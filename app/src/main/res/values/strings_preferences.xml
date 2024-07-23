@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="key_system_prompt" translatable="false">system_prompt</string>
+    <string name="key_query_template" translatable="false">query_template</string>
+    <string name="key_meditation_content" translatable="false">meditation_content</string>
+    <string name="key_meditation_text" translatable="false">meditation_text</string>
+
+</resources>
