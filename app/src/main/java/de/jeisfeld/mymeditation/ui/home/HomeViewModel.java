@@ -14,6 +14,12 @@ public class HomeViewModel extends ViewModel {
 
 	private final MutableLiveData<Integer> mPauseDuration;
 
+	private final MutableLiveData<Integer> mSeekBarMax;
+
+	private final MutableLiveData<Integer> mSeekBarProgress;
+
+	private final MutableLiveData<Boolean> mIsMeditationRunning;
+
 	public HomeViewModel() {
 		mMeditationContent = new MutableLiveData<>();
 		mMeditationContent.setValue(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content));
@@ -21,18 +27,36 @@ public class HomeViewModel extends ViewModel {
 		mMeditationText.setValue(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text));
 		mPauseDuration = new MutableLiveData<>();
 		mPauseDuration.setValue(PreferenceUtil.getSharedPreferenceInt(R.string.key_pause_duration, 0));
+		mSeekBarMax = new MutableLiveData<>();
+		mSeekBarMax.setValue(0);
+		mSeekBarProgress = new MutableLiveData<>();
+		mSeekBarProgress.setValue(0);
+		mIsMeditationRunning = new MutableLiveData<>();
+		mIsMeditationRunning.setValue(false);
 	}
 
-	public LiveData<String> getMeditationContent() {
+	protected LiveData<String> getMeditationContent() {
 		return mMeditationContent;
 	}
 
-	public LiveData<String> getMeditationText() {
+	protected LiveData<String> getMeditationText() {
 		return mMeditationText;
 	}
 
-	public LiveData<Integer> getPauseDuration() {
+	protected LiveData<Integer> getPauseDuration() {
 		return mPauseDuration;
+	}
+
+	protected LiveData<Integer> getSeekBarMax() {
+		return mSeekBarMax;
+	}
+
+	protected LiveData<Integer> getSeekBarProgress() {
+		return mSeekBarProgress;
+	}
+
+	protected LiveData<Boolean> isMeditationRunning() {
+		return mIsMeditationRunning;
 	}
 
 	protected void setMeditationContent(final String meditationContent) {
@@ -55,6 +79,18 @@ public class HomeViewModel extends ViewModel {
 		}
 		mPauseDuration.postValue(pauseDurationInt);
 		PreferenceUtil.setSharedPreferenceInt(R.string.key_pause_duration, pauseDurationInt);
+	}
+
+	protected void setSeekBarMax(final int seekBarMax) {
+		mSeekBarMax.postValue(seekBarMax);
+	}
+
+	protected void setSeekBarProgress(final int seekBarProgress) {
+		mSeekBarProgress.postValue(seekBarProgress);
+	}
+
+	protected void setMeditationRunning(final Boolean isMeditationRunning) {
+		mIsMeditationRunning.postValue(isMeditationRunning);
 	}
 
 }

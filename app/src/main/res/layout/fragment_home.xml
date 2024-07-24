@@ -38,10 +38,9 @@
     <EditText
         android:id="@+id/editTextPauseDuration"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/editText_horizontal_margin"
         android:layout_marginEnd="@dimen/editText_horizontal_margin"
-        android:layout_weight="0.2"
         android:gravity="top"
         android:importantForAutofill="no"
         android:inputType="number"
@@ -83,5 +82,24 @@
         android:layout_marginStart="@dimen/single_button_horizontal_margin"
         android:layout_marginEnd="@dimen/single_button_horizontal_margin"
         android:text="@string/button_speak_meditation" />
+
+    <Button
+        android:id="@+id/buttonPauseMeditation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/single_button_horizontal_margin"
+        android:layout_marginEnd="@dimen/single_button_horizontal_margin"
+        android:text="@string/button_pause_meditation" />
+
+    <SeekBar
+        android:id="@+id/seekBarAudio"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/editText_horizontal_margin"
+        android:layout_marginEnd="@dimen/editText_horizontal_margin"
+        android:indeterminate="false"
+        android:min="0"
+        android:max="100"
+        android:progress="0" />
 
 </LinearLayout>

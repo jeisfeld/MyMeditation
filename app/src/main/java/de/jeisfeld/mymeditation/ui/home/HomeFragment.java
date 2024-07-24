@@ -12,6 +12,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.SeekBar;
+import android.widget.SeekBar.OnSeekBarChangeListener;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -29,9 +31,7 @@ public class HomeFragment extends Fragment implements OnInitListener {
 
 	private TextToSpeech textToSpeech = null;
 	private String[] sentences;
-	private int sentenceIndex = 0;
 	private final Handler handler = new Handler();
-	private boolean isAudioRunning = false;
 
 	private HomeViewModel homeViewModel;
 
@@ -53,19 +53,36 @@ public class HomeFragment extends Fragment implements OnInitListener {
 				binding.editTextPauseDuration.setText(String.valueOf(pauseDuration));
 			}
 		});
+		homeViewModel.getSeekBarMax().observe(getViewLifecycleOwner(), binding.seekBarAudio::setMax);
+		homeViewModel.getSeekBarProgress().observe(getViewLifecycleOwner(), binding.seekBarAudio::setProgress);
+		homeViewModel.isMeditationRunning().observe(getViewLifecycleOwner(), isMeditationRunning -> {
+			binding.buttonSpeakMeditation.setVisibility(isMeditationRunning ? View.GONE : View.VISIBLE);
+			binding.buttonPauseMeditation.setVisibility(isMeditationRunning ? View.VISIBLE : View.GONE);
+		});
 
 
 		binding.buttonCreateMeditation.setOnClickListener(v -> {
+			stopAudio();
 			String systemMessage = PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt);
 			String queryTemplate = PreferenceUtil.getSharedPreferenceString(R.string.key_query_template);
 			String userMessage = queryTemplate.replace("@TEXT@", homeViewModel.getMeditationContent().getValue());
+			String oldMeditation = homeViewModel.getMeditationText().getValue();
+			homeViewModel.setMeditationText(getString(R.string.text_creating_meditation));
 			new HttpSender(getActivity()).sendMessage("openai/queryopenai.php", (response, responseData) -> {
 				Logger.log(response);
 				if (responseData.isSuccess()) {
-					homeViewModel.setMeditationText((String) responseData.getData().get("message"));
+					String meditationText = (String) responseData.getData().get("message");
+					if (meditationText == null) {
+						meditationText = "";
+					}
+					homeViewModel.setMeditationText(meditationText);
+					sentences = meditationText.split("\\.+");
+					homeViewModel.setSeekBarMax(sentences.length - 1);
+					homeViewModel.setSeekBarProgress(0);
 				}
 				else {
 					Log.e(Application.TAG, "Failed to retrieve data from OpenAI - " + responseData.getErrorMessage());
+					homeViewModel.setMeditationText(oldMeditation);
 				}
 			}, userMessage, systemMessage);
 		});
@@ -73,12 +90,18 @@ public class HomeFragment extends Fragment implements OnInitListener {
 		binding.buttonSpeakMeditation.setOnClickListener(v -> {
 			String meditationText = homeViewModel.getMeditationText().getValue();
 			if (meditationText != null && !meditationText.isEmpty()) {
-				sentences = meditationText.split("\\.");
-				sentenceIndex = 0;
-				isAudioRunning = true;
+				String[] newSentences = meditationText.split("\\.+");
+				if (sentences == null || newSentences.length != sentences.length) {
+					homeViewModel.setSeekBarMax(newSentences.length - 1);
+					homeViewModel.setSeekBarProgress(0);
+				}
+				sentences = newSentences;
+				homeViewModel.setMeditationRunning(true);
 				textToSpeech = new TextToSpeech(HomeFragment.this.getActivity(), HomeFragment.this);
 			}
 		});
+
+		binding.buttonPauseMeditation.setOnClickListener(v -> stopAudio());
 
 		binding.editTextMeditationContent.setOnFocusChangeListener((v, hasFocus) -> {
 			if (!hasFocus) {
@@ -92,18 +115,32 @@ public class HomeFragment extends Fragment implements OnInitListener {
 			}
 		});
 
+		binding.seekBarAudio.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+			@Override
+			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+				if (fromUser) {
+					homeViewModel.setSeekBarProgress(progress);
+				}
+			}
+
+			@Override
+			public void onStartTrackingTouch(SeekBar seekBar) {
+
+			}
+
+			@Override
+			public void onStopTrackingTouch(SeekBar seekBar) {
+
+			}
+		});
+
 		return root;
 	}
 
 	@Override
 	public void onDestroyView() {
-		if (textToSpeech != null) {
-			isAudioRunning = false;
-			textToSpeech.stop();
-			textToSpeech.shutdown();
-		}
-
 		super.onDestroyView();
+		stopAudio();
 		binding = null;
 	}
 
@@ -113,7 +150,7 @@ public class HomeFragment extends Fragment implements OnInitListener {
 			// Set the UtteranceProgressListener
 			textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
 				private void run() {
-					speakNextSentence();
+					speakNextSentence(false);
 				}
 
 				@Override
@@ -124,7 +161,15 @@ public class HomeFragment extends Fragment implements OnInitListener {
 				@Override
 				public void onDone(String utteranceId) {
 					// Called when the utterance completes
-					handler.post(this::run);
+					Integer sentenceIndexObject = homeViewModel.getSeekBarProgress().getValue();
+					int sentenceIndex = sentenceIndexObject == null ? 0 : sentenceIndexObject;
+					if (sentenceIndex == sentences.length - 1) {
+						stopAudio();
+					}
+					else {
+						homeViewModel.setSeekBarProgress(sentenceIndex + 1);
+						handler.post(this::run);
+					}
 				}
 
 				@Override
@@ -134,21 +179,36 @@ public class HomeFragment extends Fragment implements OnInitListener {
 			});
 
 			// Start speaking sentences with delay
-			speakNextSentence();
+			speakNextSentence(true);
 		}
 
 	}
 
-	private void speakNextSentence() {
-		if (isAudioRunning && sentenceIndex < sentences.length) {
+	private void stopAudio() {
+		if (textToSpeech != null) {
+			homeViewModel.setMeditationRunning(false);
+			textToSpeech.stop();
+			textToSpeech.shutdown();
+		}
+	}
+
+	private void speakNextSentence(final boolean isFirst) {
+		Boolean isAudioRunning = homeViewModel.isMeditationRunning().getValue();
+		if (isAudioRunning != null && isAudioRunning) {
+			Integer sentenceIndexObject = homeViewModel.getSeekBarProgress().getValue();
+			int sentenceIndex = sentenceIndexObject == null ? 0 : sentenceIndexObject;
 			String sentence = sentences[sentenceIndex];
-			sentenceIndex++;
 			Integer pauseDurationObj = homeViewModel.getPauseDuration().getValue();
 			int pauseDuration = pauseDurationObj == null ? 0 : pauseDurationObj * 1000;
 
 			// Play silent sound to wake up Bluetooth speaker
-			playSilence(sentenceIndex == 1 ? 500 : sentence.startsWith("\n") ? 2 * pauseDuration : pauseDuration,
-					() -> textToSpeech.speak(sentence.trim(), TextToSpeech.QUEUE_FLUSH, null, "utteranceId"));
+			playSilence(isFirst ? 500 : sentence.startsWith("\n") ? pauseDuration + Math.max(pauseDuration, 2000) : pauseDuration,
+					() -> {
+						Integer newSentenceIndexObject = homeViewModel.getSeekBarProgress().getValue();
+						int newSentenceIndex = sentenceIndexObject == null ? 0 : newSentenceIndexObject;
+						String newSentence = sentences[newSentenceIndex].trim();
+						textToSpeech.speak(newSentence, TextToSpeech.QUEUE_FLUSH, null, "utteranceId");
+					});
 		}
 	}
 

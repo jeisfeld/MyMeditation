@@ -5,9 +5,11 @@
     <string name="title_notifications">Notifications</string>
     <string name="button_create_meditation">Create Meditation</string>
     <string name="button_speak_meditation">Speak Meditation</string>
+    <string name="button_pause_meditation">Pause Meditation</string>
     <string name="label_meditation_text">Meditation Text</string>
     <string name="label_pause_duration">Pause Duration (seconds)</string>
     <string name="label_meditation_content">Meditation Content</string>
     <string name="label_system_prompt">System Prompt</string>
     <string name="label_query_template">Query Template</string>
+    <string name="text_creating_meditation">Creating meditation. Please wait…</string>
 </resources>
