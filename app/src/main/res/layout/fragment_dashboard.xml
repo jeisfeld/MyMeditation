@@ -2,46 +2,48 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingBottom="?attr/actionBarSize"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:paddingBottom="?attr/actionBarSize">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="System Prompt"
+        android:labelFor="@id/editTextSystemPrompt"
         android:layout_marginStart="@dimen/activity_horizontal_margin"
         android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:text="@string/label_system_prompt"
         android:textSize="@dimen/text_size_content" />
 
     <EditText
         android:id="@+id/editTextSystemPrompt"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:hint="Enter text here"
-        android:gravity="top"
         android:layout_marginStart="@dimen/editText_horizontal_margin"
         android:layout_marginEnd="@dimen/editText_horizontal_margin"
+        android:layout_weight="1"
+        android:gravity="top"
         android:importantForAutofill="no"
+        android:inputType="textMultiLine"
         android:textSize="@dimen/text_size_content" />
 
     <TextView
         android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/activity_horizontal_margin"
         android:layout_marginEnd="@dimen/activity_horizontal_margin"
-        android:layout_height="wrap_content"
-        android:text="Query Template"
+        android:labelFor="@id/editTextQueryTemplate"
+        android:text="@string/label_query_template"
         android:textSize="@dimen/text_size_content" />
 
     <EditText
         android:id="@+id/editTextQueryTemplate"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:gravity="top"
         android:layout_marginStart="@dimen/editText_horizontal_margin"
         android:layout_marginEnd="@dimen/editText_horizontal_margin"
         android:layout_weight="1"
-        android:hint="Enter text here"
+        android:gravity="top"
         android:importantForAutofill="no"
+        android:inputType="textMultiLine"
         android:textSize="@dimen/text_size_content" />
 </LinearLayout>

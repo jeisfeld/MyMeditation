@@ -18,7 +18,7 @@ public class Application extends android.app.Application {
 	/**
 	 * The default tag for logging.
 	 */
-	public static final String TAG = "MyMessages.JE";
+	public static final String TAG = "MyMeditation.JE";
 
 	/**
 	 * Retrieve the application context.
@@ -43,6 +43,8 @@ public class Application extends android.app.Application {
 		if (PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content) == null) {
 			PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_content, "Ich versetze mich in eine Zukunft hinein, in der ich anderen Menschen diene und finde darin meine Erfüllung.");
 		}
-
+		if (PreferenceUtil.getSharedPreferenceInt(R.string.key_pause_duration, -1) == -1) {
+			PreferenceUtil.setSharedPreferenceInt(R.string.key_pause_duration, 15);
+		}
 	}
 }

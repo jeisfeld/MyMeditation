@@ -24,6 +24,19 @@ public class DashboardFragment extends Fragment {
 
 		dashboardViewModel.getSystemPrompt().observe(getViewLifecycleOwner(), binding.editTextSystemPrompt::setText);
 		dashboardViewModel.getQueryTemplate().observe(getViewLifecycleOwner(), binding.editTextQueryTemplate::setText);
+
+		binding.editTextSystemPrompt.setOnFocusChangeListener((v, hasFocus) -> {
+			if (!hasFocus) {
+				dashboardViewModel.setSystemPrompt(binding.editTextSystemPrompt.getText().toString());
+			}
+		});
+		binding.editTextQueryTemplate.setOnFocusChangeListener((v, hasFocus) -> {
+			if (!hasFocus) {
+				dashboardViewModel.setQueryTemplate(binding.editTextQueryTemplate.getText().toString());
+			}
+		});
+
+
 		return root;
 	}
 

@@ -5,5 +5,6 @@
     <string name="key_query_template" translatable="false">query_template</string>
     <string name="key_meditation_content" translatable="false">meditation_content</string>
     <string name="key_meditation_text" translatable="false">meditation_text</string>
+    <string name="key_pause_duration" translatable="false">pause_duration</string>
 
 </resources>

@@ -26,4 +26,17 @@ public class DashboardViewModel extends ViewModel {
 		return mQueryTemplate;
 	}
 
+	protected void setSystemPrompt(final String systemPrompt) {
+		mSystemPrompt.postValue(systemPrompt);
+		PreferenceUtil.setSharedPreferenceString(R.string.key_system_prompt, systemPrompt);
+	}
+
+	protected void setQueryTemplate(final String queryTemplate) {
+		if (!queryTemplate.contains("@TEXT@")) {
+			return;
+		}
+		mQueryTemplate.postValue(queryTemplate);
+		PreferenceUtil.setSharedPreferenceString(R.string.key_query_template, queryTemplate);
+	}
+
 }
