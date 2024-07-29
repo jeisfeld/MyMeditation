@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2024-07-29T22:42:21.541871500Z">
+        <DropdownSelection timestamp="2024-07-29T22:51:27.819995400Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="Default" identifier="serial=Handy-Galaxy-S23:5555;connection=e3ffadcc" />
+              <DeviceId pluginId="Default" identifier="serial=Handy-Galaxy-S23:5555;connection=cf3945d1" />
             </handle>
           </Target>
         </DropdownSelection>
