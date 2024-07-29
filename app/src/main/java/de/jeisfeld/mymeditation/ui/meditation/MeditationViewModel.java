@@ -1,4 +1,4 @@
-package de.jeisfeld.mymeditation.ui.home;
+package de.jeisfeld.mymeditation.ui.meditation;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel;
 import de.jeisfeld.mymeditation.R;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
 
-public class HomeViewModel extends ViewModel {
+public class MeditationViewModel extends ViewModel {
 
 	private final MutableLiveData<String> mMeditationContent;
 
@@ -20,7 +20,7 @@ public class HomeViewModel extends ViewModel {
 
 	private final MutableLiveData<Boolean> mIsMeditationRunning;
 
-	public HomeViewModel() {
+	public MeditationViewModel() {
 		mMeditationContent = new MutableLiveData<>();
 		mMeditationContent.setValue(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content));
 		mMeditationText = new MutableLiveData<>();

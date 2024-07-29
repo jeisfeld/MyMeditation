@@ -1,4 +1,4 @@
-package de.jeisfeld.mymeditation.ui.dashboard;
+package de.jeisfeld.mymeditation.ui.configuration;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -6,13 +6,13 @@ import androidx.lifecycle.ViewModel;
 import de.jeisfeld.mymeditation.R;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
 
-public class DashboardViewModel extends ViewModel {
+public class ConfigurationViewModel extends ViewModel {
 
 	private final MutableLiveData<String> mSystemPrompt;
 
 	private final MutableLiveData<String> mQueryTemplate;
 
-	public DashboardViewModel() {
+	public ConfigurationViewModel() {
 		mSystemPrompt = new MutableLiveData<>();
 		mSystemPrompt.setValue(PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt));
 		mQueryTemplate = new MutableLiveData<>();

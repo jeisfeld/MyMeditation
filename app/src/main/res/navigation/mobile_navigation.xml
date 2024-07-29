@@ -3,23 +3,23 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/navigation_home">
+    app:startDestination="@+id/navigation_meditation">
 
     <fragment
-        android:id="@+id/navigation_home"
-        android:name="de.jeisfeld.mymeditation.ui.home.HomeFragment"
-        android:label="@string/title_home"
-        tools:layout="@layout/fragment_home" />
+        android:id="@+id/navigation_meditation"
+        android:name="de.jeisfeld.mymeditation.ui.meditation.MeditationFragment"
+        android:label="@string/title_meditation"
+        tools:layout="@layout/fragment_meditation" />
 
     <fragment
-        android:id="@+id/navigation_dashboard"
-        android:name="de.jeisfeld.mymeditation.ui.dashboard.DashboardFragment"
-        android:label="@string/title_dashboard"
-        tools:layout="@layout/fragment_dashboard" />
+        android:id="@+id/navigation_configuration"
+        android:name="de.jeisfeld.mymeditation.ui.configuration.ConfigurationFragment"
+        android:label="@string/title_configuration"
+        tools:layout="@layout/fragment_configuration" />
 
     <fragment
-        android:id="@+id/navigation_notifications"
-        android:name="de.jeisfeld.mymeditation.ui.notifications.NotificationsFragment"
-        android:label="@string/title_notifications"
-        tools:layout="@layout/fragment_notifications" />
+        android:id="@+id/navigation_saved_meditations"
+        android:name="de.jeisfeld.mymeditation.ui.savedmeditations.SavedMeditationsFragment"
+        android:label="@string/title_saved_meditations"
+        tools:layout="@layout/fragment_saved_meditations" />
 </navigation>

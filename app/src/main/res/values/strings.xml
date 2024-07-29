@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">MyMeditation</string>
-    <string name="title_home">Home</string>
-    <string name="title_dashboard">Dashboard</string>
-    <string name="title_notifications">Notifications</string>
+    <string name="title_meditation">Meditation</string>
+    <string name="title_configuration">Configuration</string>
+    <string name="title_saved_meditations">Saved Meditations</string>
     <string name="button_create_meditation">Create Meditation</string>
     <string name="button_speak_meditation">Speak Meditation</string>
     <string name="button_pause_meditation">Pause Meditation</string>

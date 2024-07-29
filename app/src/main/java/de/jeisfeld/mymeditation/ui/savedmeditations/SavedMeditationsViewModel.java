@@ -1,14 +1,14 @@
-package de.jeisfeld.mymeditation.ui.notifications;
+package de.jeisfeld.mymeditation.ui.savedmeditations;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-public class NotificationsViewModel extends ViewModel {
+public class SavedMeditationsViewModel extends ViewModel {
 
 	private final MutableLiveData<String> mText;
 
-	public NotificationsViewModel() {
+	public SavedMeditationsViewModel() {
 		mText = new MutableLiveData<>();
 		mText.setValue("This is notifications fragment");
 	}

@@ -1,4 +1,4 @@
-package de.jeisfeld.mymeditation.ui.home;
+package de.jeisfeld.mymeditation.ui.meditation;
 
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
@@ -20,32 +20,32 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import de.jeisfeld.mymeditation.Application;
 import de.jeisfeld.mymeditation.R;
-import de.jeisfeld.mymeditation.databinding.FragmentHomeBinding;
+import de.jeisfeld.mymeditation.databinding.FragmentMeditationBinding;
 import de.jeisfeld.mymeditation.http.HttpSender;
 import de.jeisfeld.mymeditation.util.Logger;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
 
-public class HomeFragment extends Fragment implements OnInitListener {
+public class MeditationFragment extends Fragment implements OnInitListener {
 
-	private FragmentHomeBinding binding;
+	private FragmentMeditationBinding binding;
 
 	private TextToSpeech textToSpeech = null;
 	private String[] sentences;
 	private final Handler handler = new Handler();
 
-	private HomeViewModel homeViewModel;
+	private MeditationViewModel meditationViewModel;
 
 
 	public View onCreateView(@NonNull LayoutInflater inflater,
 							 ViewGroup container, Bundle savedInstanceState) {
-		homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
+		meditationViewModel = new ViewModelProvider(this).get(MeditationViewModel.class);
 
-		binding = FragmentHomeBinding.inflate(inflater, container, false);
+		binding = FragmentMeditationBinding.inflate(inflater, container, false);
 		View root = binding.getRoot();
 
-		homeViewModel.getMeditationContent().observe(getViewLifecycleOwner(), binding.editTextMeditationContent::setText);
-		homeViewModel.getMeditationText().observe(getViewLifecycleOwner(), binding.editTextMeditationText::setText);
-		homeViewModel.getPauseDuration().observe(getViewLifecycleOwner(), pauseDuration -> {
+		meditationViewModel.getMeditationContent().observe(getViewLifecycleOwner(), binding.editTextMeditationContent::setText);
+		meditationViewModel.getMeditationText().observe(getViewLifecycleOwner(), binding.editTextMeditationText::setText);
+		meditationViewModel.getPauseDuration().observe(getViewLifecycleOwner(), pauseDuration -> {
 			if (pauseDuration == null) {
 				binding.editTextPauseDuration.setText("");
 			}
@@ -53,9 +53,9 @@ public class HomeFragment extends Fragment implements OnInitListener {
 				binding.editTextPauseDuration.setText(String.valueOf(pauseDuration));
 			}
 		});
-		homeViewModel.getSeekBarMax().observe(getViewLifecycleOwner(), binding.seekBarAudio::setMax);
-		homeViewModel.getSeekBarProgress().observe(getViewLifecycleOwner(), binding.seekBarAudio::setProgress);
-		homeViewModel.isMeditationRunning().observe(getViewLifecycleOwner(), isMeditationRunning -> {
+		meditationViewModel.getSeekBarMax().observe(getViewLifecycleOwner(), binding.seekBarAudio::setMax);
+		meditationViewModel.getSeekBarProgress().observe(getViewLifecycleOwner(), binding.seekBarAudio::setProgress);
+		meditationViewModel.isMeditationRunning().observe(getViewLifecycleOwner(), isMeditationRunning -> {
 			binding.buttonSpeakMeditation.setVisibility(isMeditationRunning ? View.GONE : View.VISIBLE);
 			binding.buttonPauseMeditation.setVisibility(isMeditationRunning ? View.VISIBLE : View.GONE);
 		});
@@ -65,9 +65,9 @@ public class HomeFragment extends Fragment implements OnInitListener {
 			stopAudio();
 			String systemMessage = PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt);
 			String queryTemplate = PreferenceUtil.getSharedPreferenceString(R.string.key_query_template);
-			String userMessage = queryTemplate.replace("@TEXT@", homeViewModel.getMeditationContent().getValue());
-			String oldMeditation = homeViewModel.getMeditationText().getValue();
-			homeViewModel.setMeditationText(getString(R.string.text_creating_meditation));
+			String userMessage = queryTemplate.replace("@TEXT@", meditationViewModel.getMeditationContent().getValue());
+			String oldMeditation = meditationViewModel.getMeditationText().getValue();
+			meditationViewModel.setMeditationText(getString(R.string.text_creating_meditation));
 			new HttpSender(getActivity()).sendMessage("openai/queryopenai.php", (response, responseData) -> {
 				Logger.log(response);
 				if (responseData.isSuccess()) {
@@ -75,29 +75,29 @@ public class HomeFragment extends Fragment implements OnInitListener {
 					if (meditationText == null) {
 						meditationText = "";
 					}
-					homeViewModel.setMeditationText(meditationText);
+					meditationViewModel.setMeditationText(meditationText);
 					sentences = meditationText.split("\\.+");
-					homeViewModel.setSeekBarMax(sentences.length - 1);
-					homeViewModel.setSeekBarProgress(0);
+					meditationViewModel.setSeekBarMax(sentences.length - 1);
+					meditationViewModel.setSeekBarProgress(0);
 				}
 				else {
 					Log.e(Application.TAG, "Failed to retrieve data from OpenAI - " + responseData.getErrorMessage());
-					homeViewModel.setMeditationText(oldMeditation);
+					meditationViewModel.setMeditationText(oldMeditation);
 				}
 			}, userMessage, systemMessage);
 		});
 
 		binding.buttonSpeakMeditation.setOnClickListener(v -> {
-			String meditationText = homeViewModel.getMeditationText().getValue();
+			String meditationText = meditationViewModel.getMeditationText().getValue();
 			if (meditationText != null && !meditationText.isEmpty()) {
 				String[] newSentences = meditationText.split("\\.+");
 				if (sentences == null || newSentences.length != sentences.length) {
-					homeViewModel.setSeekBarMax(newSentences.length - 1);
-					homeViewModel.setSeekBarProgress(0);
+					meditationViewModel.setSeekBarMax(newSentences.length - 1);
+					meditationViewModel.setSeekBarProgress(0);
 				}
 				sentences = newSentences;
-				homeViewModel.setMeditationRunning(true);
-				textToSpeech = new TextToSpeech(HomeFragment.this.getActivity(), HomeFragment.this);
+				meditationViewModel.setMeditationRunning(true);
+				textToSpeech = new TextToSpeech(MeditationFragment.this.getActivity(), MeditationFragment.this);
 			}
 		});
 
@@ -105,13 +105,13 @@ public class HomeFragment extends Fragment implements OnInitListener {
 
 		binding.editTextMeditationContent.setOnFocusChangeListener((v, hasFocus) -> {
 			if (!hasFocus) {
-				homeViewModel.setMeditationContent(binding.editTextMeditationContent.getText().toString());
+				meditationViewModel.setMeditationContent(binding.editTextMeditationContent.getText().toString());
 			}
 		});
 
 		binding.editTextPauseDuration.setOnFocusChangeListener((v, hasFocus) -> {
 			if (!hasFocus) {
-				homeViewModel.setPauseDuration(binding.editTextPauseDuration.getText().toString());
+				meditationViewModel.setPauseDuration(binding.editTextPauseDuration.getText().toString());
 			}
 		});
 
@@ -119,7 +119,7 @@ public class HomeFragment extends Fragment implements OnInitListener {
 			@Override
 			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 				if (fromUser) {
-					homeViewModel.setSeekBarProgress(progress);
+					meditationViewModel.setSeekBarProgress(progress);
 				}
 			}
 
@@ -161,13 +161,13 @@ public class HomeFragment extends Fragment implements OnInitListener {
 				@Override
 				public void onDone(String utteranceId) {
 					// Called when the utterance completes
-					Integer sentenceIndexObject = homeViewModel.getSeekBarProgress().getValue();
+					Integer sentenceIndexObject = meditationViewModel.getSeekBarProgress().getValue();
 					int sentenceIndex = sentenceIndexObject == null ? 0 : sentenceIndexObject;
 					if (sentenceIndex == sentences.length - 1) {
 						stopAudio();
 					}
 					else {
-						homeViewModel.setSeekBarProgress(sentenceIndex + 1);
+						meditationViewModel.setSeekBarProgress(sentenceIndex + 1);
 						handler.post(this::run);
 					}
 				}
@@ -186,25 +186,25 @@ public class HomeFragment extends Fragment implements OnInitListener {
 
 	private void stopAudio() {
 		if (textToSpeech != null) {
-			homeViewModel.setMeditationRunning(false);
+			meditationViewModel.setMeditationRunning(false);
 			textToSpeech.stop();
 			textToSpeech.shutdown();
 		}
 	}
 
 	private void speakNextSentence(final boolean isFirst) {
-		Boolean isAudioRunning = homeViewModel.isMeditationRunning().getValue();
+		Boolean isAudioRunning = meditationViewModel.isMeditationRunning().getValue();
 		if (isAudioRunning != null && isAudioRunning) {
-			Integer sentenceIndexObject = homeViewModel.getSeekBarProgress().getValue();
+			Integer sentenceIndexObject = meditationViewModel.getSeekBarProgress().getValue();
 			int sentenceIndex = sentenceIndexObject == null ? 0 : sentenceIndexObject;
 			String sentence = sentences[sentenceIndex];
-			Integer pauseDurationObj = homeViewModel.getPauseDuration().getValue();
+			Integer pauseDurationObj = meditationViewModel.getPauseDuration().getValue();
 			int pauseDuration = pauseDurationObj == null ? 0 : pauseDurationObj * 1000;
 
 			// Play silent sound to wake up Bluetooth speaker
 			playSilence(isFirst ? 500 : sentence.startsWith("\n") ? pauseDuration + Math.max(pauseDuration, 2000) : pauseDuration,
 					() -> {
-						Integer newSentenceIndexObject = homeViewModel.getSeekBarProgress().getValue();
+						Integer newSentenceIndexObject = meditationViewModel.getSeekBarProgress().getValue();
 						int newSentenceIndex = sentenceIndexObject == null ? 0 : newSentenceIndexObject;
 						String newSentence = sentences[newSentenceIndex].trim();
 						textToSpeech.speak(newSentence, TextToSpeech.QUEUE_FLUSH, null, "utteranceId");
