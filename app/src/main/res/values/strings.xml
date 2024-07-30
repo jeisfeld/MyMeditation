@@ -11,5 +11,19 @@
     <string name="label_meditation_content">Meditation Content</string>
     <string name="label_system_prompt">System Prompt</string>
     <string name="label_query_template">Query Template</string>
+
+    <string name="button_ok">OK</string>
+    <string name="button_cancel">Cancel</string>
+    <string name="button_delete">Delete</string>
+    <string name="button_save">Save</string>
+    <string name="button_save_current_meditation">Save current meditation</string>
+
     <string name="text_creating_meditation">Creating meditation. Please wait…</string>
+
+    <string name="title_dialog_confirmation">Confirmation</string>
+    <string name="message_confirm_delete_meditation">Do you want to delete the meditation “%1$s” from the app?</string>
+    <string name="title_dialog_save_meditation">Save Meditation</string>
+    <string name="text_dialog_save_meditation">Please enter the meditation name</string>
+    <string name="toast_meditation_restored">Meditation “%1$s” has been restored</string>
+
 </resources>

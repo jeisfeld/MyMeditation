@@ -38,7 +38,7 @@ public class MeditationFragment extends Fragment implements OnInitListener {
 
 	public View onCreateView(@NonNull LayoutInflater inflater,
 							 ViewGroup container, Bundle savedInstanceState) {
-		meditationViewModel = new ViewModelProvider(this).get(MeditationViewModel.class);
+		meditationViewModel = new ViewModelProvider(getActivity()).get(MeditationViewModel.class);
 
 		binding = FragmentMeditationBinding.inflate(inflater, container, false);
 		View root = binding.getRoot();

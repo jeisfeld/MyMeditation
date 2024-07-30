@@ -14,8 +14,12 @@ public class ConfigurationViewModel extends ViewModel {
 
 	public ConfigurationViewModel() {
 		mSystemPrompt = new MutableLiveData<>();
-		mSystemPrompt.setValue(PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt));
 		mQueryTemplate = new MutableLiveData<>();
+		getStoredData();
+	}
+
+	public void getStoredData() {
+		mSystemPrompt.setValue(PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt));
 		mQueryTemplate.setValue(PreferenceUtil.getSharedPreferenceString(R.string.key_query_template));
 	}
 

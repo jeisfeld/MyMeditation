@@ -7,4 +7,13 @@
     <string name="key_meditation_text" translatable="false">meditation_text</string>
     <string name="key_pause_duration" translatable="false">pause_duration</string>
 
+    <string name="key_max_saved_meditation_id" translatable="false">max_saved_meditation_id</string>
+    <string name="key_saved_meditation_ids" translatable="false">saved_meditation_ids</string>
+    <string name="key_saved_meditation_name" translatable="false">saved_meditation_name</string>
+    <string name="key_saved_system_prompt" translatable="false">saved_system_prompt</string>
+    <string name="key_saved_query_template" translatable="false">saved_query_template</string>
+    <string name="key_saved_meditation_content" translatable="false">meditation_content</string>
+    <string name="key_saved_meditation_text" translatable="false">meditation_text</string>
+
+
 </resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingStart="?attr/dialogPreferredPadding"
+    android:paddingTop="?attr/dialogPreferredPadding"
+    android:paddingEnd="?attr/dialogPreferredPadding"
+    android:paddingBottom="?attr/dialogPreferredPadding">
+
+    <TextView
+        android:id="@+id/textViewConfirmationMessage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -17,7 +17,7 @@ public class ConfigurationFragment extends Fragment {
 	public View onCreateView(@NonNull LayoutInflater inflater,
 							 ViewGroup container, Bundle savedInstanceState) {
 		ConfigurationViewModel configurationViewModel =
-				new ViewModelProvider(this).get(ConfigurationViewModel.class);
+				new ViewModelProvider(getActivity()).get(ConfigurationViewModel.class);
 
 		binding = FragmentConfigurationBinding.inflate(inflater, container, false);
 		View root = binding.getRoot();

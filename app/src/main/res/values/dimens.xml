@@ -8,4 +8,7 @@
 
     <dimen name="single_button_horizontal_margin">48dp</dimen>
 
+    <dimen name="list_horizontal_margin">8dp</dimen>
+    <dimen name="list_vertical_margin">8dp</dimen>
+
 </resources>

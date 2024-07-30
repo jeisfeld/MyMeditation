@@ -22,17 +22,21 @@ public class MeditationViewModel extends ViewModel {
 
 	public MeditationViewModel() {
 		mMeditationContent = new MutableLiveData<>();
-		mMeditationContent.setValue(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content));
 		mMeditationText = new MutableLiveData<>();
-		mMeditationText.setValue(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text));
 		mPauseDuration = new MutableLiveData<>();
-		mPauseDuration.setValue(PreferenceUtil.getSharedPreferenceInt(R.string.key_pause_duration, 0));
+		getStoredData();
 		mSeekBarMax = new MutableLiveData<>();
 		mSeekBarMax.setValue(0);
 		mSeekBarProgress = new MutableLiveData<>();
 		mSeekBarProgress.setValue(0);
 		mIsMeditationRunning = new MutableLiveData<>();
 		mIsMeditationRunning.setValue(false);
+	}
+
+	public void getStoredData() {
+		mMeditationContent.setValue(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content));
+		mMeditationText.setValue(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text));
+		mPauseDuration.setValue(PreferenceUtil.getSharedPreferenceInt(R.string.key_pause_duration, 0));
 	}
 
 	protected LiveData<String> getMeditationContent() {
