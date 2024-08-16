@@ -15,6 +15,11 @@ import android.view.ViewGroup;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
@@ -30,7 +35,7 @@ public class MeditationFragment extends Fragment implements OnInitListener {
 	private FragmentMeditationBinding binding;
 
 	private TextToSpeech textToSpeech = null;
-	private String[] sentences;
+	private List<String> sentences;
 	private final Handler handler = new Handler();
 
 	private MeditationViewModel meditationViewModel;
@@ -38,7 +43,7 @@ public class MeditationFragment extends Fragment implements OnInitListener {
 
 	public View onCreateView(@NonNull LayoutInflater inflater,
 							 ViewGroup container, Bundle savedInstanceState) {
-		meditationViewModel = new ViewModelProvider(getActivity()).get(MeditationViewModel.class);
+		meditationViewModel = new ViewModelProvider(requireActivity()).get(MeditationViewModel.class);
 
 		binding = FragmentMeditationBinding.inflate(inflater, container, false);
 		View root = binding.getRoot();
@@ -47,11 +52,10 @@ public class MeditationFragment extends Fragment implements OnInitListener {
 		meditationViewModel.getMeditationText().observe(getViewLifecycleOwner(), binding.editTextMeditationText::setText);
 		meditationViewModel.getPauseDuration().observe(getViewLifecycleOwner(), pauseDuration -> {
 			if (pauseDuration == null) {
-				binding.editTextPauseDuration.setText("");
+				pauseDuration = 1;
 			}
-			else {
-				binding.editTextPauseDuration.setText(String.valueOf(pauseDuration));
-			}
+			binding.seekBarPauseDuration.setProgress(pauseDuration);
+			binding.textPauseDuration.setText(getString(R.string.text_pause_duration, pauseDuration));
 		});
 		meditationViewModel.getSeekBarMax().observe(getViewLifecycleOwner(), binding.seekBarAudio::setMax);
 		meditationViewModel.getSeekBarProgress().observe(getViewLifecycleOwner(), binding.seekBarAudio::setProgress);
@@ -62,6 +66,8 @@ public class MeditationFragment extends Fragment implements OnInitListener {
 
 
 		binding.buttonCreateMeditation.setOnClickListener(v -> {
+			meditationViewModel.setMeditationContent(binding.editTextMeditationContent.getText().toString());
+
 			stopAudio();
 			String systemMessage = PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt);
 			String queryTemplate = PreferenceUtil.getSharedPreferenceString(R.string.key_query_template);
@@ -76,8 +82,8 @@ public class MeditationFragment extends Fragment implements OnInitListener {
 						meditationText = "";
 					}
 					meditationViewModel.setMeditationText(meditationText);
-					sentences = meditationText.split("\\.+");
-					meditationViewModel.setSeekBarMax(sentences.length - 1);
+					sentences = splitIntoIndividualSentences(meditationText);
+					meditationViewModel.setSeekBarMax(sentences.size() - 1);
 					meditationViewModel.setSeekBarProgress(0);
 				}
 				else {
@@ -88,11 +94,14 @@ public class MeditationFragment extends Fragment implements OnInitListener {
 		});
 
 		binding.buttonSpeakMeditation.setOnClickListener(v -> {
+			meditationViewModel.setPauseDuration(binding.seekBarPauseDuration.getProgress());
+			meditationViewModel.setMeditationText(binding.editTextMeditationText.getText().toString());
+
 			String meditationText = meditationViewModel.getMeditationText().getValue();
 			if (meditationText != null && !meditationText.isEmpty()) {
-				String[] newSentences = meditationText.split("\\.+");
-				if (sentences == null || newSentences.length != sentences.length) {
-					meditationViewModel.setSeekBarMax(newSentences.length - 1);
+				List<String> newSentences = splitIntoIndividualSentences(meditationText);
+				if (sentences == null || newSentences.size() != sentences.size()) {
+					meditationViewModel.setSeekBarMax(newSentences.size() - 1);
 					meditationViewModel.setSeekBarProgress(0);
 				}
 				sentences = newSentences;
@@ -109,9 +118,28 @@ public class MeditationFragment extends Fragment implements OnInitListener {
 			}
 		});
 
-		binding.editTextPauseDuration.setOnFocusChangeListener((v, hasFocus) -> {
+		binding.seekBarPauseDuration.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+			@Override
+			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+				if (fromUser) {
+					meditationViewModel.setPauseDuration(progress);
+				}
+			}
+
+			@Override
+			public void onStartTrackingTouch(SeekBar seekBar) {
+
+			}
+
+			@Override
+			public void onStopTrackingTouch(SeekBar seekBar) {
+
+			}
+		});
+
+		binding.editTextMeditationText.setOnFocusChangeListener((v, hasFocus) -> {
 			if (!hasFocus) {
-				meditationViewModel.setPauseDuration(binding.editTextPauseDuration.getText().toString());
+				meditationViewModel.setMeditationText(binding.editTextMeditationText.getText().toString());
 			}
 		});
 
@@ -135,6 +163,19 @@ public class MeditationFragment extends Fragment implements OnInitListener {
 		});
 
 		return root;
+	}
+
+	public static List<String> splitIntoIndividualSentences(String input) {
+		List<String> result = new ArrayList<>();
+		String regex = "[^.!?]+[.!?]";
+		Pattern pattern = Pattern.compile(regex);
+
+		Matcher matcher = pattern.matcher(input);
+		while (matcher.find()) {
+			result.add(matcher.group().trim());
+		}
+
+		return result;
 	}
 
 	@Override
@@ -163,7 +204,7 @@ public class MeditationFragment extends Fragment implements OnInitListener {
 					// Called when the utterance completes
 					Integer sentenceIndexObject = meditationViewModel.getSeekBarProgress().getValue();
 					int sentenceIndex = sentenceIndexObject == null ? 0 : sentenceIndexObject;
-					if (sentenceIndex == sentences.length - 1) {
+					if (sentenceIndex == sentences.size() - 1) {
 						stopAudio();
 					}
 					else {
@@ -197,7 +238,7 @@ public class MeditationFragment extends Fragment implements OnInitListener {
 		if (isAudioRunning != null && isAudioRunning) {
 			Integer sentenceIndexObject = meditationViewModel.getSeekBarProgress().getValue();
 			int sentenceIndex = sentenceIndexObject == null ? 0 : sentenceIndexObject;
-			String sentence = sentences[sentenceIndex];
+			String sentence = sentences.get(sentenceIndex);
 			Integer pauseDurationObj = meditationViewModel.getPauseDuration().getValue();
 			int pauseDuration = pauseDurationObj == null ? 0 : pauseDurationObj * 1000;
 
@@ -206,7 +247,8 @@ public class MeditationFragment extends Fragment implements OnInitListener {
 					() -> {
 						Integer newSentenceIndexObject = meditationViewModel.getSeekBarProgress().getValue();
 						int newSentenceIndex = sentenceIndexObject == null ? 0 : newSentenceIndexObject;
-						String newSentence = sentences[newSentenceIndex].trim();
+						String newSentence = sentences.get(newSentenceIndex).trim();
+						Logger.log(newSentence);
 						textToSpeech.speak(newSentence, TextToSpeech.QUEUE_FLUSH, null, "utteranceId");
 					});
 		}

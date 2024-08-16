@@ -30,7 +30,7 @@ public class SavedMeditationsFragment extends Fragment {
 		final RecyclerView recyclerView = binding.recyclerViewSavedMeditations;
 		populateRecyclerView(recyclerView);
 
-		binding.buttonSaveCurrentMeditation.setOnClickListener(v -> DialogUtil.displayInputDialog(getActivity(), new RequestInputDialogListener() {
+		binding.buttonSaveCurrentMeditation.setOnClickListener(v -> DialogUtil.displayInputDialog(requireActivity(), new RequestInputDialogListener() {
 			@Override
 			public void onDialogPositiveClick(DialogFragment dialog, String text) {
 				int newMeditationId = PreferenceUtil.getSharedPreferenceInt(R.string.key_max_saved_meditation_id, 0) + 1;

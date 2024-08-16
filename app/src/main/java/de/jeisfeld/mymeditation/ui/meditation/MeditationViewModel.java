@@ -73,16 +73,9 @@ public class MeditationViewModel extends ViewModel {
 		PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_text, meditationText);
 	}
 
-	protected void setPauseDuration(final String pauseDuration) {
-		int pauseDurationInt;
-		try {
-			pauseDurationInt = Integer.parseInt(pauseDuration);
-		}
-		catch (NumberFormatException e) {
-			pauseDurationInt = 0;
-		}
-		mPauseDuration.postValue(pauseDurationInt);
-		PreferenceUtil.setSharedPreferenceInt(R.string.key_pause_duration, pauseDurationInt);
+	protected void setPauseDuration(final int pauseDuration) {
+		mPauseDuration.postValue(pauseDuration);
+		PreferenceUtil.setSharedPreferenceInt(R.string.key_pause_duration, pauseDuration);
 	}
 
 	protected void setSeekBarMax(final int seekBarMax) {

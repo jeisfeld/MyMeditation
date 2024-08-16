@@ -25,5 +25,6 @@
     <string name="title_dialog_save_meditation">Save Meditation</string>
     <string name="text_dialog_save_meditation">Please enter the meditation name</string>
     <string name="toast_meditation_restored">Meditation “%1$s” has been restored</string>
+    <string name="text_pause_duration">%1$ds</string>
 
 </resources>
