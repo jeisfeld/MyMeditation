@@ -6,8 +6,12 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import de.jeisfeld.mymeditation.R;
 import de.jeisfeld.mymeditation.databinding.FragmentConfigurationBinding;
 
 public class ConfigurationFragment extends Fragment {
@@ -21,6 +25,25 @@ public class ConfigurationFragment extends Fragment {
 
 		binding = FragmentConfigurationBinding.inflate(inflater, container, false);
 		View root = binding.getRoot();
+
+		root.post(() -> {
+			WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(requireActivity().getWindow().getDecorView());
+
+			if (insets != null) {
+				Insets systemInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+				View navView = requireActivity().findViewById(R.id.nav_view);
+				int bottomNavHeight = navView.getHeight();
+				int navOnlyHeight = Math.max(0, bottomNavHeight - systemInsets.bottom);
+
+				root.setPadding(
+						systemInsets.left,
+						systemInsets.top + navOnlyHeight,
+						systemInsets.right,
+						systemInsets.bottom + navOnlyHeight
+				);
+			}
+		});
 
 		configurationViewModel.getSystemPrompt().observe(getViewLifecycleOwner(), binding.editTextSystemPrompt::setText);
 		configurationViewModel.getQueryTemplate().observe(getViewLifecycleOwner(), binding.editTextQueryTemplate::setText);

@@ -11,8 +11,10 @@
         android:labelFor="@id/editTextSystemPrompt"
         android:layout_marginStart="@dimen/activity_horizontal_margin"
         android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:layout_marginTop="@dimen/activity_heading_margin"
         android:text="@string/label_system_prompt"
-        android:textSize="@dimen/text_size_content" />
+        android:textSize="@dimen/text_size_content_heading"
+        android:textStyle="bold" />
 
     <EditText
         android:id="@+id/editTextSystemPrompt"
@@ -31,9 +33,11 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/activity_horizontal_margin"
         android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:layout_marginTop="@dimen/activity_heading_margin"
         android:labelFor="@id/editTextQueryTemplate"
         android:text="@string/label_query_template"
-        android:textSize="@dimen/text_size_content" />
+        android:textSize="@dimen/text_size_content_heading"
+        android:textStyle="bold" />
 
     <EditText
         android:id="@+id/editTextQueryTemplate"

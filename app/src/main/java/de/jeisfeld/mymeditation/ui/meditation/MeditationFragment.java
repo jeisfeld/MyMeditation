@@ -21,6 +21,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import androidx.annotation.NonNull;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import de.jeisfeld.mymeditation.Application;
@@ -47,6 +50,25 @@ public class MeditationFragment extends Fragment implements OnInitListener {
 
 		binding = FragmentMeditationBinding.inflate(inflater, container, false);
 		View root = binding.getRoot();
+
+		root.post(() -> {
+			WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(requireActivity().getWindow().getDecorView());
+
+			if (insets != null) {
+				Insets systemInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+				View navView = requireActivity().findViewById(R.id.nav_view);
+				int bottomNavHeight = navView.getHeight();
+				int navOnlyHeight = Math.max(0, bottomNavHeight - systemInsets.bottom);
+
+				root.setPadding(
+						systemInsets.left,
+						systemInsets.top + navOnlyHeight,
+						systemInsets.right,
+						systemInsets.bottom + navOnlyHeight
+				);
+			}
+		});
 
 		meditationViewModel.getMeditationContent().observe(getViewLifecycleOwner(), binding.editTextMeditationContent::setText);
 		meditationViewModel.getMeditationText().observe(getViewLifecycleOwner(), binding.editTextMeditationText::setText);

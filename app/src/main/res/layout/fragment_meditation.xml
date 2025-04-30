@@ -10,9 +10,11 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/activity_horizontal_margin"
         android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:layout_marginTop="@dimen/activity_heading_margin"
         android:labelFor="@id/editTextMeditationContent"
         android:text="@string/label_meditation_content"
-        android:textSize="@dimen/text_size_content" />
+        android:textSize="@dimen/text_size_content_heading"
+        android:textStyle="bold" />
 
     <EditText
         android:id="@+id/editTextMeditationContent"
@@ -39,22 +41,23 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/activity_horizontal_margin"
         android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:layout_marginTop="@dimen/activity_heading_margin"
         android:labelFor="@id/seekBarPauseDuration"
         android:text="@string/label_pause_duration"
         android:textSize="@dimen/text_size_content" />
 
     <LinearLayout
         android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/activity_horizontal_margin"
         android:layout_marginEnd="@dimen/activity_horizontal_margin"
-        android:layout_height="wrap_content"
         android:orientation="horizontal">
 
         <SeekBar
             android:id="@+id/seekBarPauseDuration"
             android:layout_width="0px"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:indeterminate="false"
             android:max="30"
             android:min="1"
@@ -63,8 +66,8 @@
         <TextView
             android:id="@+id/textPauseDuration"
             android:layout_width="30dp"
-            android:textAlignment="viewEnd"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:textAlignment="viewEnd" />
     </LinearLayout>
 
     <TextView
@@ -72,9 +75,11 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/activity_horizontal_margin"
         android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:layout_marginTop="@dimen/activity_heading_margin"
         android:labelFor="@id/editTextMeditationText"
         android:text="@string/label_meditation_text"
-        android:textSize="@dimen/text_size_content" />
+        android:textSize="@dimen/text_size_content_heading"
+        android:textStyle="bold" />
 
     <EditText
         android:id="@+id/editTextMeditationText"

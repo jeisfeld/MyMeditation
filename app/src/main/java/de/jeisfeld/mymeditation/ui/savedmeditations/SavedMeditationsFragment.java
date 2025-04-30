@@ -8,6 +8,9 @@ import android.view.ViewGroup;
 import java.util.ArrayList;
 
 import androidx.annotation.NonNull;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -26,6 +29,25 @@ public class SavedMeditationsFragment extends Fragment {
 							 ViewGroup container, Bundle savedInstanceState) {
 		binding = FragmentSavedMeditationsBinding.inflate(inflater, container, false);
 		View root = binding.getRoot();
+
+		root.post(() -> {
+			WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(requireActivity().getWindow().getDecorView());
+
+			if (insets != null) {
+				Insets systemInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+				View navView = requireActivity().findViewById(R.id.nav_view);
+				int bottomNavHeight = navView.getHeight();
+				int navOnlyHeight = Math.max(0, bottomNavHeight - systemInsets.bottom);
+
+				root.setPadding(
+						systemInsets.left,
+						systemInsets.top + navOnlyHeight,
+						systemInsets.right,
+						systemInsets.bottom + navOnlyHeight
+				);
+			}
+		});
 
 		final RecyclerView recyclerView = binding.recyclerViewSavedMeditations;
 		populateRecyclerView(recyclerView);
