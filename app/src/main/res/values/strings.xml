@@ -27,4 +27,12 @@
     <string name="toast_meditation_restored">Meditation “%1$s” has been restored</string>
     <string name="text_pause_duration">%1$ds</string>
 
+    <string name="ai_settings">AI settings</string>
+    <string name="ai_settings_description">Choose a model ID: claude-… for Claude, gpt-… or an o-series model for OpenAI, gemini-… for Gemini, grok-… for Grok, deepseek-… for DeepSeek, kimi-… for Kimi, or qwen-… / qwen3-… for Qwen. Prompts are sent to that provider and use your API credit.</string>
+    <string name="ai_settings_save">Save</string>
+    <string name="ai_model_hint">AI model ID</string>
+    <string name="ai_model_invalid">Use a Claude, OpenAI, Gemini, Grok, DeepSeek, Kimi or Qwen model ID.</string>
+    <!-- Keep the existing preference value so saved model selections survive this update. -->
+    <string name="key_ai_model" translatable="false">claude_model</string>
+    <string name="default_ai_model" translatable="false">claude-sonnet-4-5</string>
 </resources>

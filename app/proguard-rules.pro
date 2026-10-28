@@ -19,3 +19,13 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+# Optional local credentials are accessed by reflection.
+-keep class de.jeisfeld.mymeditation.http.HttpCredentials {
+    public static final java.lang.String CLAUDE_API_KEY;
+    public static final java.lang.String OPENAI_API_KEY;
+    public static final java.lang.String GEMINI_API_KEY;
+    public static final java.lang.String GROK_API_KEY;
+    public static final java.lang.String DEEPSEEK_API_KEY;
+    public static final java.lang.String KIMI_API_KEY;
+    public static final java.lang.String QWEN_API_KEY;
+}

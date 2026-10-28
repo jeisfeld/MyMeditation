@@ -60,8 +60,37 @@ public class ConfigurationFragment extends Fragment {
 		});
 
 
+        binding.buttonAiSettings.setOnClickListener(v -> showAiSettings());
+
 		return root;
 	}
+
+    private void showAiSettings() {
+        de.jeisfeld.mymeditation.databinding.DialogAiSettingsBinding settings =
+                de.jeisfeld.mymeditation.databinding.DialogAiSettingsBinding.inflate(getLayoutInflater());
+        settings.editTextAiModel.setText(de.jeisfeld.mymeditation.util.PreferenceUtil.getSharedPreferenceString(
+                R.string.key_ai_model, R.string.default_ai_model));
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(R.string.ai_settings)
+                .setView(settings.getRoot())
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.ai_settings_save, null).create();
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(button -> {
+                String model = settings.editTextAiModel.getText().toString().trim();
+                if (model.isEmpty()) { model = getString(R.string.default_ai_model); }
+                try {
+                    de.jeisfeld.mymeditation.http.AiProvider.forModel(model);
+                } catch (IllegalArgumentException e) {
+                    settings.editTextAiModel.setError(getString(R.string.ai_model_invalid));
+                    return;
+                }
+                de.jeisfeld.mymeditation.util.PreferenceUtil.setSharedPreferenceString(R.string.key_ai_model, model);
+                dialog.dismiss();
+            });
+        });
+        dialog.show();
+    }
 
 	@Override
 	public void onDestroyView() {

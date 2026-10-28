@@ -15,3 +15,12 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Local work and credentials
+/work/
+.env
+.env.*
+*.key
+
+# Developer-owned provider keys (never commit this class)
+/app/src/main/java/de/jeisfeld/mymeditation/http/HttpCredentials.java

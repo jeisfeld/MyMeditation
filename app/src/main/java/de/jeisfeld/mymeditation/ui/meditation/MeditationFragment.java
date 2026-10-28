@@ -8,7 +8,6 @@ import android.os.Handler;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.TextToSpeech.OnInitListener;
 import android.speech.tts.UtteranceProgressListener;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,10 +25,9 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
-import de.jeisfeld.mymeditation.Application;
 import de.jeisfeld.mymeditation.R;
 import de.jeisfeld.mymeditation.databinding.FragmentMeditationBinding;
-import de.jeisfeld.mymeditation.http.HttpSender;
+import de.jeisfeld.mymeditation.http.AiClient;
 import de.jeisfeld.mymeditation.util.Logger;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
 
@@ -93,26 +91,25 @@ public class MeditationFragment extends Fragment implements OnInitListener {
 			stopAudio();
 			String systemMessage = PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt);
 			String queryTemplate = PreferenceUtil.getSharedPreferenceString(R.string.key_query_template);
-			String userMessage = queryTemplate.replace("@TEXT@", meditationViewModel.getMeditationContent().getValue());
+			String userMessage = (queryTemplate == null ? "@TEXT@" : queryTemplate).replace("@TEXT@", meditationViewModel.getMeditationContent().getValue());
 			String oldMeditation = meditationViewModel.getMeditationText().getValue();
 			meditationViewModel.setMeditationText(getString(R.string.text_creating_meditation));
-			new HttpSender(getActivity()).sendMessage("openai/queryopenai.php", (response, responseData) -> {
-				Logger.log(response);
-				if (responseData.isSuccess()) {
-					String meditationText = (String) responseData.getData().get("message");
-					if (meditationText == null) {
-						meditationText = "";
-					}
-					meditationViewModel.setMeditationText(meditationText);
-					sentences = splitIntoIndividualSentences(meditationText);
-					meditationViewModel.setSeekBarMax(sentences.size() - 1);
-					meditationViewModel.setSeekBarProgress(0);
-				}
-				else {
-					Log.e(Application.TAG, "Failed to retrieve data from OpenAI - " + responseData.getErrorMessage());
-					meditationViewModel.setMeditationText(oldMeditation);
-				}
-			}, userMessage, systemMessage);
+            binding.buttonCreateMeditation.setEnabled(false);
+            String model = PreferenceUtil.getSharedPreferenceString(R.string.key_ai_model, R.string.default_ai_model);
+            AiClient.create(model, systemMessage, userMessage, (text, error) -> {
+                meditationViewModel.setMeditationText(error == null ? text : oldMeditation);
+                if (binding == null) { return; }
+                binding.buttonCreateMeditation.setEnabled(true);
+                if (error == null) {
+                    sentences = splitIntoIndividualSentences(text);
+                    meditationViewModel.setSeekBarMax(Math.max(0, sentences.size() - 1));
+                    meditationViewModel.setSeekBarProgress(0);
+                } else {
+                    new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                            .setTitle("Create Meditation").setMessage(error)
+                            .setPositiveButton(android.R.string.ok, null).show();
+                }
+            });
 		});
 
 		binding.buttonSpeakMeditation.setOnClickListener(v -> {
