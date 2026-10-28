@@ -28,4 +28,5 @@
     public static final java.lang.String DEEPSEEK_API_KEY;
     public static final java.lang.String KIMI_API_KEY;
     public static final java.lang.String QWEN_API_KEY;
+    public static final java.lang.String ELEVENLABS_API_KEY;
 }

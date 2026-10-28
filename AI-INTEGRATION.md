@@ -1,6 +1,6 @@
 # Meditation AI integration
 
-Create Meditation calls the selected provider directly over HTTPS. Configure its native model ID in **Configuration → AI settings**. Existing prompts, the `@TEXT@` query template, and saved model selection are retained. Speak Meditation still uses Android TTS.
+Create Meditation calls the selected provider directly over HTTPS. Configure its native model ID in **Configuration → AI settings**. Existing prompts, the `@TEXT@` query template, and saved model selection are retained. Speak Meditation supports device TTS or OpenAI speech.
 
 ## Local API keys
 
@@ -40,10 +40,67 @@ Enter a text generation model available to your API account; a recognized prefix
 
 Kimi uses the international Moonshot endpoint (`api.moonshot.ai`). Qwen uses Alibaba Model Studio's international DashScope endpoint (`dashscope-intl.aliyuncs.com`, Singapore); use keys and models provisioned for that region, rather than China or US regional credentials. DeepSeek uses `api.deepseek.com`. These are direct provider services, not third-party aggregators. Qwen requests disable thinking mode to support non-streaming meditation generation. DeepSeek and Kimi reasoning fields are ignored; only the final answer is used.
 
-System and user prompts are sent only to the selected provider. Requests use its own key and fixed HTTPS endpoint, with redirects disabled. Failed, incomplete, blocked, or empty responses preserve the previous meditation. Provider response bodies and keys are not logged. Reasoning/thought blocks are excluded from the meditation. Requests are not automatically retried.
+System and user prompts are sent only to the selected provider. Requests use its own key and fixed HTTPS endpoint, with redirects disabled. Failed, incomplete, blocked, or empty responses preserve the previous meditation. Provider response bodies and keys are not logged. Reasoning/thought blocks are excluded from the meditation. Text-generation requests are not automatically retried; speech retries are described below.
 
 ## Verification
 
 `bash gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest`
 
 Protocol tests cover routing, provider request formats, system prompts, text extraction, reasoning exclusion, and incomplete/blocked/refused responses. On a device, verify real requests for each configured provider, missing keys, unavailable models, network failures, and switching models. No real API keys are needed to build or run protocol tests.
+
+## OpenAI voice output
+
+In **Configuration → AI settings**, choose **Device text-to-speech** (the default) or **OpenAI speech**. Text generation and speech models are independent: for example, Claude can create the meditation and OpenAI can speak it. OpenAI speech reuses `HttpCredentials.OPENAI_API_KEY`; no additional secret or in-app key entry is needed.
+
+OpenAI defaults to `gpt-4o-mini-tts` with voice `coral`, a calm meditation instruction, and adjustable speed (default 1.0, normal pace). The model field also accepts dated `gpt-4o-mini-tts` variants, `tts-1`, and `tts-1-hd`. Legacy `tts-1` models require alloy, echo, fable, onyx, nova, or shimmer and omit the unsupported instructions parameter. Choose another built-in voice from the dialog. The dialog explicitly labels these voices as AI-generated.
+
+Audio is generated per sentence via `https://api.openai.com/v1/audio/speech`. Existing pause duration, pause/resume from the current sentence, and sentence seeking apply to both engines. Long sentences are divided into segments of at most 3500 UTF-16 characters. The next sentence is prefetched during playback; therefore a cancelled session can still incur charges for a request already submitted. Temporary network failures, HTTP 408/429 and selected 5xx responses get up to three total attempts with 1s/2s backoff and Retry-After handling (waits capped at 30s). Authentication, invalid models/voices, and other permanent request errors fail immediately. Pausing cancels retries, including backoff waits. There is no silent fallback to another engine. A request that succeeds at OpenAI but loses its response may be billed again when retried. First playback needs connectivity and API credit. If generation falls behind playback, a network wait can extend the selected pause.
+
+Completed MP3 segments are cached privately in the app's disposable cache, keyed by text, model, voice, instructions, format and speed. Replaying unchanged segments uses the cache without a new API request. Completed audio is bounded to approximately 50 MiB (temporary downloads are additional and each limited to 20 MiB), excluded from Android backup as cache data, and may be cleared by Android or via the app's cache settings. It contains the spoken meditation, so treat the device accordingly. Changing text, voice or speech model generates new audio. Incomplete downloads never become cache entries.
+
+Pausing, seeking, audio focus loss, and destroying the meditation view stop playback and invalidate late network/media/TTS callbacks. Audio resources and downloads are released when the view is destroyed. Headless/background service playback is not added in this change.
+
+Speech tests cover request compatibility, cache identity and offline reuse, cancellation, and sentence segmentation (including trailing text and long input). The playback and API classes are also compiled against Android API 36. An isolated copy of the complete app also builds and passes lint with the cached SDK 36 / Android Gradle plugin 8.13.0 and matching older AndroidX dependencies; the actual project remains on SDK 37 and its current dependencies. Full application build/lint requires the project's Android Gradle plugin 9.4.1 and SDK 37; this workspace does not have that toolchain. Device validation should include both engines, voice changes, airplane mode with cached/uncached sentences, missing keys, seeking while downloading, pausing during silence/audio, phone-call audio focus loss, and navigating away before a response arrives.
+
+### Speech pace, delivery and voice choice
+
+AI settings now exposes **Speech speed** (`0.25`–`4.0`, default `1.0`) and **Voice instructions**. Try `1.1` or `1.2` if normal pace is still slow. The old built-in instruction to speak slowly is removed. Example style: “Use a feminine voice, warm and sensual, with clear articulation and a steady natural pace,” or “Firm, confident and commanding, with crisp articulation; avoid a theatrical delivery.” The model follows delivery hints approximately, so audition them in the meditation language. Voice instructions apply only to the gpt-4o-mini-tts family; tts-1/tts-1-hd ignore them. Changing speed or effective instructions changes the audio cache identity.
+
+All 13 currently listed OpenAI built-in voices are already available. Perceived gender varies; coral, nova, shimmer, sage and marin are useful candidates for a feminine delivery. Voices do not have an official gender selector. See OpenAI's [voice previews and guide](https://developers.openai.com/api/docs/guides/text-to-speech#voice-options).
+
+The official OpenAI SDK lists `gpt-4o-mini-tts-2025-12-15` as an additional dated snapshot; the model field accepts it already. A dated snapshot is not a guarantee of better sound than the alias. `tts-1-hd` is an older alternative worth comparing (use a compatible voice such as nova), but it lacks style instructions. Gemini TTS and Qwen TTS are now integrated as described below. ElevenLabs is also available as described below and requires its own account/API key. OpenAI model availability and lifecycle can change; check the current provider documentation before selecting a model for long-term use.
+
+## Gemini and Qwen voice output
+
+AI settings now offers Device TTS, OpenAI speech, Gemini speech and Qwen TTS (international). Model and voice selections are kept separately for each provider, including the existing OpenAI selection. Speed and style preferences are shared. Device TTS remains the default.
+
+- **Gemini:** uses `HttpCredentials.GEMINI_API_KEY`, with `gemini-2.5-flash-preview-tts` and `Kore` by default. `gemini-2.5-pro-preview-tts` is another model to compare. This integration uses the Gemini 2.5 native generateContent speech API, not the newer Gemini 3.x Interactions API. The selected Google API account must have access to the model. A curated voice list includes Kore, Aoede, Leda, Zephyr, Sulafat, Puck, Charon, Fenrir, Orus and Gacrux. Delivery instructions are included in the speech prompt. Returned mono PCM is converted to a WAV container for Android playback; the sample rate is taken from the response.
+- **Qwen:** uses `HttpCredentials.QWEN_API_KEY`, default model `qwen3-tts-flash`, voice `Cherry`, through DashScope's international Singapore endpoint. Other available voices include Serena, Chelsie and Ethan. Model availability, voice support and languages depend on the provider/region. Use hosted Qwen TTS model IDs, not Qwen-Audio understanding models, self-hosted model names or realtime WebSocket models. For model-supported instruction delivery, select an instruct model such as `qwen3-tts-instruct-flash`; standard Qwen TTS models ignore the style field. The generated audio URL must be an Alibaba storage URL; known HTTP OSS links are upgraded to HTTPS before downloading; provider authorization is never forwarded to that storage download, and redirects are disabled.
+
+For Gemini and Qwen, the speed setting adjusts Android playback speed with pitch preserved; OpenAI continues using its API speed parameter. Changing local speed reuses cached native-provider audio. Gemini/Qwen caches are separate from the existing OpenAI cache and share an additional bounded native-audio cache. Qwen segments are limited to 500 characters, Gemini to 1500, so provider text limits do not receive arbitrarily long sentences. Sentence controls operate on these smaller segments where necessary. Generation, playback and cache reuse follow the same pause/seek/cancellation flow and bounded retry policy.
+
+No additional keys are needed if your existing Gemini and international Qwen credentials already have speech model access. These accounts can bill speech separately from text generation. There is no live API validation without your credentials: validate model access, voice names and delivery on the device. ElevenLabs requires a separate ElevenLabs API key with speech access; a free or paid plan may be suitable depending on current model access, quotas and intended usage.
+
+## Gemini reliability, Qwen storage links, and ElevenLabs
+
+Gemini empty candidates, empty audio and transient incomplete-generation finishes now use the existing bounded three-attempt retry policy. Explicit safety/policy blocks are not retried. Gemini generation calls are serialized across player instances so prefetch does not issue simultaneous requests to a quota-limited speech model. PCM and valid WAV responses are supported. If an error persists, the exact message helps distinguish model restrictions, quota and playback failures.
+
+Qwen links on recognized `*.aliyuncs.com` storage hosts may arrive with an HTTP scheme. These are upgraded to HTTPS while preserving the signed path/query; no unencrypted download is made. Other hostnames remain rejected, and the error now shows only protocol and hostname to aid diagnosis, without revealing signed URL tokens. This addresses the likely source of the reported unsupported-address failure; other hosts need to be checked against an actual returned hostname.
+
+For ElevenLabs, add this constant inside your local, Git-ignored `HttpCredentials` and rebuild:
+
+```java
+public static final String ELEVENLABS_API_KEY = "your-elevenlabs-api-key";
+```
+
+Select **ElevenLabs speech** in AI settings and paste a **voice ID** from your ElevenLabs Voices page into the voice field. Use the ID, not a voice's display name. There is no preset ID: access to public, library and personal voices depends on the account. Default model: `eleven_multilingual_v2`; models such as `eleven_v3` or `eleven_flash_v2_5` can also be selected if available to the account. The key needs Text-to-Speech permission and sufficient credit/quota. A free or paid plan may be appropriate depending on provider limits and licensing requirements.
+
+ElevenLabs uses the native `/v1/text-to-speech/{voice_id}` endpoint with `xi-api-key` authentication and MP3 output. It shares native-provider caching, cancellation, retries and local pitch-preserving speed control. Cache identity includes the ElevenLabs voice ID as well as text, model and voice settings. The free-text delivery-instructions field is intentionally not prepended to the spoken text or sent as an unsupported API parameter. For expressive v3 delivery, model-supported audio tags may be included in the meditation itself; other models may read those tags aloud. ElevenLabs live calls require the user's account and have not been tested here.
+
+## Named ElevenLabs voices and speed profiles
+
+In AI settings, select ElevenLabs and press **Add voice**. Enter a friendly name and paste the voice ID once. The voice dropdown then displays the saved name. **Rename voice** updates the selected voice's name without changing its ID, cached audio or speed. Adding the same ID updates its name; different IDs cannot share the same name. An existing manually entered ID is carried over as “Saved voice 1” (or another available numbered name). Press the main AI settings **Save** button to persist additions, renames and speed changes; cancelling the main dialog discards these edits.
+
+Speech speed is remembered per provider and voice ID for every cloud provider. Switching between voices or providers restores that voice's last saved speed. Renaming an ElevenLabs voice preserves its speed because the identity uses its ID, not its friendly name. New voices start at 1.0. The currently selected voice inherits the previous global speed during the first migration, so the current setup is preserved. Model selection does not reset voice speed. Playback reads the selected voice's speed profile; device TTS behavior is unchanged.
+
+Names, IDs and speed profiles are stored in normal app preferences and participate in the existing preference export. They contain no API keys. Voice availability still depends on the ElevenLabs account; the local library does not automatically fetch the account's voice catalogue.

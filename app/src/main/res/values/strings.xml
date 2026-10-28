@@ -35,4 +35,36 @@
     <!-- Keep the existing preference value so saved model selections survive this update. -->
     <string name="key_ai_model" translatable="false">claude_model</string>
     <string name="default_ai_model" translatable="false">claude-sonnet-4-5</string>
+    <string name="speech_output_label">Voice output</string>
+    <string name="speech_model_label">Speech model</string>
+    <string name="speech_voice_label">Voice</string>
+    <string name="speech_notice">These voices are AI-generated. Uncached sentences are sent to the selected provider and billed to your API account.</string>
+    <string name="key_speech_backend" translatable="false">speech_backend</string>
+    <string name="default_speech_backend" translatable="false">device</string>
+    <string name="key_speech_model" translatable="false">speech_model</string>
+    <string name="default_speech_model" translatable="false">gpt-4o-mini-tts</string>
+    <string name="key_speech_voice" translatable="false">speech_voice</string>
+    <string name="default_speech_voice" translatable="false">coral</string>
+    <string-array name="speech_backend_options">
+        <item>Device text-to-speech</item>
+        <item>OpenAI speech</item>
+        <item>Gemini speech</item>
+        <item>Qwen TTS (international)</item>
+        <item>ElevenLabs speech</item>
+    </string-array>
+    <string name="speech_speed_label">Speech speed (0.25–4.0; 1.0 is normal)</string>
+    <string name="speech_style_label">Voice instructions</string>
+    <string name="speech_style_hint">For example: warm and sensual, or firm and commanding. Use a natural pace.</string>
+    <string name="speech_style_note">Instructions work with Gemini and gpt-4o-mini-tts. For Qwen, select an instruct TTS model to use them; standard Qwen and tts-1 models ignore them. Gemini, Qwen and ElevenLabs speed is adjusted locally. ElevenLabs ignores this instructions field; eleven_v3 can use audio tags in the meditation text.</string>
+    <string name="speech_voice_hint">For a feminine sound, try OpenAI coral/nova, Gemini Kore/Aoede/Leda, or Qwen Cherry/Serena/Chelsie. Voice character varies with language.</string>
+    <string name="key_speech_speed" translatable="false">speech_speed</string>
+    <string name="default_speech_speed" translatable="false">1.0</string>
+    <string name="key_speech_style" translatable="false">speech_style</string>
+    <string name="default_speech_style">Speak naturally as a meditation guide, with a warm, clear tone.</string>
+    <string name="elevenlabs_voice_id_hint">ElevenLabs voice ID (copy from your Voices page)</string>
+    <string name="add_saved_voice">Add voice</string>
+    <string name="rename_saved_voice">Rename voice</string>
+    <string name="saved_voice_name">Voice name</string>
+    <string name="add_voice_first">Use Add voice to save an ElevenLabs voice with its name and ID first.</string>
+    <string name="button_rename_voice">Rename</string>
 </resources>

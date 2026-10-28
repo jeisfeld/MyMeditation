@@ -14,16 +14,6 @@ public final class AiClient {
     public interface Callback { void complete(String text, String error); }
     private AiClient() { }
 
-    private static String getLocalApiKey(AiProvider provider) throws ReflectiveOperationException {
-        try {
-            Object value = Class.forName("de.jeisfeld.mymeditation.http.HttpCredentials")
-                    .getField(provider.keyField).get(null);
-            return value instanceof String ? ((String) value).trim() : "";
-        } catch (ClassNotFoundException | NoSuchFieldException e) {
-            return "";
-        }
-    }
-
     public static void create(String model, String system, String prompt, Callback callback) {
         new Thread(() -> {
             HttpsURLConnection connection = null;
@@ -32,7 +22,7 @@ public final class AiClient {
             try {
                 String modelId = model == null ? "" : model.trim();
                 AiProvider provider = AiProvider.forModel(modelId);
-                String apiKey = getLocalApiKey(provider);
+                String apiKey = LocalCredentials.read(provider.keyField);
                 if (apiKey.isEmpty()) {
                     throw new IllegalStateException("Set HttpCredentials." + provider.keyField + " in your local credentials file, then rebuild the app.");
                 }

@@ -38,6 +38,15 @@ public final class PreferenceUtil {
 		return PreferenceManager.getDefaultSharedPreferences(Application.getAppContext());
 	}
 
+    /** Named provider-specific preferences, without adding a resource for every backend. */
+    public static String getSharedPreferenceString(String key, String defaultValue) {
+        return getSharedPreferences().getString(key, defaultValue);
+    }
+
+    public static void setSharedPreferenceString(String key, String value) {
+        getSharedPreferences().edit().putString(key, value).apply();
+    }
+
 	/**
 	 * Retrieve a String shared preference.
 	 *

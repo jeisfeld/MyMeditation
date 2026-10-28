@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+<LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -25,4 +28,112 @@
         android:inputType="textNoSuggestions"
         android:singleLine="true" />
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/activity_vertical_margin"
+        android:labelFor="@id/spinnerSpeechBackend"
+        android:text="@string/speech_output_label" />
+    <Spinner
+        android:id="@+id/spinnerSpeechBackend"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:entries="@array/speech_backend_options" />
+    <LinearLayout
+        android:id="@+id/openAiSpeechSettings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/speech_notice" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/activity_heading_margin"
+            android:labelFor="@id/editTextSpeechModel"
+            android:text="@string/speech_model_label" />
+        <EditText
+            android:id="@+id/editTextSpeechModel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textNoSuggestions"
+            android:importantForAutofill="no"
+            android:singleLine="true" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:labelFor="@id/spinnerSpeechVoice"
+            android:text="@string/speech_voice_label" />
+        <Spinner
+            android:id="@+id/spinnerSpeechVoice"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+        <LinearLayout
+            android:id="@+id/elevenVoiceButtons"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:visibility="gone">
+            <Button
+                android:id="@+id/buttonAddVoice"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="@dimen/activity_heading_margin"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:singleLine="true"
+                android:textAllCaps="false"
+                android:text="@string/add_saved_voice" />
+            <Button
+                android:id="@+id/buttonRenameVoice"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:singleLine="true"
+                android:textAllCaps="false"
+                android:text="@string/button_rename_voice" />
+        </LinearLayout>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/speech_voice_hint" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/activity_heading_margin"
+            android:labelFor="@id/editTextSpeechSpeed"
+            android:text="@string/speech_speed_label" />
+        <EditText
+            android:id="@+id/editTextSpeechSpeed"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal"
+            android:importantForAutofill="no"
+            android:singleLine="true" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/activity_heading_margin"
+            android:labelFor="@id/editTextSpeechStyle"
+            android:text="@string/speech_style_label" />
+        <EditText
+            android:id="@+id/editTextSpeechStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/speech_style_hint"
+            android:inputType="textMultiLine|textCapSentences"
+            android:importantForAutofill="no"
+            android:minLines="2"
+            android:gravity="top" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/speech_style_note" />
+    </LinearLayout>
 </LinearLayout>
+</ScrollView>
