@@ -71,4 +71,36 @@ public class SpeechRetryTest {
         assertEquals(0, SpeechRetry.retryAfter(null));
     }
 
+    @Test public void unlimitedRetriesSurviveManyFailuresWithBoundedBackoff() throws Exception {
+        int[] attempts = {0};
+        java.util.List<Long> delays = new java.util.ArrayList<>();
+        String result = SpeechRetry.untilCancelled(() -> {
+            if (++attempts[0] <= 12) { throw new java.net.SocketTimeoutException(); }
+            return "audio";
+        }, () -> { }, ms -> { }, (attempt, delay) -> delays.add(delay));
+        assertEquals("audio", result);
+        assertEquals(13, attempts[0]);
+        assertEquals(12, delays.size());
+        assertEquals(Long.valueOf(1000), delays.get(0));
+        assertEquals(Long.valueOf(30000), delays.get(11));
+        for (long delay : delays) { assertTrue(delay <= 30000); }
+    }
+
+    @Test public void unlimitedRetriesStillStopOnCancellationOrPermanentErrors() {
+        int[] attempts = {0};
+        boolean[] cancelled = {false};
+        assertThrows(CancellationException.class, () -> SpeechRetry.untilCancelled(() -> {
+            attempts[0]++;
+            throw new IOException("offline");
+        }, () -> { if (cancelled[0]) { throw new CancellationException(); } }, ms -> { },
+                (attempt, delay) -> { if (attempt == 8) { cancelled[0] = true; } }));
+        assertEquals(8, attempts[0]);
+        int[] permanent = {0};
+        assertThrows(IllegalStateException.class, () -> SpeechRetry.untilCancelled(() -> {
+            permanent[0]++;
+            throw new SpeechRetry.HttpFailure(401, 0);
+        }, () -> { }, ms -> fail("Should not wait"), (attempt, delay) -> fail("Should not retry")));
+        assertEquals(1, permanent[0]);
+    }
+
 }

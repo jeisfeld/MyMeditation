@@ -45,6 +45,12 @@ public class MeditationFragment extends Fragment {
                 new MeditationSpeechPlayer.Listener() {
                     @Override public void onSentence(int index) { meditationViewModel.setSeekBarProgress(index); }
                     @Override public void onRunning(boolean running) { meditationViewModel.setMeditationRunning(running); }
+                    @Override public void onStatus(String status) {
+                        if (binding != null) {
+                            binding.textSpeechStatus.setText(status);
+                            binding.textSpeechStatus.setVisibility(status.isEmpty() ? View.GONE : View.VISIBLE);
+                        }
+                    }
                     @Override public void onError(String error) {
                         if (binding != null) {
                             new AlertDialog.Builder(requireContext())

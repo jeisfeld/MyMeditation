@@ -26,6 +26,7 @@ public final class MeditationSpeechPlayer {
         void onSentence(int index);
         void onRunning(boolean running);
         void onError(String error);
+        default void onStatus(String status) { }
     }
     private final Context context;
     private final Listener listener;
@@ -50,6 +51,7 @@ public final class MeditationSpeechPlayer {
     private static final class Download {
         final CloudSpeech request = new CloudSpeech();
         CompletableFuture<File> result;
+        String waiting = "";
     }
 
     public MeditationSpeechPlayer(Context context, Listener listener) {
@@ -104,6 +106,13 @@ public final class MeditationSpeechPlayer {
         if (job == null) {
             job = new Download();
             final Download current = job;
+            final int token = session;
+            current.request.setRetryListener((attempt, delay) -> handler.post(() -> {
+                if (!valid(token)) { return; }
+                current.waiting = "ElevenLabs temporarily unavailable. Retrying in " + (delay / 1000)
+                        + " s (retry " + attempt + "). Pause to stop.";
+                if (index == position) { listener.onStatus(current.waiting); }
+            }));
             final String text = sentences.get(position);
             final SpeechBackend speechBackend = backend;
             final String speechModel = model;
@@ -111,7 +120,7 @@ public final class MeditationSpeechPlayer {
             final double speechSpeed = speed;
             final String speechStyle = style;
             job.result = CompletableFuture.supplyAsync(() -> {
-                try { return current.request.audio(context.getCacheDir(), speechBackend, speechModel, speechVoice, text, speechSpeed, speechStyle); }
+                try { return current.request.audioWithPersistentCache(context.getCacheDir(), context.getNoBackupFilesDir(), speechBackend, speechModel, speechVoice, text, speechSpeed, speechStyle); }
                 catch (Exception e) { throw new java.util.concurrent.CompletionException(e); }
             }, executor);
             downloads.put(position, job);
@@ -125,7 +134,9 @@ public final class MeditationSpeechPlayer {
         if (backend != SpeechBackend.DEVICE) {
             final int position = index;
             Download job = download(position);
-            if (position + 1 < sentences.size()) { download(position + 1); }
+            listener.onStatus(job.waiting);
+            int ahead = backend == SpeechBackend.ELEVENLABS ? 3 : 1;
+            for (int next = position + 1; next < Math.min(sentences.size(), position + ahead + 1); next++) { download(next); }
             job.result.whenComplete((file, error) -> handler.post(() -> {
                 if (!valid(token) || index != position) { return; }
                 if (error != null) {
@@ -137,6 +148,7 @@ public final class MeditationSpeechPlayer {
                             ? reported.getMessage() : "Could not generate speech. Check your connection and try again.");
                     return;
                 }
+                listener.onStatus("");
                 waitSilently(first ? 500 : pauseMs, token, () -> play(file, token));
             }));
         } else {
@@ -227,6 +239,7 @@ public final class MeditationSpeechPlayer {
             ((android.media.AudioManager) context.getSystemService(Context.AUDIO_SERVICE)).abandonAudioFocusRequest(focus);
             focus = null;
         }
+        listener.onStatus("");
         listener.onRunning(false);
     }
 

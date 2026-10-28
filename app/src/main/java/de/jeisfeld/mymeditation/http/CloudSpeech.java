@@ -13,6 +13,38 @@ import org.json.JSONObject;
 /** Cancellable native speech generation; Qwen audio downloads never receive the provider key. */
 public final class CloudSpeech {
     private static final java.util.concurrent.Semaphore GEMINI_GATE = new java.util.concurrent.Semaphore(1, true);
+    private static final java.util.concurrent.Semaphore ELEVEN_GATE = new java.util.concurrent.Semaphore(1, true);
+    private java.util.function.BiConsumer<Integer, Long> retryListener = (attempt, delay) -> { };
+    public void setRetryListener(java.util.function.BiConsumer<Integer, Long> listener) { retryListener = listener; }
+
+    /** Retain paid ElevenLabs audio outside Android's disposable cache, reusing old cached files. */
+    public File audioWithPersistentCache(File cache, File durable, SpeechBackend backend, String model, String voice,
+            String text, double speed, String style) throws Exception {
+        check();
+        if (backend != SpeechBackend.ELEVENLABS) { return audio(cache, backend, model, voice, text, speed, style); }
+        String name = NativeSpeechProtocol.cacheName(backend, model, voice, text, style);
+        File destination = new File(durable, "native-speech/" + name);
+        File previous = new File(cache, "native-speech/" + name);
+        if (!destination.exists() && previous.isFile() && previous.length() > 0 && previous.length() <= 20 * 1024 * 1024) {
+            File folder = destination.getParentFile();
+            if (folder.isDirectory() || folder.mkdirs()) {
+                File temporary = File.createTempFile("migrate-", ".tmp", folder);
+                try {
+                    Files.copy(previous.toPath(), temporary.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    check();
+                    synchronized (CloudSpeech.class) {
+                        trim(folder, 236L * 1024 * 1024);
+                        check();
+                        Files.move(temporary.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    }
+                } catch (java.io.IOException ignored) { /* Existing cache remains usable if migration fails. */ }
+                finally { temporary.delete(); }
+            }
+            if (!destination.exists()) { return audio(cache, backend, model, voice, text, speed, style); }
+        }
+        return audio(durable, backend, model, voice, text, speed, style);
+    }
+
     private final OpenAiSpeech openai = new OpenAiSpeech();
     private volatile HttpsURLConnection connection;
     private volatile boolean cancelled;
@@ -20,19 +52,24 @@ public final class CloudSpeech {
     private void check() { if (cancelled || Thread.currentThread().isInterrupted()) { throw new CancellationException(); } }
     public File audio(File root, SpeechBackend backend, String model, String voice, String text, double speed, String style) throws Exception {
         if (backend == SpeechBackend.OPENAI) { return openai.audio(root, model, voice, text, speed, style); }
-        return SpeechRetry.run(() -> {
+        SpeechRetry.Operation<File> operation = () -> {
             boolean acquired = false;
+            java.util.concurrent.Semaphore gate = backend == SpeechBackend.GEMINI ? GEMINI_GATE
+                    : backend == SpeechBackend.ELEVENLABS ? ELEVEN_GATE : null;
             try {
-                if (backend == SpeechBackend.GEMINI) {
-                    while (!GEMINI_GATE.tryAcquire(100, java.util.concurrent.TimeUnit.MILLISECONDS)) { check(); }
+                if (gate != null) {
+                    while (!gate.tryAcquire(100, java.util.concurrent.TimeUnit.MILLISECONDS)) { check(); }
                     acquired = true;
                 }
                 return attempt(root, backend, model, voice, text, style);
             } catch (org.json.JSONException e) {
                 if (backend == SpeechBackend.GEMINI) { throw new SpeechRetry.TransientGenerationFailure("Gemini returned malformed speech data."); }
                 throw e;
-            } finally { if (acquired) { GEMINI_GATE.release(); } }
-        }, this::check, Thread::sleep);
+            } finally { if (acquired) { gate.release(); } }
+        };
+        return backend == SpeechBackend.ELEVENLABS
+                ? SpeechRetry.untilCancelled(operation, this::check, Thread::sleep, retryListener)
+                : SpeechRetry.run(operation, this::check, Thread::sleep);
     }
     private File attempt(File root, SpeechBackend backend, String model, String voice, String text, String style) throws Exception {
         check();
@@ -58,7 +95,9 @@ public final class CloudSpeech {
             byte[] audio;
             if (backend == SpeechBackend.ELEVENLABS) {
                 requireAudio(connection, "ElevenLabs");
+                long expected = connection.getContentLengthLong();
                 audio = read(connection.getInputStream(), 20 * 1024 * 1024);
+                if (expected > 0 && audio.length != expected) { throw new java.io.EOFException("Incomplete ElevenLabs audio download."); }
             } else {
                 byte[] json = read(connection.getInputStream(), 32 * 1024 * 1024);
                 JSONObject response = new JSONObject(new String(json, StandardCharsets.UTF_8));
@@ -73,17 +112,12 @@ public final class CloudSpeech {
                 }
             }
             check();
-            if (audio.length == 0) { throw new IllegalStateException("Provider returned empty audio."); }
+            if (audio.length == 0) { throw new SpeechRetry.TransientGenerationFailure("Provider returned empty audio."); }
             temporary = File.createTempFile("speech-", ".tmp", directory);
             Files.write(temporary.toPath(), audio);
             synchronized (CloudSpeech.class) {
                 check();
-                File[] files = directory.listFiles((d, n) -> n.endsWith(".audio"));
-                if (files != null) {
-                    java.util.Arrays.sort(files, java.util.Comparator.comparingLong(File::lastModified));
-                    long size = 0; for (File file : files) { size += file.length(); }
-                    for (File file : files) { if (size <= 30 * 1024 * 1024) { break; } long length = file.length(); if (file.delete()) { size -= length; } }
-                }
+                trim(directory, (backend == SpeechBackend.ELEVENLABS ? 236L : 30L) * 1024 * 1024);
                 Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
             }
             return target;
@@ -92,9 +126,21 @@ public final class CloudSpeech {
             HttpsURLConnection current = connection; connection = null; if (current != null) { current.disconnect(); }
         }
     }
-    private static void requireAudio(HttpsURLConnection connection, String provider) {
+    private static void trim(File directory, long limit) {
+        File[] files = directory.listFiles((d, n) -> n.endsWith(".audio"));
+        if (files == null) { return; }
+        java.util.Arrays.sort(files, java.util.Comparator.comparingLong(File::lastModified));
+        long size = 0;
+        for (File file : files) { size += file.length(); }
+        for (File file : files) {
+            if (size <= limit) { break; }
+            long length = file.length(); if (file.delete()) { size -= length; }
+        }
+    }
+    private static void requireAudio(HttpsURLConnection connection, String provider) throws java.io.IOException {
         String type = connection.getContentType();
         if (type == null || !(type.startsWith("audio/") || type.startsWith("application/octet-stream"))) {
+            if ("ElevenLabs".equals(provider)) { throw new SpeechRetry.TransientGenerationFailure("ElevenLabs returned a non-audio response."); }
             throw new IllegalStateException(provider + " returned a non-audio response.");
         }
     }

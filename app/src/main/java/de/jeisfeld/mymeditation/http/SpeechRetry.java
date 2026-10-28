@@ -26,7 +26,17 @@ final class SpeechRetry {
     private SpeechRetry() { }
 
     static <T> T run(Operation<T> operation, Cancellation cancellation, Wait wait) throws Exception {
-        for (int attempt = 0; ; attempt++) {
+        return run(operation, cancellation, wait, false, (attempt, delay) -> { });
+    }
+
+    static <T> T untilCancelled(Operation<T> operation, Cancellation cancellation, Wait wait,
+            java.util.function.BiConsumer<Integer, Long> progress) throws Exception {
+        return run(operation, cancellation, wait, true, progress);
+    }
+
+    private static <T> T run(Operation<T> operation, Cancellation cancellation, Wait wait, boolean unlimited,
+            java.util.function.BiConsumer<Integer, Long> progress) throws Exception {
+        for (int attempt = 0; ; attempt = Math.min(attempt + 1, 1000000)) {
             cancellation.check();
             try { return operation.run(); }
             catch (Exception failure) {
@@ -35,14 +45,15 @@ final class SpeechRetry {
                     if (failure instanceof HttpFailure) { throw new IllegalStateException(failure.getMessage()); }
                     throw failure;
                 }
-                if (attempt >= 2) {
+                if (!unlimited && attempt >= 2) {
                     throw new IllegalStateException("Speech service failed after 3 attempts. "
                             + (failure instanceof HttpFailure ? failure.getMessage() : "Check your connection and try again."), failure);
                 }
-                long delay = 1000L << attempt;
+                long delay = Math.min(30000, 1000L << Math.min(attempt, 5));
                 if (failure instanceof HttpFailure) {
                     delay = Math.max(delay, ((HttpFailure) failure).retryAfterMs);
                 }
+                progress.accept(attempt + 1, Math.min(delay, 30000));
                 // Check cancellation during backoff rather than waiting for the entire delay.
                 for (long remaining = Math.min(delay, 30000); remaining > 0; remaining -= 100) {
                     cancellation.check();

@@ -122,4 +122,35 @@ public class NativeSpeechTest {
         assertThrows(IllegalStateException.class, () -> NativeSpeechProtocol.geminiAudio(safety));
     }
 
+    @Test public void elevenLabsMigratesPaidAudioAndReusesItAfterRestartAndSpeedChange() throws Exception {
+        java.io.File root = java.nio.file.Files.createTempDirectory("durable-speech-test").toFile();
+        try {
+            java.io.File oldCache = new java.io.File(root, "cache");
+            java.io.File durable = new java.io.File(root, "no-backup");
+            java.io.File oldDirectory = new java.io.File(oldCache, "native-speech");
+            assertTrue(oldDirectory.mkdirs());
+            String voice = "EXAVITQu4vr4xnSDxMaL";
+            String name = NativeSpeechProtocol.cacheName(SpeechBackend.ELEVENLABS, "eleven_multilingual_v2", voice, "Breathe.", "style");
+            java.io.File previous = new java.io.File(oldDirectory, name);
+            byte[] bytes = {1, 2, 3, 4};
+            java.nio.file.Files.write(previous.toPath(), bytes);
+            java.io.File result = new CloudSpeech().audioWithPersistentCache(oldCache, durable, SpeechBackend.ELEVENLABS,
+                    "eleven_multilingual_v2", voice, "Breathe.", 1.0, "style");
+            assertTrue(result.toPath().startsWith(durable.toPath()));
+            assertArrayEquals(bytes, java.nio.file.Files.readAllBytes(result.toPath()));
+            assertTrue(previous.delete());
+            // A fresh request object and a different local playback speed need no network/key.
+            assertEquals(result, new CloudSpeech().audioWithPersistentCache(oldCache, durable, SpeechBackend.ELEVENLABS,
+                    "eleven_multilingual_v2", voice, "Breathe.", 1.3, "different ignored style"));
+            CloudSpeech cancelled = new CloudSpeech();
+            cancelled.cancel();
+            assertThrows(java.util.concurrent.CancellationException.class, () -> cancelled.audioWithPersistentCache(oldCache, durable,
+                    SpeechBackend.ELEVENLABS, "eleven_multilingual_v2", voice, "Breathe.", 1.0, "style"));
+        } finally {
+            try (java.util.stream.Stream<java.nio.file.Path> paths = java.nio.file.Files.walk(root.toPath())) {
+                paths.sorted(java.util.Comparator.reverseOrder()).forEach(path -> path.toFile().delete());
+            }
+        }
+    }
+
 }
