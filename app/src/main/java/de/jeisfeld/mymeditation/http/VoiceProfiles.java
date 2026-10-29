@@ -41,7 +41,17 @@ public final class VoiceProfiles {
     public List<Voice> voices() {
         List<Voice> result = new ArrayList<>();
         for (Map.Entry<String, String> entry : names.entrySet()) { result.add(new Voice(entry.getKey(), entry.getValue())); }
+        java.text.Collator alphabet = java.text.Collator.getInstance();
+        alphabet.setStrength(java.text.Collator.PRIMARY);
+        result.sort((left, right) -> {
+            int order = alphabet.compare(left.name, right.name);
+            return order == 0 ? left.id.compareTo(right.id) : order;
+        });
         return result;
+    }
+    public void removeVoice(String id) {
+        names.remove(id);
+        speeds.remove(SpeechBackend.ELEVENLABS.id + ":" + id);
     }
     public void saveVoice(String id, String name) {
         id = id.trim(); name = name.trim();

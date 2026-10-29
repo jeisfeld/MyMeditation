@@ -63,8 +63,9 @@
     <string name="default_speech_style">Speak naturally as a meditation guide, with a warm, clear tone.</string>
     <string name="elevenlabs_voice_id_hint">ElevenLabs voice ID (copy from your Voices page)</string>
     <string name="add_saved_voice">Add voice</string>
-    <string name="rename_saved_voice">Rename voice</string>
+    <string name="edit_saved_voice">Edit voice</string>
     <string name="saved_voice_name">Voice name</string>
     <string name="add_voice_first">Use Add voice to save an ElevenLabs voice with its name and ID first.</string>
-    <string name="button_rename_voice">Rename</string>
+    <string name="button_edit_voice">Edit</string>
+    <string name="remove_saved_voice">Remove voice</string>
 </resources>

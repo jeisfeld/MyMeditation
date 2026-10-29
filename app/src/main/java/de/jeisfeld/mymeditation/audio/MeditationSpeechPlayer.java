@@ -33,6 +33,7 @@ public final class MeditationSpeechPlayer {
     private final Listener listener;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
+    private final ExecutorService elevenExecutor = Executors.newSingleThreadExecutor();
     private final Map<Integer, Download> downloads = new HashMap<>();
     private android.media.AudioFocusRequest focus;
     private TextToSpeech tts;
@@ -123,7 +124,7 @@ public final class MeditationSpeechPlayer {
             job.result = CompletableFuture.supplyAsync(() -> {
                 try { return current.request.audioWithPersistentCache(context.getCacheDir(), context.getNoBackupFilesDir(), speechBackend, speechModel, speechVoice, text, speechSpeed, speechStyle); }
                 catch (Exception e) { throw new java.util.concurrent.CompletionException(e); }
-            }, executor);
+            }, speechBackend == SpeechBackend.ELEVENLABS ? elevenExecutor : executor);
             downloads.put(position, job);
         }
         return job;
@@ -135,9 +136,8 @@ public final class MeditationSpeechPlayer {
         if (backend != SpeechBackend.DEVICE) {
             final int position = index;
             Download job = download(position);
-            listener.onStatus(job.waiting);
-            int ahead = backend == SpeechBackend.ELEVENLABS ? 3 : 1;
-            for (int next = position + 1; next < Math.min(sentences.size(), position + ahead + 1); next++) { download(next); }
+            listener.onStatus(job.waiting.isEmpty() && backend == SpeechBackend.ELEVENLABS ? "Preparing ElevenLabs audio…" : job.waiting);
+            if (backend != SpeechBackend.ELEVENLABS && position + 1 < sentences.size()) { download(position + 1); }
             job.result.whenComplete((file, error) -> handler.post(() -> {
                 if (!valid(token) || index != position) { return; }
                 if (error != null) {
@@ -148,6 +148,11 @@ public final class MeditationSpeechPlayer {
                     fail(reported instanceof IllegalArgumentException || reported instanceof IllegalStateException
                             ? reported.getMessage() : "Could not generate speech. Check your connection and try again.");
                     return;
+                }
+                // Queue speculative synthesis only after the current recording is available.
+                // This prevents a later sentence from acquiring a provider slot before startup.
+                if (backend == SpeechBackend.ELEVENLABS) {
+                    for (int next = position + 1; next < Math.min(sentences.size(), position + 4); next++) { download(next); }
                 }
                 listener.onStatus("");
                 waitSilently(first ? 500 : pauseMs, token, () -> play(file, token));
@@ -244,5 +249,5 @@ public final class MeditationSpeechPlayer {
         listener.onRunning(false);
     }
 
-    public void close() { stop(); executor.shutdownNow(); }
+    public void close() { stop(); executor.shutdownNow(); elevenExecutor.shutdownNow(); }
 }

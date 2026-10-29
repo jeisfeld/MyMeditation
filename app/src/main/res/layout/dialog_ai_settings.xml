@@ -88,7 +88,7 @@
                 android:textAllCaps="false"
                 android:text="@string/add_saved_voice" />
             <Button
-                android:id="@+id/buttonRenameVoice"
+                android:id="@+id/buttonEditVoice"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -96,7 +96,7 @@
                 android:paddingEnd="8dp"
                 android:singleLine="true"
                 android:textAllCaps="false"
-                android:text="@string/button_rename_voice" />
+                android:text="@string/button_edit_voice" />
         </LinearLayout>
         <TextView
             android:layout_width="match_parent"

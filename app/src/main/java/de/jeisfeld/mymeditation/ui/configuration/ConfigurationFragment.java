@@ -133,7 +133,7 @@ public class ConfigurationFragment extends Fragment {
             settings.spinnerSpeechVoice.setSelection(position);
             settings.spinnerSpeechVoice.setVisibility(View.VISIBLE);
             settings.elevenVoiceButtons.setVisibility(backend == SpeechBackend.ELEVENLABS ? View.VISIBLE : View.GONE);
-            settings.buttonRenameVoice.setEnabled(!activeVoice[0].isEmpty());
+            settings.buttonEditVoice.setEnabled(!activeVoice[0].isEmpty());
             settings.editTextSpeechSpeed.setText(Double.toString(profiles.speed(backend, activeVoice[0], 1.0)));
             loading[0] = false;
         };
@@ -152,8 +152,19 @@ public class ConfigurationFragment extends Fragment {
         settings.buttonAddVoice.setOnClickListener(v -> editSavedVoice(profiles, null, id -> {
             remember.run(); voices.put(SpeechBackend.ELEVENLABS, id); load.run();
         }));
-        settings.buttonRenameVoice.setOnClickListener(v -> editSavedVoice(profiles, activeVoice[0], id -> {
-            remember.run(); voices.put(SpeechBackend.ELEVENLABS, id); load.run();
+        settings.buttonEditVoice.setOnClickListener(v -> editSavedVoice(profiles, activeVoice[0], id -> {
+            remember.run();
+            if (id == null) {
+                profiles.removeVoice(activeVoice[0]);
+                java.util.List<VoiceProfiles.Voice> remaining = profiles.voices();
+                voices.put(SpeechBackend.ELEVENLABS, remaining.isEmpty() ? "" : remaining.get(0).id);
+                if (remaining.isEmpty()) {
+                    activeVoice[0] = "";
+                    selected[0] = SpeechBackend.DEVICE;
+                    settings.spinnerSpeechBackend.setSelection(selected[0].ordinal());
+                }
+            } else { voices.put(SpeechBackend.ELEVENLABS, id); }
+            load.run();
         }));
         load.run();
         settings.spinnerSpeechBackend.setSelection(selected[0].ordinal());
@@ -237,8 +248,11 @@ public class ConfigurationFragment extends Fragment {
         id.setSingleLine(true);
         layout.addView(id);
         if (existingId != null) { id.setText(existingId); id.setEnabled(false); name.setText(profiles.name(existingId)); }
-        AlertDialog dialog = new AlertDialog.Builder(requireContext()).setTitle(existingId == null ? R.string.add_saved_voice : R.string.rename_saved_voice)
-                .setView(layout).setNegativeButton(android.R.string.cancel, null).setPositiveButton(R.string.button_save, null).create();
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext())
+                .setTitle(existingId == null ? R.string.add_saved_voice : R.string.edit_saved_voice)
+                .setView(layout).setNegativeButton(android.R.string.cancel, null).setPositiveButton(R.string.button_save, null);
+        if (existingId != null) { builder.setNeutralButton(R.string.remove_saved_voice, (dialog, which) -> onSaved.accept(null)); }
+        AlertDialog dialog = builder.create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             try {
                 String voiceId = id.getText().toString().trim();
