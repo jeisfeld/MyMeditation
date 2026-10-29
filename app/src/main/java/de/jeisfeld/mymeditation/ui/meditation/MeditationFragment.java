@@ -31,6 +31,13 @@ public class MeditationFragment extends Fragment {
     private FragmentMeditationBinding binding;
 
     private List<String> sentences;
+    private boolean reading;
+    private android.text.method.KeyListener editorKeyListener;
+    private int editorInputType;
+    private int highlightedPosition = -2;
+    private String highlightedText = "";
+    private final android.text.style.StyleSpan spokenBold = new android.text.style.StyleSpan(android.graphics.Typeface.BOLD);
+    private android.text.style.BackgroundColorSpan spokenBackground;
     private String pendingSpeechStatus = "";
     private final Runnable showSpeechStatus = () -> {
         if (binding != null && !pendingSpeechStatus.isEmpty()) {
@@ -48,6 +55,9 @@ public class MeditationFragment extends Fragment {
 
         binding = FragmentMeditationBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
+        editorKeyListener = binding.editTextMeditationText.getKeyListener();
+        editorInputType = binding.editTextMeditationText.getInputType();
+        spokenBackground = new android.text.style.BackgroundColorSpan(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.spoken_text_highlight));
 
         root.post(() -> {
             WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(requireActivity().getWindow().getDecorView());
@@ -69,7 +79,9 @@ public class MeditationFragment extends Fragment {
         });
 
         meditationViewModel.getMeditationContent().observe(getViewLifecycleOwner(), binding.editTextMeditationContent::setText);
-        meditationViewModel.getMeditationText().observe(getViewLifecycleOwner(), binding.editTextMeditationText::setText);
+        meditationViewModel.getMeditationText().observe(getViewLifecycleOwner(), text -> {
+            if (!reading) { binding.editTextMeditationText.setText(text); }
+        });
         meditationViewModel.getPauseDuration().observe(getViewLifecycleOwner(), pauseDuration -> {
             if (pauseDuration == null) {
                 pauseDuration = 1.0;
@@ -79,13 +91,17 @@ public class MeditationFragment extends Fragment {
         });
         meditationViewModel.getSeekBarMax().observe(getViewLifecycleOwner(), binding.seekBarAudio::setMax);
         meditationViewModel.getSeekBarProgress().observe(getViewLifecycleOwner(), binding.seekBarAudio::setProgress);
-        meditationViewModel.isMeditationRunning().observe(getViewLifecycleOwner(), isMeditationRunning -> {
-            binding.buttonSpeakMeditation.setVisibility(isMeditationRunning ? View.GONE : View.VISIBLE);
-            binding.buttonPauseMeditation.setVisibility(isMeditationRunning ? View.VISIBLE : View.GONE);
-        });
-
         MeditationPlaybackService.state().observe(getViewLifecycleOwner(), state -> {
+            renderReadingMode(state);
+            binding.buttonSpeakMeditation.setVisibility(state.active ? View.GONE : View.VISIBLE);
+            binding.playbackControls.setVisibility(state.active ? View.VISIBLE : View.GONE);
+            binding.buttonResumeMeditation.setVisibility(state.running ? View.GONE : View.VISIBLE);
+            binding.buttonPauseMeditation.setVisibility(state.running ? View.VISIBLE : View.GONE);
+            binding.buttonEndMeditation.setEnabled(state.active);
+            binding.buttonPreviousMeditation.setEnabled(state.active && state.position > 0);
+            binding.buttonNextMeditation.setEnabled(state.active && state.position < state.sentences.size() - 1);
             meditationViewModel.setMeditationRunning(state.running);
+            meditationViewModel.setSeekBarProgress(state.position);
             if (!state.sentences.isEmpty()) {
                 sentences = state.sentences;
                 meditationViewModel.setSeekBarMax(Math.max(0, sentences.size() - 1));
@@ -141,7 +157,11 @@ public class MeditationFragment extends Fragment {
             startAudio(binding.seekBarAudio.getProgress());
         });
 
+        binding.buttonResumeMeditation.setOnClickListener(v -> binding.buttonSpeakMeditation.performClick());
+        binding.buttonPreviousMeditation.setOnClickListener(v -> MeditationPlaybackService.skip(requireContext(), -1));
+        binding.buttonNextMeditation.setOnClickListener(v -> MeditationPlaybackService.skip(requireContext(), 1));
         binding.buttonPauseMeditation.setOnClickListener(v -> stopAudio());
+        binding.buttonEndMeditation.setOnClickListener(v -> MeditationPlaybackService.end(requireContext()));
 
         binding.editTextMeditationContent.setOnFocusChangeListener((v, hasFocus) -> {
             if (!hasFocus) {
@@ -280,6 +300,55 @@ public class MeditationFragment extends Fragment {
         return SpeechBackend.fromId(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend, R.string.default_speech_backend));
     }
 
+    private void renderReadingMode(MeditationPlaybackService.State state) {
+        android.widget.EditText editor = binding.editTextMeditationText;
+        if (reading != state.active) {
+            reading = state.active;
+            int creation = reading ? View.GONE : View.VISIBLE;
+            binding.labelMeditationContent.setVisibility(creation);
+            binding.editTextMeditationContent.setVisibility(creation);
+            binding.buttonCreateMeditation.setVisibility(creation);
+            editor.setKeyListener(reading ? null : editorKeyListener);
+            editor.setRawInputType(reading ? android.text.InputType.TYPE_NULL : editorInputType);
+            editor.setCursorVisible(!reading);
+            editor.setShowSoftInputOnFocus(!reading);
+            if (reading) {
+                editor.clearFocus();
+                ((android.view.inputmethod.InputMethodManager) requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE))
+                        .hideSoftInputFromWindow(editor.getWindowToken(), 0);
+            } else {
+                editor.setText(meditationViewModel.getMeditationText().getValue());
+            }
+            highlightedPosition = -2;
+        }
+        if (reading && !editor.getText().toString().equals(state.text)) {
+            editor.setText(state.text);
+            highlightedPosition = -2;
+        }
+        int target = reading ? state.spokenPosition : -1;
+        String text = editor.getText().toString();
+        if (target == highlightedPosition && text.equals(highlightedText)) { return; }
+        highlightedPosition = target; highlightedText = text;
+        android.text.Editable editable = editor.getText();
+        editable.removeSpan(spokenBackground); editable.removeSpan(spokenBold);
+        int[] range = de.jeisfeld.mymeditation.audio.SpokenTextRanges.range(text, state.sentences, target);
+        if (range[0] < 0) { return; }
+        editable.setSpan(spokenBackground, range[0], range[1], android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        editable.setSpan(spokenBold, range[0], range[1], android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        androidx.core.view.OneShotPreDrawListener.add(editor, () -> {
+            if (binding == null || binding.editTextMeditationText != editor || highlightedPosition != target
+                    || !editor.getText().toString().equals(text)) { return; }
+            android.text.Layout layout = editor.getLayout();
+            if (layout == null) { return; }
+            int top = layout.getLineTop(layout.getLineForOffset(range[0]));
+            int bottom = layout.getLineBottom(layout.getLineForOffset(Math.max(range[0], range[1]-1)));
+            int height = editor.getHeight() - editor.getCompoundPaddingTop() - editor.getCompoundPaddingBottom();
+            if (top < editor.getScrollY() || bottom > editor.getScrollY() + height) {
+                editor.scrollTo(0, Math.max(0, Math.min(top - height / 4, layout.getHeight() - height)));
+            }
+        });
+    }
+
     private void updateSpeechStatus(String status) {
         if (status.equals(pendingSpeechStatus)) { return; }
         binding.textSpeechStatus.removeCallbacks(showSpeechStatus);
@@ -301,6 +370,7 @@ public class MeditationFragment extends Fragment {
     @Override public void onDestroyView() {
         binding.textSpeechStatus.removeCallbacks(showSpeechStatus);
         pendingSpeechStatus = "";
+        reading = false; highlightedPosition = -2; highlightedText = "";
         binding = null;
         super.onDestroyView();
     }

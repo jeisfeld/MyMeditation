@@ -38,23 +38,34 @@ public final class MeditationPlaybackService extends Service {
 
     public static final class State {
         public final boolean running;
+        public final boolean active;
+        public final String text;
+        public final int spokenPosition;
         public final int position;
         public final List<String> sentences;
         public final String status, error;
         public final long errorId;
-        State(boolean running, int position, List<String> sentences, String status, String error, long errorId) {
+        State(boolean running, int position, List<String> sentences, String status, String error, long errorId,
+                boolean active, String text, int spokenPosition) {
+            this.active = active; this.text = text; this.spokenPosition = spokenPosition;
             this.running = running; this.position = position;
             this.sentences = Collections.unmodifiableList(new java.util.ArrayList<>(sentences));
             this.status = status; this.error = error; this.errorId = errorId;
         }
     }
-    private static final MutableLiveData<State> STATE = new MutableLiveData<>(new State(false, 0, Collections.emptyList(), "", "", 0));
+    private static final MutableLiveData<State> STATE = new MutableLiveData<>(new State(false, 0, Collections.emptyList(), "", "", 0, false, "", -1));
     public static LiveData<State> state() { return STATE; }
     public static void play(Context context, int position) {
         context.startForegroundService(new Intent(context, MeditationPlaybackService.class).setAction(START).putExtra("position", position));
     }
     public static void seek(Context context, int position) {
         context.startForegroundService(new Intent(context, MeditationPlaybackService.class).setAction(SEEK).putExtra("position", position));
+    }
+    public static void skip(Context context, int direction) {
+        if (STATE.getValue().active) {
+            context.startForegroundService(new Intent(context, MeditationPlaybackService.class)
+                    .setAction(direction < 0 ? PREVIOUS : NEXT));
+        }
     }
     public static void pause(Context context) {
         if (STATE.getValue().running) { context.startService(new Intent(context, MeditationPlaybackService.class).setAction(PAUSE)); }
@@ -64,11 +75,15 @@ public final class MeditationPlaybackService extends Service {
             context.startService(new Intent(context, MeditationPlaybackService.class).setAction(APPLY_SETTINGS));
         }
     }
+    public static void end(Context context) {
+        context.startService(new Intent(context, MeditationPlaybackService.class).setAction(STOP));
+    }
     public static void setPause(Context context, double seconds) {
         if (STATE.getValue().running) { context.startService(new Intent(context, MeditationPlaybackService.class).setAction(SET_PAUSE).putExtra("seconds", seconds)); }
     }
 
-    private boolean running, transition, destroying, keepNotification, stopping;
+    private boolean running, transition, destroying, keepNotification, stopping, active;
+    private int spokenPosition = -1;
     private final android.os.Handler idleHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable stopIdle = () -> { if (!running) { stopSelf(); } };
     private final Runnable renewWakeLock = new Runnable() {
@@ -105,11 +120,15 @@ public final class MeditationPlaybackService extends Service {
             @Override public void onPlay() { resumePlayback(); }
             @Override public void onPause() { pausePlayback(); }
             @Override public void onStop() { stopPlayback(); }
+            @Override public void onCustomAction(String action, android.os.Bundle extras) {
+                if (STOP.equals(action)) { stopPlayback(); }
+            }
             @Override public void onSkipToNext() { skip(1); }
             @Override public void onSkipToPrevious() { skip(-1); }
         });
         session.setActive(true);
         player = new MeditationSpeechPlayer(this, new MeditationSpeechPlayer.Listener() {
+            @Override public void onSpeaking(int index) { spokenPosition = index; publish(); }
             @Override public void onSentence(int index) {
                 position = index; PreferenceUtil.setSharedPreferenceString(POSITION, Integer.toString(index)); publish(); updateNotification();
             }
@@ -126,7 +145,7 @@ public final class MeditationPlaybackService extends Service {
             @Override public void onError(String message) {
                 running = false; error = message; errorId = System.nanoTime(); status = ""; publish(); finishService(false);
             }
-            @Override public void onFinished() { position = 0; PreferenceUtil.setSharedPreferenceString(POSITION, "0"); publish(); finishService(false); }
+            @Override public void onFinished() { active = false; spokenPosition = -1; position = 0; PreferenceUtil.setSharedPreferenceString(POSITION, "0"); publish(); finishService(false); }
         });
         if (Build.VERSION.SDK_INT >= 33) { registerReceiver(noisy, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY), RECEIVER_NOT_EXPORTED); }
         else { registerReceiver(noisy, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)); }
@@ -202,6 +221,7 @@ public final class MeditationPlaybackService extends Service {
     }
     private void saveRequest() { PreferenceUtil.setSharedPreferenceString(SAVED, request.json()); }
     private void startAt(int index) {
+        active = true; spokenPosition = -1;
         sentences = SpeechSegments.split(request.text, request.backend.segmentLimit);
         position = Math.max(0, Math.min(index, sentences.size() - 1));
         idleHandler.removeCallbacks(stopIdle);
@@ -243,7 +263,7 @@ public final class MeditationPlaybackService extends Service {
         try { player.stop(); running = false; status = ""; releaseWakeLock(); publish(); updateSession(); pausedNotification(); }
         finally { transition = false; }
     }
-    private void stopPlayback() { pausePlayback(); position = 0; PreferenceUtil.setSharedPreferenceString(POSITION, "0"); publish(); finishService(false); }
+    private void stopPlayback() { pausePlayback(); active = false; spokenPosition = -1; position = 0; PreferenceUtil.setSharedPreferenceString(POSITION, "0"); publish(); finishService(false); }
     private void pausedNotification() {
         keepNotification = true; stopping = true;
         stopForeground(STOP_FOREGROUND_DETACH);
@@ -268,10 +288,12 @@ public final class MeditationPlaybackService extends Service {
         idleHandler.removeCallbacks(renewWakeLock);
         if (wakeLock != null && wakeLock.isHeld()) { wakeLock.release(); }
     }
-    private void publish() { STATE.setValue(new State(running, position, sentences, status, error, errorId)); }
+    private void publish() { STATE.setValue(new State(running, position, sentences, status, error, errorId, active, request == null ? "" : request.text, spokenPosition)); }
     private void updateSession() {
         session.setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE
                 | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_STOP | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS)
+                // Android 13+ derives notification buttons from the session, not Notification actions.
+                .addCustomAction(STOP, getString(R.string.notification_stop), R.drawable.ic_playback_stop)
                 .setState(running ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED, PlaybackState.PLAYBACK_POSITION_UNKNOWN, running ? 1f : 0f).build());
     }
     private PendingIntent command(String action, int code, boolean foreground) {
@@ -290,8 +312,8 @@ public final class MeditationPlaybackService extends Service {
                 .addAction(new Notification.Action.Builder(active ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,
                         getString(active ? R.string.notification_pause : R.string.notification_resume), command(active ? PAUSE : RESUME, 2, !active)).build())
                 .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_next, getString(R.string.notification_next), command(NEXT, 3, true)).build())
-                .addAction(new Notification.Action.Builder(android.R.drawable.ic_menu_close_clear_cancel, getString(R.string.notification_stop), command(STOP, 4, false)).build())
-                .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(0, 1, 2)).build();
+                .addAction(new Notification.Action.Builder(R.drawable.ic_playback_stop, getString(R.string.notification_stop), command(STOP, 4, false)).build())
+                .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(0, 1, 3)).build();
     }
     private void updateNotification() { if (!destroying) { getSystemService(NotificationManager.class).notify(NOTIFICATION, notification(running)); } }
     @Override public IBinder onBind(Intent intent) { return null; }
@@ -300,7 +322,9 @@ public final class MeditationPlaybackService extends Service {
         idleHandler.removeCallbacksAndMessages(null);
         if (player != null) { player.close(); }
         releaseWakeLock();
-        running = false; status = ""; publish();
+        running = false; status = "";
+        if (!keepNotification) { active = false; spokenPosition = -1; }
+        publish();
         if (!keepNotification) { getSystemService(NotificationManager.class).cancel(NOTIFICATION); }
         if (session != null) { session.release(); }
         unregisterReceiver(noisy);

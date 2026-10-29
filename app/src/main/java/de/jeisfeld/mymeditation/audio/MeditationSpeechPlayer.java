@@ -29,6 +29,7 @@ public final class MeditationSpeechPlayer {
         void onError(String error);
         default void onStatus(String status) { }
         default void onFinished() { }
+        default void onSpeaking(int index) { }
     }
     private final Context context;
     private final Listener listener;
@@ -94,7 +95,10 @@ public final class MeditationSpeechPlayer {
                 tts.setAudioAttributes(attributes());
                 tts.setSpeechRate((float) speed);
                 tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-                    @Override public void onStart(String id) { }
+                    @Override public void onStart(String id) {
+                        int spoken = Integer.parseInt(id.substring(id.lastIndexOf('-') + 1));
+                        handler.post(() -> { if (valid(token) && index == spoken) { listener.onSpeaking(spoken); } });
+                    }
                     @Override public void onDone(String id) { handler.post(() -> complete(token)); }
                     @Override public void onError(String id) { handler.post(() -> { if (valid(token)) { fail(UiText.DEVICE_SPEECH_FAILED.text()); } }); }
                 });
@@ -185,6 +189,7 @@ public final class MeditationSpeechPlayer {
                         if (backend != SpeechBackend.OPENAI) {
                             player.setPlaybackParams(new android.media.PlaybackParams().setSpeed((float) speed).setPitch(1.0f));
                         }
+                        listener.onSpeaking(index);
                     } catch (RuntimeException e) { fail(UiText.PLAYBACK_SPEED_FAILED.text()); }
                 }
             });

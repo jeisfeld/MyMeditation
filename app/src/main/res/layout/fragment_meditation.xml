@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:paddingBottom="?attr/actionBarSize">
 
     <TextView
+        android:id="@+id/labelMeditationContent"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/activity_horizontal_margin"
@@ -134,26 +136,60 @@
         android:ellipsize="end"
         android:visibility="gone" />
 
-    <FrameLayout
+    <Button
+        android:id="@+id/buttonSpeakMeditation"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/single_button_horizontal_margin"
         android:layout_marginEnd="@dimen/single_button_horizontal_margin"
-        android:measureAllChildren="true">
+        android:text="@string/button_speak_meditation" />
 
-        <Button
-            android:id="@+id/buttonSpeakMeditation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/button_speak_meditation" />
-
-        <Button
+    <LinearLayout
+        android:id="@+id/playbackControls"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonPreviousMeditation"
+            style="@style/PlaybackControl"
+            app:icon="@drawable/ic_playback_previous"
+            android:contentDescription="@string/notification_previous"
+            android:tooltipText="@string/notification_previous"
+            android:enabled="false" />
+        <FrameLayout
+            android:layout_width="56dp"
+            android:layout_height="48dp">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonResumeMeditation"
+            style="@style/PlaybackControl"
+            app:icon="@drawable/ic_playback_play"
+            android:contentDescription="@string/button_speak_meditation"
+            android:tooltipText="@string/button_speak_meditation" />
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonPauseMeditation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:text="@string/button_pause_meditation" />
-    </FrameLayout>
+            style="@style/PlaybackControl"
+            app:icon="@drawable/ic_playback_pause"
+            android:contentDescription="@string/button_pause_meditation"
+            android:tooltipText="@string/button_pause_meditation"
+            android:visibility="gone" />
+        </FrameLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonEndMeditation"
+            style="@style/PlaybackControl"
+            app:icon="@drawable/ic_playback_stop"
+            android:contentDescription="@string/button_end_meditation"
+            android:tooltipText="@string/button_end_meditation"
+            android:enabled="false" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonNextMeditation"
+            style="@style/PlaybackControl"
+            app:icon="@drawable/ic_playback_next"
+            android:contentDescription="@string/notification_next"
+            android:tooltipText="@string/notification_next"
+            android:enabled="false" />
+    </LinearLayout>
 
     <SeekBar
         android:id="@+id/seekBarAudio"
