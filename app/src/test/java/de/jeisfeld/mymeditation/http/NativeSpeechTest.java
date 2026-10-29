@@ -21,10 +21,17 @@ public class NativeSpeechTest {
         SpeechBackend.QWEN.validate("qwen3-tts-flash", "Cherry");
         assertThrows(IllegalArgumentException.class, () -> SpeechBackend.QWEN.validate("qwen-audio", "Cherry"));
         assertThrows(IllegalArgumentException.class, () -> SpeechBackend.QWEN.validate("qwen3-tts-realtime", "Cherry"));
-        assertThrows(IllegalArgumentException.class, () -> SpeechBackend.GEMINI.validate("gemini-3.8-flash-tts", "Kore"));
+        SpeechBackend.GEMINI.validate("gemini-3.8-flash-tts", "Kore");
+        SpeechBackend.GEMINI.validate("gemini-3.8-flash-tts-preview-2026", "Aoede");
+        for (String invalid : new String[] {"gemini-3.8-flash", "gemini-3.8-flash-ttsx", "gemini-3.8-realtime-tts",
+                "gemini-3.8-flash-tts?key=bad", "../gemini-3.8-flash-tts", "other-3.8-flash-tts"}) {
+            assertThrows(invalid, IllegalArgumentException.class, () -> SpeechBackend.GEMINI.validate(invalid, "Kore"));
+        }
     }
     @Test public void requestsUseNativeAudioFormatsAndDeliveryInstructions() throws Exception {
         JSONObject gemini = NativeSpeechProtocol.request(SpeechBackend.GEMINI, "gemini-2.5-flash-preview-tts", "Kore", "Breathe.", "Warm.");
+        assertEquals("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
+                NativeSpeechProtocol.endpoint(SpeechBackend.GEMINI, "gemini-2.5-flash-preview-tts", "Kore"));
         assertEquals("AUDIO", gemini.getJSONObject("generationConfig").getJSONArray("responseModalities").getString(0));
         assertEquals("Kore", gemini.getJSONObject("generationConfig").getJSONObject("speechConfig").getJSONObject("voiceConfig")
                 .getJSONObject("prebuiltVoiceConfig").getString("voiceName"));
@@ -35,6 +42,33 @@ public class NativeSpeechTest {
         assertFalse(qwen.getJSONObject("parameters").has("instructions"));
         JSONObject instruct = NativeSpeechProtocol.request(SpeechBackend.QWEN, "qwen3-tts-instruct-flash", "Cherry", "Breathe.", "Firm.");
         assertEquals("Firm.", instruct.getJSONObject("parameters").getString("instructions"));
+    }
+    @Test public void geminiWithoutDirectionSendsOnlyTranscriptAndInvalidatesOldCache() throws Exception {
+        String text = "Atme ruhig.\nLass los.";
+        for (String style : new String[] {null, "", "  "}) {
+            JSONObject request = NativeSpeechProtocol.request(SpeechBackend.GEMINI, "gemini-2.5-flash-preview-tts", "Kore", text, style);
+            assertEquals(text, request.getJSONArray("contents").getJSONObject(0).getJSONArray("parts").getJSONObject(0).getString("text"));
+            assertFalse(request.has("systemInstruction"));
+        }
+        JSONObject oldRequest = NativeSpeechProtocol.request(SpeechBackend.GEMINI, "gemini-2.5-flash-preview-tts", "Kore", text, "");
+        oldRequest.getJSONArray("contents").getJSONObject(0).getJSONArray("parts").getJSONObject(0).put("text",
+                "Read only the passage below exactly, in its original language. Do not add words. Delivery instructions: \nPassage:\n" + text);
+        byte[] oldDigest = java.security.MessageDigest.getInstance("SHA-256").digest(
+                ("gemini:v1:" + oldRequest).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        StringBuilder oldName = new StringBuilder();
+        for (byte b : oldDigest) { oldName.append(String.format(java.util.Locale.ROOT, "%02x", b & 255)); }
+        assertNotEquals(oldName + ".audio", NativeSpeechProtocol.cacheName(SpeechBackend.GEMINI, "gemini-2.5-flash-preview-tts", "Kore", text, ""));
+    }
+    @Test public void geminiSeparatesDirectionFromEachTranscript() throws Exception {
+        for (String text : new String[] {"Atme ruhig.", "Lass los."}) {
+            JSONObject request = NativeSpeechProtocol.request(SpeechBackend.GEMINI, "gemini-2.5-flash-preview-tts", "Kore", text, " Warm and calm. ");
+            String prompt = request.getJSONArray("contents").getJSONObject(0).getJSONArray("parts").getJSONObject(0).getString("text");
+            String[] sections = prompt.split("\\n\\n# TRANSCRIPT\\n", 2);
+            assertEquals(2, sections.length);
+            assertEquals("# DIRECTOR'S NOTES\nWarm and calm.", sections[0]);
+            assertEquals(text, sections[1]);
+            assertFalse(prompt.contains("Read only the passage"));
+        }
     }
     private JSONObject pcmResponse(byte[] bytes) throws Exception {
         return new JSONObject().put("candidates", new JSONArray().put(new JSONObject().put("finishReason", "STOP")
@@ -50,6 +84,13 @@ public class NativeSpeechTest {
         assertArrayEquals(pcm, java.util.Arrays.copyOfRange(wav, 44, wav.length));
         assertThrows(SpeechRetry.TransientGenerationFailure.class, () -> NativeSpeechProtocol.geminiAudio(new JSONObject()));
         assertThrows(IllegalStateException.class, () -> NativeSpeechProtocol.geminiAudio(pcmResponse(new byte[] {1})));
+    }
+    @Test public void incompleteGeminiAudioRetainsFinishReason() throws Exception {
+        JSONObject response = pcmResponse(new byte[] {1, 0});
+        response.getJSONArray("candidates").getJSONObject(0).put("finishReason", "MAX_TOKENS");
+        Exception error = assertThrows(SpeechRetry.TransientGenerationFailure.class,
+                () -> NativeSpeechProtocol.geminiAudio(response));
+        assertTrue(error.getMessage().contains("MAX_TOKENS"));
     }
     @Test public void qwenDownloadsAreRestrictedToHttpsAlibabaStorage() throws Exception {
         for (String address : new String[] {"https://example.com/a.wav", "https://files.aliyuncs.com.evil.com/a.wav", "https://user:secret@files.aliyuncs.com/a.wav"}) {

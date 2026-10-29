@@ -29,7 +29,12 @@ public enum SpeechBackend {
     public String voiceKey() { return this == OPENAI ? "speech_voice" : id + "_speech_voice"; }
     public List<String> voices() {
         switch (this) {
-            case GEMINI: return Arrays.asList("Kore", "Aoede", "Leda", "Zephyr", "Sulafat", "Gacrux", "Puck", "Charon", "Fenrir", "Orus");
+            case GEMINI:
+                // Perceived feminine voices first; retain the original ordering within each group.
+                return Arrays.asList("Kore", "Aoede", "Leda", "Zephyr", "Sulafat", "Gacrux",
+                        "Achernar", "Autonoe", "Callirrhoe", "Despina", "Erinome", "Laomedeia", "Pulcherrima", "Vindemiatrix",
+                        "Puck", "Charon", "Fenrir", "Orus", "Achird", "Algenib", "Algieba", "Alnilam", "Enceladus", "Iapetus",
+                        "Rasalgethi", "Sadachbia", "Sadaltager", "Schedar", "Umbriel", "Zubenelgenubi");
             case ELEVENLABS: return java.util.Collections.emptyList();
             case QWEN: return Arrays.asList("Cherry", "Serena", "Chelsie", "Ethan");
             default: return SpeechProtocol.VOICES;
@@ -47,7 +52,7 @@ public enum SpeechBackend {
             return;
         }
         boolean valid = model != null && model.matches("[A-Za-z0-9._-]+") && !model.contains("realtime");
-        valid &= this == GEMINI ? model != null && model.startsWith("gemini-2.5-") && model.contains("-tts")
+        valid &= this == GEMINI ? model != null && model.matches("gemini-[A-Za-z0-9._-]+-tts(?:-[A-Za-z0-9._-]+)?")
                 : model != null && (model.startsWith("qwen3-tts-") || model.startsWith("qwen-tts-"));
         if (this == GEMINI && !valid) {
             throw new IllegalArgumentException(UiText.GEMINI_TTS_MODEL.text());

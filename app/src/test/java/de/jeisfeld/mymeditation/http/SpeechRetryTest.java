@@ -29,6 +29,19 @@ public class SpeechRetryTest {
         assertTrue(error.getMessage().contains("3 attempts"));
     }
 
+    @Test public void exhaustedGenerationRetriesPreserveReasonButNetworkDetailsStayGeneric() {
+        IllegalStateException generated = assertThrows(IllegalStateException.class, () -> SpeechRetry.run(() -> {
+            throw new SpeechRetry.TransientGenerationFailure("Gemini returned no audio.");
+        }, () -> { }, ms -> { }));
+        assertTrue(generated.getMessage().contains("3 attempts"));
+        assertTrue(generated.getMessage().contains("Gemini returned no audio."));
+        IllegalStateException network = assertThrows(IllegalStateException.class, () -> SpeechRetry.run(() -> {
+            throw new IOException("Private network detail");
+        }, () -> { }, ms -> { }));
+        assertFalse(network.getMessage().contains("Private network detail"));
+        assertTrue(network.getMessage().contains("Check your connection"));
+    }
+
     @Test public void authenticationAndValidationErrorsAreNotRetried() {
         for (int status : new int[] {400, 401, 403, 404, 422}) {
             int[] attempts = {0};

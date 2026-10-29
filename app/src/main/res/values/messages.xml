@@ -35,7 +35,7 @@
     <string name="message_speech_response_large">Speech response too large.</string>
     <string name="message_eleven_model">Use an ElevenLabs TTS model such as eleven_multilingual_v2 or eleven_v3.</string>
     <string name="message_eleven_voice_id">Paste a voice ID from your ElevenLabs Voices page.</string>
-    <string name="message_gemini_tts_model">Use gemini-2.5-flash-preview-tts or gemini-2.5-pro-preview-tts. Newer Interactions speech models are not supported here.</string>
+    <string name="message_gemini_tts_model">Use a Gemini text-to-speech model ID (gemini-…-tts).</string>
     <string name="message_openai_tts_model">Use gpt-4o-mini-tts, tts-1 or tts-1-hd for OpenAI speech.</string>
     <string name="message_openai_voice">Choose a supported OpenAI voice.</string>
     <string name="message_legacy_voices">For tts-1 models, choose shimmer, nova, alloy, fable, echo or onyx.</string>
@@ -65,4 +65,5 @@
     <string name="message_provider_speech_http">%1$s speech failed (HTTP %2$d). Check key, model access, region and credit.</string>
     <string name="message_saved_voice">Saved voice %1$d</string>
     <string name="message_eleven_retry">ElevenLabs temporarily unavailable. Retrying in %1$d s (retry %2$d). Pause to stop.</string>
+    <string name="message_gemini_incomplete_reason">Gemini returned incomplete speech (finish reason: %1$s).</string>
 </resources>

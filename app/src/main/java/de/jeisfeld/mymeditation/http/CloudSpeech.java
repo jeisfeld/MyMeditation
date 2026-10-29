@@ -92,7 +92,7 @@ public final class CloudSpeech {
             try (java.io.OutputStream out = connection.getOutputStream()) {
                 out.write(NativeSpeechProtocol.request(backend, model, voice, text, style).toString().getBytes(StandardCharsets.UTF_8));
             }
-            verify(connection, backend.id);
+            verify(connection, backend.id, key);
             byte[] audio;
             if (backend == SpeechBackend.ELEVENLABS) {
                 requireAudio(connection, "ElevenLabs");
@@ -102,12 +102,15 @@ public final class CloudSpeech {
             } else {
                 byte[] json = read(connection.getInputStream(), 32 * 1024 * 1024);
                 JSONObject response = new JSONObject(new String(json, StandardCharsets.UTF_8));
-                if (backend == SpeechBackend.GEMINI) { audio = NativeSpeechProtocol.geminiAudio(response); }
+                if (backend == SpeechBackend.GEMINI) {
+                    audio = GeminiInteractionsSpeech.uses(model) ? GeminiInteractionsSpeech.audio(response)
+                            : NativeSpeechProtocol.geminiAudio(response);
+                }
                 else {
                     URL url = NativeSpeechProtocol.qwenAudioUrl(response);
                     connection.disconnect();
                     connection = connect(url); // No Authorization header on the storage download.
-                    verify(connection, "Qwen audio download");
+                    verify(connection, "Qwen audio download", "");
                     requireAudio(connection, "Qwen");
                     audio = read(connection.getInputStream(), 20 * 1024 * 1024);
                 }
@@ -153,13 +156,15 @@ public final class CloudSpeech {
         c.setInstanceFollowRedirects(false); c.setConnectTimeout(15000); c.setReadTimeout(90000);
         return c;
     }
-    private static void verify(HttpsURLConnection c, String provider) throws Exception {
+    private static void verify(HttpsURLConnection c, String provider, String key) throws Exception {
         int status = c.getResponseCode();
         if (status < 200 || status >= 300) {
             if (status == 408 || status == 429 || status == 500 || status == 502 || status == 503 || status == 504) {
                 throw new SpeechRetry.HttpFailure(status, SpeechRetry.retryAfter(c.getHeaderField("Retry-After")));
             }
-            throw new IllegalStateException(UiText.PROVIDER_SPEECH_HTTP.text(provider, status));
+            String detail = "gemini".equals(provider) ? SpeechErrorDetail.read(c.getErrorStream(), key) : "";
+            throw new IllegalStateException(UiText.PROVIDER_SPEECH_HTTP.text(provider, status)
+                    + (detail.isEmpty() ? "" : "\n" + detail));
         }
     }
     private byte[] read(InputStream input, int limit) throws Exception {

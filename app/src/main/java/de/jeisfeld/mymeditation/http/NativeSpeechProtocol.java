@@ -17,6 +17,7 @@ final class NativeSpeechProtocol {
             return "https://api.elevenlabs.io/v1/text-to-speech/" + voice + "?output_format=mp3_44100_128";
         }
         if (backend == SpeechBackend.GEMINI) {
+            if (GeminiInteractionsSpeech.uses(model)) { return "https://generativelanguage.googleapis.com/v1beta/interactions"; }
             return "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
         }
         return "https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation";
@@ -31,8 +32,11 @@ final class NativeSpeechProtocol {
                     .put("voice_settings", new JSONObject().put("stability", 0.5).put("similarity_boost", 0.75));
         }
         if (backend == SpeechBackend.GEMINI) {
-            String prompt = "Read only the passage below exactly, in its original language. Do not add words. "
-                    + "Delivery instructions: " + (style == null ? "" : style) + "\nPassage:\n" + text;
+            if (GeminiInteractionsSpeech.uses(model)) { return GeminiInteractionsSpeech.request(model, voice, text, style); }
+            // Legacy TTS can vocalize prose instructions mixed into the transcript. Use plain text
+            // without a style, otherwise distinguish direction from the spoken transcript.
+            String prompt = style == null || style.trim().isEmpty() ? text
+                    : "# DIRECTOR'S NOTES\n" + style.trim() + "\n\n# TRANSCRIPT\n" + text;
             return new JSONObject().put("contents", new JSONArray().put(new JSONObject().put("role", "user")
                     .put("parts", new JSONArray().put(new JSONObject().put("text", prompt)))))
                     .put("generationConfig", new JSONObject().put("responseModalities", new JSONArray().put("AUDIO"))
@@ -47,7 +51,7 @@ final class NativeSpeechProtocol {
         return new JSONObject().put("model", model).put("input", input).put("parameters", parameters);
     }
     static String cacheName(SpeechBackend backend, String model, String voice, String text, String style) throws Exception {
-        byte[] digest = MessageDigest.getInstance("SHA-256").digest((backend.id + ":v1:" + (backend == SpeechBackend.ELEVENLABS ? voice + ":" : "")
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest((backend.id + (backend == SpeechBackend.GEMINI ? ":v2:" + model + ":" : ":v1:") + (backend == SpeechBackend.ELEVENLABS ? voice + ":" : "")
                 + request(backend, model, voice, text, style)).getBytes(StandardCharsets.UTF_8));
         StringBuilder value = new StringBuilder();
         for (byte b : digest) { value.append(String.format(java.util.Locale.ROOT, "%02x", b & 255)); }
@@ -80,13 +84,16 @@ final class NativeSpeechProtocol {
         String finish = candidate.optString("finishReason");
         if (!"STOP".equals(finish)) {
             if (java.util.Arrays.asList("", "OTHER", "MAX_TOKENS", "FINISH_REASON_UNSPECIFIED").contains(finish)) {
-                throw new SpeechRetry.TransientGenerationFailure(UiText.GEMINI_INCOMPLETE.text());
+                throw new SpeechRetry.TransientGenerationFailure(UiText.GEMINI_INCOMPLETE_REASON.text(finish.isEmpty() ? "UNSPECIFIED" : finish));
             }
             throw new IllegalStateException(UiText.GEMINI_FAILED.text(finish));
         }
         JSONObject content = candidate.optJSONObject("content");
         JSONArray parts = content == null ? null : content.optJSONArray("parts");
         if (parts == null) { throw new SpeechRetry.TransientGenerationFailure(UiText.GEMINI_NO_PARTS.text()); }
+        return geminiPartsAudio(parts);
+    }
+    static byte[] geminiPartsAudio(JSONArray parts) throws Exception {
         java.io.ByteArrayOutputStream pcm = new java.io.ByteArrayOutputStream();
         int rate = 24000;
         for (int i = 0; i < parts.length(); i++) {
@@ -94,7 +101,7 @@ final class NativeSpeechProtocol {
             if (data == null) { continue; }
             String mime = data.getString("mimeType");
             if (mime.startsWith("audio/wav") || mime.startsWith("audio/x-wav")) {
-                byte[] wav = java.util.Base64.getDecoder().decode(data.getString("data"));
+                byte[] wav = geminiDecode(data.getString("data"));
                 if (pcm.size() != 0 || parts.length() != 1 || wav.length < 44 || wav.length > 20 * 1024 * 1024
                         || !"RIFF".equals(new String(wav, 0, 4, StandardCharsets.US_ASCII))
                         || !"WAVE".equals(new String(wav, 8, 4, StandardCharsets.US_ASCII))) {
@@ -107,7 +114,7 @@ final class NativeSpeechProtocol {
             int partRate = matcher.find() ? Integer.parseInt(matcher.group(1)) : 24000;
             if (partRate < 8000 || partRate > 96000 || (pcm.size() > 0 && rate != partRate)) { throw new IllegalStateException(UiText.GEMINI_INVALID_RATE.text()); }
             rate = partRate;
-            byte[] bytes = java.util.Base64.getDecoder().decode(data.getString("data"));
+            byte[] bytes = geminiDecode(data.getString("data"));
             if ((bytes.length & 1) != 0 || pcm.size() + bytes.length > 20 * 1024 * 1024) { throw new IllegalStateException(UiText.GEMINI_INVALID_SIZE.text()); }
             pcm.write(bytes);
         }
@@ -120,4 +127,9 @@ final class NativeSpeechProtocol {
                 .put("data".getBytes(StandardCharsets.US_ASCII)).putInt(bytes.length).put(bytes);
         return wav.array();
     }
+    private static byte[] geminiDecode(String data) throws Exception {
+        try { return java.util.Base64.getDecoder().decode(data); }
+        catch (IllegalArgumentException e) { throw new SpeechRetry.TransientGenerationFailure(UiText.GEMINI_MALFORMED.text()); }
+    }
+
 }

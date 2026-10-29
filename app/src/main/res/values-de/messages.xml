@@ -35,7 +35,7 @@
     <string name="message_speech_response_large">Die Antwort für die Sprachausgabe ist zu groß.</string>
     <string name="message_eleven_model">Verwende ein ElevenLabs-TTS-Modell wie eleven_multilingual_v2 oder eleven_v3.</string>
     <string name="message_eleven_voice_id">Füge eine Stimmen-ID von deiner ElevenLabs-Seite „Voices“ ein.</string>
-    <string name="message_gemini_tts_model">Verwende gemini-2.5-flash-preview-tts oder gemini-2.5-pro-preview-tts. Neuere Interactions-Sprachmodelle werden hier nicht unterstützt.</string>
+    <string name="message_gemini_tts_model">Verwende eine Gemini-Text-to-Speech-Modell-ID (gemini-…-tts).</string>
     <string name="message_openai_tts_model">Verwende gpt-4o-mini-tts, tts-1 oder tts-1-hd für die OpenAI-Sprachausgabe.</string>
     <string name="message_openai_voice">Wähle eine unterstützte OpenAI-Stimme.</string>
     <string name="message_legacy_voices">Wähle für tts-1-Modelle shimmer, nova, alloy, fable, echo oder onyx.</string>
@@ -65,4 +65,5 @@
     <string name="message_provider_speech_http">Die %1$s-Sprachausgabe ist fehlgeschlagen (HTTP %2$d). Prüfe Schlüssel, Modellzugriff, Region und Guthaben.</string>
     <string name="message_saved_voice">Gespeicherte Stimme %1$d</string>
     <string name="message_eleven_retry">ElevenLabs ist vorübergehend nicht verfügbar. Neuer Versuch in %1$d s (Wiederholung %2$d). Zum Anhalten pausieren.</string>
+    <string name="message_gemini_incomplete_reason">Gemini hat eine unvollständige Sprachausgabe zurückgegeben (Abschlussgrund: %1$s).</string>
 </resources>

@@ -47,7 +47,8 @@ final class SpeechRetry {
                     throw failure;
                 }
                 if (!unlimited && attempt >= 2) {
-                    throw new IllegalStateException(UiText.RETRY_EXHAUSTED.text(failure instanceof HttpFailure ? failure.getMessage() : UiText.CONNECTION_AGAIN.text()), failure);
+                    throw new IllegalStateException(UiText.RETRY_EXHAUSTED.text(failure instanceof HttpFailure || failure instanceof TransientGenerationFailure
+                            ? failure.getMessage() : UiText.CONNECTION_AGAIN.text()), failure);
                 }
                 long delay = Math.min(30000, 1000L << Math.min(attempt, 5));
                 if (failure instanceof HttpFailure) {
