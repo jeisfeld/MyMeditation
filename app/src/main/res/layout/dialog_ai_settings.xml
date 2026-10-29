@@ -17,6 +17,17 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/activity_heading_margin"
+        android:labelFor="@id/spinnerAiModelPreset"
+        android:text="@string/ai_model_presets_label" />
+    <Spinner
+        android:id="@+id/spinnerAiModelPreset"
+        android:layout_width="match_parent"
+        android:layout_height="48dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/activity_heading_margin"
         android:labelFor="@id/editTextAiModel"
         android:text="@string/ai_model_hint" />
 
@@ -52,15 +63,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/activity_heading_margin"
-            android:labelFor="@id/editTextSpeechModel"
+            android:labelFor="@id/spinnerSpeechModel"
             android:text="@string/speech_model_label" />
-        <EditText
-            android:id="@+id/editTextSpeechModel"
+        <Spinner
+            android:id="@+id/spinnerSpeechModel"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="textNoSuggestions"
-            android:importantForAutofill="no"
-            android:singleLine="true" />
+            android:layout_height="48dp" />
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

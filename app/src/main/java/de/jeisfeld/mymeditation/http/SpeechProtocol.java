@@ -14,6 +14,11 @@ public final class SpeechProtocol {
     public static final String DEFAULT_VOICE = "coral";
     public static final List<String> VOICES = java.util.Collections.unmodifiableList(Arrays.asList(
             "shimmer", "sage", "coral", "nova", "marin", "alloy", "fable", "verse", "cedar", "ash", "ballad", "echo", "onyx"));
+    private static final List<String> LEGACY_VOICES = java.util.Collections.unmodifiableList(Arrays.asList(
+            "shimmer", "nova", "alloy", "fable", "echo", "onyx"));
+    public static List<String> voices(String model) {
+        return model != null && model.startsWith("tts-1") ? LEGACY_VOICES : VOICES;
+    }
     public static final String DEFAULT_STYLE = "Speak naturally as a meditation guide, with a warm, clear tone.";
     private static final String INSTRUCTIONS = "Read only the supplied text, in its original language. Do not add words.";
     private SpeechProtocol() { }
@@ -24,7 +29,7 @@ public final class SpeechProtocol {
             throw new IllegalArgumentException(UiText.OPENAI_TTS_MODEL.text());
         }
         if (!VOICES.contains(voice)) { throw new IllegalArgumentException(UiText.OPENAI_VOICE.text()); }
-        if (model.startsWith("tts-1") && !Arrays.asList("shimmer", "nova", "alloy", "fable", "echo", "onyx").contains(voice)) {
+        if (model.startsWith("tts-1") && !LEGACY_VOICES.contains(voice)) {
             throw new IllegalArgumentException(UiText.LEGACY_VOICES.text());
         }
     }

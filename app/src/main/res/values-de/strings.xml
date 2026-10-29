@@ -67,4 +67,6 @@
     <string name="label_voice_speed">Sprechgeschwindigkeit</string>
     <string name="pause_value_range">Gib eine Pause zwischen 0 und 30 Sekunden ein.</string>
     <string name="button_end_meditation">Meditation beenden</string>
+    <string name="ai_model_presets_label">KI-Modellvorlagen</string>
+    <string name="ai_model_presets_hint">Vorlage auswählen…</string>
 </resources>

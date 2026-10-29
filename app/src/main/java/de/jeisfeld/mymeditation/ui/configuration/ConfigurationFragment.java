@@ -2,6 +2,7 @@ package de.jeisfeld.mymeditation.ui.configuration;
 
 import android.os.Bundle;
 import de.jeisfeld.mymeditation.http.VoiceProfiles;
+import de.jeisfeld.mymeditation.http.ModelCatalog;
 import de.jeisfeld.mymeditation.http.SpeechBackend;
 import de.jeisfeld.mymeditation.databinding.DialogAiSettingsBinding;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
@@ -80,6 +81,20 @@ public class ConfigurationFragment extends Fragment {
                 DialogAiSettingsBinding.inflate(getLayoutInflater());
         settings.editTextAiModel.setText(PreferenceUtil.getSharedPreferenceString(
                 R.string.key_ai_model, R.string.default_ai_model));
+        java.util.List<String> presets = new java.util.ArrayList<>();
+        presets.add(getString(R.string.ai_model_presets_hint));
+        presets.addAll(ModelCatalog.aiModels());
+        settings.spinnerAiModelPreset.setAdapter(modelAdapter(presets));
+        settings.spinnerAiModelPreset.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (position <= 0) { return; }
+                String model = ModelCatalog.aiModels().get(position - 1);
+                settings.editTextAiModel.setText(model);
+                settings.editTextAiModel.setSelection(model.length());
+                settings.spinnerAiModelPreset.setSelection(0);
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) { }
+        });
         settings.editTextSpeechStyle.setText(PreferenceUtil.getSharedPreferenceString(
                 R.string.key_speech_style, R.string.default_speech_style));
         SpeechBackend[] selected = {SpeechBackend.fromId(PreferenceUtil.getSharedPreferenceString(
@@ -98,22 +113,19 @@ public class ConfigurationFragment extends Fragment {
         java.util.Map<SpeechBackend, String> voices = new java.util.HashMap<>();
         Runnable remember = () -> {
             if (selected[0] != SpeechBackend.DEVICE) {
-                models.put(selected[0], settings.editTextSpeechModel.getText().toString().trim());
+                Object model = settings.spinnerSpeechModel.getSelectedItem();
+                if (model != null) { models.put(selected[0], model.toString()); }
                 voices.put(selected[0], activeVoice[0]);
             }
         };
-        Runnable load = () -> {
+        Runnable loadVoices = () -> {
             SpeechBackend backend = selected[0];
-            settings.openAiSpeechSettings.setVisibility(backend == SpeechBackend.DEVICE ? View.GONE : View.VISIBLE);
             if (backend == SpeechBackend.DEVICE) { return; }
-            settings.editTextSpeechModel.setText(models.containsKey(backend) ? models.get(backend)
-                    : PreferenceUtil.getSharedPreferenceString(backend.modelKey(), backend.defaultModel));
-            loading[0] = true;
             java.util.List<String> labels = new java.util.ArrayList<>();
             voiceIds.clear();
             if (backend == SpeechBackend.ELEVENLABS) {
                 for (VoiceProfiles.Voice saved : profiles.voices()) { labels.add(saved.name); voiceIds.add(saved.id); }
-            } else { labels.addAll(backend.voices()); voiceIds.addAll(backend.voices()); }
+            } else { labels.addAll(backend.voices(models.get(backend))); voiceIds.addAll(labels); }
             ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, labels);
             adapter.setDropDownViewResource(R.layout.dropdown_voice_item);
             settings.spinnerSpeechVoice.setAdapter(adapter);
@@ -125,12 +137,38 @@ public class ConfigurationFragment extends Fragment {
             settings.spinnerSpeechVoice.setVisibility(View.VISIBLE);
             settings.elevenVoiceButtons.setVisibility(backend == SpeechBackend.ELEVENLABS ? View.VISIBLE : View.GONE);
             settings.buttonEditVoice.setEnabled(!activeVoice[0].isEmpty());
+        };
+        Runnable load = () -> {
+            SpeechBackend backend = selected[0];
+            settings.openAiSpeechSettings.setVisibility(backend == SpeechBackend.DEVICE ? View.GONE : View.VISIBLE);
+            if (backend == SpeechBackend.DEVICE) { return; }
+            loading[0] = true;
+            String model = models.containsKey(backend) ? models.get(backend)
+                    : PreferenceUtil.getSharedPreferenceString(backend.modelKey(), backend.defaultModel);
+            if (model == null || model.isEmpty()) { model = backend.defaultModel; }
+            models.put(backend, model);
+            java.util.List<String> choices = ModelCatalog.speechModels(backend, model);
+            settings.spinnerSpeechModel.setAdapter(modelAdapter(choices));
+            settings.spinnerSpeechModel.setSelection(choices.indexOf(model));
+            loadVoices.run();
             loading[0] = false;
         };
+        settings.spinnerSpeechModel.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (loading[0] || selected[0] == SpeechBackend.DEVICE) { return; }
+                Object item = settings.spinnerSpeechModel.getSelectedItem();
+                if (item == null || item.equals(models.get(selected[0]))) { return; }
+                voices.put(selected[0], activeVoice[0]);
+                models.put(selected[0], item.toString());
+                loadVoices.run();
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) { }
+        });
         settings.spinnerSpeechVoice.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (loading[0] || position < 0 || position >= voiceIds.size()) { return; }
-                String next = voiceIds.get(position);
+                int current = settings.spinnerSpeechVoice.getSelectedItemPosition();
+                if (loading[0] || current < 0 || current >= voiceIds.size()) { return; }
+                String next = voiceIds.get(current);
                 if (!next.equals(activeVoice[0])) {
                         activeVoice[0] = next;
                 }
@@ -191,7 +229,10 @@ public class ConfigurationFragment extends Fragment {
                         if (backend == SpeechBackend.ELEVENLABS && !voices.get(backend).matches("[A-Za-z0-9_-]{10,128}")) {
                             new AlertDialog.Builder(requireContext()).setMessage(R.string.add_voice_first)
                                     .setPositiveButton(R.string.button_ok, null).show();
-                        } else { settings.editTextSpeechModel.setError(e.getMessage()); }
+                        } else {
+                            new AlertDialog.Builder(requireContext()).setMessage(e.getMessage())
+                                    .setPositiveButton(R.string.button_ok, null).show();
+                        }
                         return;
                     }
                 }
@@ -212,6 +253,12 @@ public class ConfigurationFragment extends Fragment {
             });
         });
         dialog.show();
+    }
+
+    private ArrayAdapter<String> modelAdapter(java.util.List<String> models) {
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, models);
+        adapter.setDropDownViewResource(R.layout.dropdown_voice_item);
+        return adapter;
     }
 
     private void editSavedVoice(VoiceProfiles profiles, String existingId, java.util.function.Consumer<String> onSaved) {

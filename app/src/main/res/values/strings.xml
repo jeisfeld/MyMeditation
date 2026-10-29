@@ -82,4 +82,6 @@
     <string name="label_voice_speed">Voice speed</string>
     <string name="pause_value_range">Enter a pause from 0 to 30 seconds.</string>
     <string name="button_end_meditation">End meditation</string>
+    <string name="ai_model_presets_label">AI model presets</string>
+    <string name="ai_model_presets_hint">Choose a preset…</string>
 </resources>

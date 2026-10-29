@@ -40,6 +40,9 @@ public enum SpeechBackend {
             default: return SpeechProtocol.VOICES;
         }
     }
+    public List<String> voices(String model) {
+        return this == OPENAI ? SpeechProtocol.voices(model) : voices();
+    }
     public void validate(String model, String voice) {
         if (this == OPENAI) { SpeechProtocol.validate(model, voice); return; }
         if (this == ELEVENLABS) {
