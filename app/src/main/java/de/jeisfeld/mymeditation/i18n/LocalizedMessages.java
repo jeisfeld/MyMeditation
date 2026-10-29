@@ -10,8 +10,9 @@ public final class LocalizedMessages {
         Context app = context.getApplicationContext();
         UiText.setTranslator((message, args) -> app.getString(resource(message), args));
     }
-    private static int resource(UiText message) {
+    static int resource(UiText message) {
         switch (message) {
+            case WAITING_FOR_AUDIO_FOCUS: return R.string.message_waiting_for_audio_focus;
             case AUDIO_UNAVAILABLE: return R.string.message_audio_unavailable;
             case DEVICE_START_FAILED: return R.string.message_device_start_failed;
             case DEVICE_SPEECH_FAILED: return R.string.message_device_speech_failed;
@@ -33,6 +34,7 @@ public final class LocalizedMessages {
             case EMPTY_SPEECH: return R.string.message_empty_speech;
             case QWEN_REJECTED: return R.string.message_qwen_rejected;
             case GEMINI_NO_CANDIDATES: return R.string.message_gemini_no_candidates;
+            case GEMINI_INCOMPLETE_REASON: return R.string.message_gemini_incomplete_reason;
             case GEMINI_INCOMPLETE: return R.string.message_gemini_incomplete;
             case GEMINI_NO_PARTS: return R.string.message_gemini_no_parts;
             case GEMINI_INVALID_WAV: return R.string.message_gemini_invalid_wav;

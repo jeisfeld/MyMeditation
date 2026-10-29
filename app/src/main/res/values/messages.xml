@@ -66,4 +66,5 @@
     <string name="message_saved_voice">Saved voice %1$d</string>
     <string name="message_eleven_retry">ElevenLabs temporarily unavailable. Retrying in %1$d s (retry %2$d). Pause to stop.</string>
     <string name="message_gemini_incomplete_reason">Gemini returned incomplete speech (finish reason: %1$s).</string>
+    <string name="message_waiting_for_audio_focus">Paused for other audio. This passage will repeat when it ends.</string>
 </resources>

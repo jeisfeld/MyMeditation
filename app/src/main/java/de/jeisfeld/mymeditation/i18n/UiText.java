@@ -2,6 +2,7 @@ package de.jeisfeld.mymeditation.i18n;
 
 /** Resource-backed production messages with an English fallback for platform-independent tests. */
 public enum UiText {
+    WAITING_FOR_AUDIO_FOCUS("Paused for other audio. This passage will repeat when it ends."),
     AUDIO_UNAVAILABLE("Audio output is currently unavailable. Please try again."),
     DEVICE_START_FAILED("Device text-to-speech could not start."),
     DEVICE_SPEECH_FAILED("Device speech failed."),

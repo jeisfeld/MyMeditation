@@ -30,6 +30,8 @@ public final class MeditationSpeechPlayer {
         default void onStatus(String status) { }
         default void onFinished() { }
         default void onSpeaking(int index) { }
+        default void onWaitingForAudioFocus(boolean waiting) { }
+        default void onResumeAfterInterruption(int sentence) { }
     }
     private final Context context;
     private final Listener listener;
@@ -38,6 +40,8 @@ public final class MeditationSpeechPlayer {
     private final ExecutorService elevenExecutor = Executors.newSingleThreadExecutor();
     private final Map<Integer, Download> downloads = new HashMap<>();
     private android.media.AudioFocusRequest focus;
+    private final AudioFocusRecovery focusRecovery = new AudioFocusRecovery();
+    private int focusSession;
     private TextToSpeech tts;
     private MediaPlayer media;
     private AudioTrack silence;
@@ -74,13 +78,18 @@ public final class MeditationSpeechPlayer {
         this.voice = voice;
         this.speed = speed;
         this.style = style;
+        focusRecovery.start();
         running = true;
         listener.onRunning(true);
         final int token = session;
         android.media.AudioManager audio = (android.media.AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        final int focusToken = focusSession;
         focus = new android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
-                .setAudioAttributes(attributes()).setOnAudioFocusChangeListener(change -> {
-                    if (change < 0 && valid(token)) { stop(); }
+                .setAudioAttributes(attributes()).setWillPauseWhenDucked(true)
+                .setOnAudioFocusChangeListener(change -> {
+                    // Audio callbacks have their own generation: temporary suspension invalidates
+                    // speech/network callbacks, but must still accept a later focus GAIN.
+                    if (focus != null && focusToken == focusSession) { audioFocusChanged(change); }
                 }, handler).build();
         if (audio.requestAudioFocus(focus) != android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             fail(UiText.AUDIO_UNAVAILABLE.text());
@@ -104,6 +113,33 @@ public final class MeditationSpeechPlayer {
                 });
                 next(token, true);
             }));
+        }
+    }
+
+    private void audioFocusChanged(int change) {
+        AudioFocusRecovery.Change event;
+        switch (change) {
+            case android.media.AudioManager.AUDIOFOCUS_GAIN: event = AudioFocusRecovery.Change.GAIN; break;
+            case android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+            case android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
+                event = AudioFocusRecovery.Change.TEMPORARY_LOSS; break;
+            case android.media.AudioManager.AUDIOFOCUS_LOSS: event = AudioFocusRecovery.Change.PERMANENT_LOSS; break;
+            default: return;
+        }
+        switch (focusRecovery.change(event, index)) {
+            case SUSPEND:
+                // Retain the focus request so Android can return focus when navigation finishes.
+                stopPlaybackResources();
+                listener.onWaitingForAudioFocus(true);
+                listener.onStatus(UiText.WAITING_FOR_AUDIO_FOCUS.text());
+                listener.onRunning(false);
+                break;
+            case RESUME:
+                listener.onWaitingForAudioFocus(false);
+                listener.onResumeAfterInterruption(focusRecovery.sentence());
+                break;
+            case STOP: stop(); break;
+            default: break;
         }
     }
 
@@ -252,19 +288,25 @@ public final class MeditationSpeechPlayer {
 
     public void setPauseSeconds(double seconds) { pauseMs = (int) Math.round(Math.max(0, seconds) * 1000); }
 
-    public void stop() {
+    private void stopPlaybackResources() {
         session++;
         running = false;
-        handler.removeCallbacksAndMessages(null);
+        // Do not remove handler messages here: a focus GAIN may already be queued.
         for (Download job : downloads.values()) { job.request.cancel(); job.result.cancel(true); }
         downloads.clear();
         if (tts != null) { tts.stop(); tts.shutdown(); tts = null; }
-        releaseMedia();
-        releaseSilence();
+        releaseMedia(); releaseSilence();
+    }
+
+    public void stop() {
+        focusRecovery.cancel(); focusSession++;
+        stopPlaybackResources();
+        handler.removeCallbacksAndMessages(null);
         if (focus != null) {
             ((android.media.AudioManager) context.getSystemService(Context.AUDIO_SERVICE)).abandonAudioFocusRequest(focus);
             focus = null;
         }
+        listener.onWaitingForAudioFocus(false);
         listener.onStatus("");
         listener.onRunning(false);
     }

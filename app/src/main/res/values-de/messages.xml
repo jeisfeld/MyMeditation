@@ -66,4 +66,5 @@
     <string name="message_saved_voice">Gespeicherte Stimme %1$d</string>
     <string name="message_eleven_retry">ElevenLabs ist vorübergehend nicht verfügbar. Neuer Versuch in %1$d s (Wiederholung %2$d). Zum Anhalten pausieren.</string>
     <string name="message_gemini_incomplete_reason">Gemini hat eine unvollständige Sprachausgabe zurückgegeben (Abschlussgrund: %1$s).</string>
+    <string name="message_waiting_for_audio_focus">Für eine andere Audioausgabe pausiert. Danach wird dieser Abschnitt wiederholt.</string>
 </resources>
