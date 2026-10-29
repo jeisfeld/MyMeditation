@@ -116,12 +116,14 @@ public class MeditationFragment extends Fragment {
 
 
         binding.buttonCreateMeditation.setOnClickListener(v -> {
-            meditationViewModel.setMeditationContent(binding.editTextMeditationContent.getText().toString());
+            // postValue updates the ViewModel asynchronously; build this request from the visible text.
+            String meditationContent = binding.editTextMeditationContent.getText().toString();
+            meditationViewModel.setMeditationContent(meditationContent);
 
             stopAudio();
             String systemMessage = PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt);
             String queryTemplate = PreferenceUtil.getSharedPreferenceString(R.string.key_query_template);
-            String userMessage = (queryTemplate == null ? "@TEXT@" : queryTemplate).replace("@TEXT@", meditationViewModel.getMeditationContent().getValue());
+            String userMessage = (queryTemplate == null ? "@TEXT@" : queryTemplate).replace("@TEXT@", meditationContent);
             String oldMeditation = meditationViewModel.getMeditationText().getValue();
             meditationViewModel.setMeditationText(getString(R.string.text_creating_meditation));
             binding.buttonCreateMeditation.setEnabled(false);
