@@ -97,26 +97,36 @@
         android:id="@+id/textSpeechStatus"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/activity_horizontal_margin"
-        android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:layout_margin="0dp"
+        android:padding="0dp"
+        android:minHeight="0dp"
+        android:includeFontPadding="false"
+        android:textSize="12sp"
         android:accessibilityLiveRegion="polite"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:visibility="gone" />
 
-    <Button
-        android:id="@+id/buttonSpeakMeditation"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/single_button_horizontal_margin"
         android:layout_marginEnd="@dimen/single_button_horizontal_margin"
-        android:text="@string/button_speak_meditation" />
+        android:measureAllChildren="true">
 
-    <Button
-        android:id="@+id/buttonPauseMeditation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/single_button_horizontal_margin"
-        android:layout_marginEnd="@dimen/single_button_horizontal_margin"
-        android:text="@string/button_pause_meditation" />
+        <Button
+            android:id="@+id/buttonSpeakMeditation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/button_speak_meditation" />
+
+        <Button
+            android:id="@+id/buttonPauseMeditation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:text="@string/button_pause_meditation" />
+    </FrameLayout>
 
     <SeekBar
         android:id="@+id/seekBarAudio"

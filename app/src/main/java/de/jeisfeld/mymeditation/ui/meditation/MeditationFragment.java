@@ -31,6 +31,13 @@ public class MeditationFragment extends Fragment {
     private FragmentMeditationBinding binding;
 
     private List<String> sentences;
+    private String pendingSpeechStatus = "";
+    private final Runnable showSpeechStatus = () -> {
+        if (binding != null && !pendingSpeechStatus.isEmpty()) {
+            binding.textSpeechStatus.setText(pendingSpeechStatus);
+            binding.textSpeechStatus.setVisibility(View.VISIBLE);
+        }
+    };
 
     private MeditationViewModel meditationViewModel;
 
@@ -84,8 +91,7 @@ public class MeditationFragment extends Fragment {
                 meditationViewModel.setSeekBarMax(Math.max(0, sentences.size() - 1));
                 meditationViewModel.setSeekBarProgress(state.position);
             }
-            binding.textSpeechStatus.setText(state.status);
-            binding.textSpeechStatus.setVisibility(state.status.isEmpty() ? View.GONE : View.VISIBLE);
+            updateSpeechStatus(state.status);
             if (!state.error.isEmpty() && meditationViewModel.consumePlaybackError(state.errorId)) {
                 new AlertDialog.Builder(requireContext()).setTitle(R.string.button_speak_meditation)
                         .setMessage(state.error).setPositiveButton(R.string.button_ok, null).show();
@@ -205,9 +211,27 @@ public class MeditationFragment extends Fragment {
         return SpeechBackend.fromId(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend, R.string.default_speech_backend));
     }
 
+    private void updateSpeechStatus(String status) {
+        if (status.equals(pendingSpeechStatus)) { return; }
+        binding.textSpeechStatus.removeCallbacks(showSpeechStatus);
+        pendingSpeechStatus = status;
+        if (status.isEmpty()) {
+            binding.textSpeechStatus.setText("");
+            // No idle gap: only sustained status messages use a compact single line.
+            binding.textSpeechStatus.setVisibility(View.GONE);
+        } else if (binding.textSpeechStatus.getVisibility() == View.VISIBLE) {
+            binding.textSpeechStatus.setText(status);
+        } else {
+            // Cached/prefetched audio often clears "Preparing" within the same frame.
+            binding.textSpeechStatus.postDelayed(showSpeechStatus, 300);
+        }
+    }
+
     private void stopAudio() { MeditationPlaybackService.pause(requireContext()); }
 
     @Override public void onDestroyView() {
+        binding.textSpeechStatus.removeCallbacks(showSpeechStatus);
+        pendingSpeechStatus = "";
         binding = null;
         super.onDestroyView();
     }
