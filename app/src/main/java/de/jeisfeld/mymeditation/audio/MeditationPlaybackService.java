@@ -203,6 +203,9 @@ public final class MeditationPlaybackService extends Service {
                 PreferenceUtil.getPauseSeconds());
     }
     private PlaybackRequest configuredRequest(String activeText, double pauseSeconds) {
+        return currentRequest(activeText, pauseSeconds);
+    }
+    public static PlaybackRequest currentRequest(String activeText, double pauseSeconds) {
         SpeechBackend backend = SpeechBackend.fromId(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend, R.string.default_speech_backend));
         String voice = PreferenceUtil.getSharedPreferenceString(backend.voiceKey(), backend.defaultVoice);
         double speed = 1.0;

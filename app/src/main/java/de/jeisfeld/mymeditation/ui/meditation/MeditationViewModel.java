@@ -7,7 +7,15 @@ import de.jeisfeld.mymeditation.R;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
 
 public class MeditationViewModel extends ViewModel {
-    private long lastPlaybackError;
+    private long lastPlaybackError, lastExportResult, lastOfflineError;
+    public boolean consumeExportResult(long id) {
+        if (id == 0 || id == lastExportResult) { return false; }
+        lastExportResult = id; return true;
+    }
+    public boolean consumeOfflineError(long id) {
+        if (id == 0 || id == lastOfflineError) { return false; }
+        lastOfflineError = id; return true;
+    }
     protected boolean consumePlaybackError(long id) {
         if (id == 0 || id == lastPlaybackError) { return false; }
         lastPlaybackError = id;

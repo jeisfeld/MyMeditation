@@ -6,27 +6,61 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingTop="@dimen/list_vertical_margin"
-    android:paddingBottom="@dimen/list_vertical_margin">
+    android:minHeight="48dp">
 
     <TextView
         android:id="@+id/textViewMeditationName"
         android:layout_width="0dp"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/list_horizontal_margin"
         android:ellipsize="end"
         android:singleLine="true"
         android:textAppearance="?android:attr/textAppearanceMedium"
-        app:layout_constraintEnd_toStartOf="@id/imageViewDelete"
+        app:layout_constraintEnd_toStartOf="@id/buttonPlayOffline"
         app:layout_constraintHorizontal_bias="0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
-    <ImageView
+    <ImageButton
+        android:id="@+id/buttonPlayOffline"
+        android:layout_width="40dp"
+        android:layout_height="48dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="12dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_playback_play"
+        app:tint="?attr/colorControlNormal"
+        android:contentDescription="@string/button_play_offline"
+        android:tooltipText="@string/button_play_offline"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/buttonShareOffline" />
+    <ImageButton
+        android:id="@+id/buttonShareOffline"
+        android:layout_width="40dp"
+        android:layout_height="48dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="12dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_share_audio"
+        app:tint="?attr/colorControlNormal"
+        android:contentDescription="@string/button_share_offline"
+        android:tooltipText="@string/button_share_offline"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/imageViewDelete" />
+
+    <ImageButton
         android:id="@+id/imageViewDelete"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_marginEnd="@dimen/list_horizontal_margin"
+        android:layout_width="40dp"
+        android:layout_height="48dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="12dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        app:tint="?attr/colorControlNormal"
         android:src="@drawable/ic_button_delete"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/imageViewDragHandle"

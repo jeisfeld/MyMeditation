@@ -1,0 +1,12 @@
+Offline MP3 encoding uses the portable, unmodified MP3 engine from Jump3r 1.0.5,
+a Java port of LAME, copyright the LAME authors, Kenjiro Uetake and Hanns Holger Rutz.
+Licensed under LGPL 2.1 or later; see jump3r-LGPL-2.1.txt.
+Source (including original notices):
+https://repo.maven.apache.org/maven2/de/sciss/jump3r/1.0.5/jump3r-1.0.5-sources.jar
+https://github.com/Sciss/Jump3r
+The build retains the mp3/mpg packages and omits unused desktop frontends.
+
+Pitch-preserving speed processing uses AndroidX Media3 1.8.0 (Sonic),
+copyright The Android Open Source Project and Sonic contributors,
+under the Apache License 2.0 (included in the dependency metadata).
+Source: https://github.com/androidx/media

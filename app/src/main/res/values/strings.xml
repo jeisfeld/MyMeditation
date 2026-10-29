@@ -84,4 +84,22 @@
     <string name="button_end_meditation">End meditation</string>
     <string name="ai_model_presets_label">AI model presets</string>
     <string name="ai_model_presets_hint">Choose a preset…</string>
+    <string name="button_export_meditation">Save offline MP3</string>
+    <string name="button_cancel_export">Cancel MP3 export</string>
+    <string name="button_play_offline">Play offline recording</string>
+    <string name="button_share_offline">Share MP3</string>
+    <string name="offline_share_failed">Could not share this MP3.</string>
+    <string name="offline_play_failed">Could not play this offline recording.</string>
+    <string name="offline_channel">Offline meditation</string>
+    <string name="offline_back">Back 15 seconds</string>
+    <string name="offline_forward">Forward 15 seconds</string>
+    <string name="export_title">Save offline MP3</string>
+    <string name="export_channel">MP3 export</string>
+    <string name="export_preparing">Preparing MP3…</string>
+    <string name="export_progress">Rendering passage %1$d of %2$d…</string>
+    <string name="export_retry">Speech service unavailable. Retrying in %1$d s (retry %2$d).</string>
+    <string name="export_cloud_required">Choose an AI voice in AI settings to save an offline MP3. Device text-to-speech is not supported for MP3 export.</string>
+    <string name="export_failed">Could not create the MP3. No incomplete recording was saved. Check your connection and available storage, then try again.</string>
+    <string name="export_saved">“%1$s” is ready in Saved meditations. Use Play to listen offline or Share to copy the MP3.</string>
+    <string name="default_offline_name">Offline meditation</string>
 </resources>

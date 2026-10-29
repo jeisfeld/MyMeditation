@@ -16,6 +16,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 import de.jeisfeld.mymeditation.R;
+import de.jeisfeld.mymeditation.ui.meditation.MeditationViewModel;
 import de.jeisfeld.mymeditation.databinding.FragmentSavedMeditationsBinding;
 import de.jeisfeld.mymeditation.util.DialogUtil;
 import de.jeisfeld.mymeditation.util.DialogUtil.RequestInputDialogFragment.RequestInputDialogListener;
@@ -24,6 +25,8 @@ import de.jeisfeld.mymeditation.util.PreferenceUtil;
 public class SavedMeditationsFragment extends Fragment {
 
 	private FragmentSavedMeditationsBinding binding;
+	private ItemTouchHelper touchHelper;
+	private int lastOfflinePlaybackId;
 
 	public View onCreateView(@NonNull LayoutInflater inflater,
 							 ViewGroup container, Bundle savedInstanceState) {
@@ -55,20 +58,11 @@ public class SavedMeditationsFragment extends Fragment {
 		binding.buttonSaveCurrentMeditation.setOnClickListener(v -> DialogUtil.displayInputDialog(requireActivity(), new RequestInputDialogListener() {
 			@Override
 			public void onDialogPositiveClick(DialogFragment dialog, String text) {
-				int newMeditationId = PreferenceUtil.getSharedPreferenceInt(R.string.key_max_saved_meditation_id, 0) + 1;
-				PreferenceUtil.setIndexedSharedPreferenceString(R.string.key_saved_meditation_name, newMeditationId, text);
-				PreferenceUtil.setIndexedSharedPreferenceString(R.string.key_saved_system_prompt, newMeditationId,
-						PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt));
-				PreferenceUtil.setIndexedSharedPreferenceString(R.string.key_saved_query_template, newMeditationId,
-						PreferenceUtil.getSharedPreferenceString(R.string.key_query_template));
-				PreferenceUtil.setIndexedSharedPreferenceString(R.string.key_saved_meditation_content, newMeditationId,
-						PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content));
-				PreferenceUtil.setIndexedSharedPreferenceString(R.string.key_saved_meditation_text, newMeditationId,
+				de.jeisfeld.mymeditation.audio.OfflineMeditations.save(text,
+						PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt),
+						PreferenceUtil.getSharedPreferenceString(R.string.key_query_template),
+						PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content),
 						PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text));
-				ArrayList<Integer> savedMeditationIds = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids);
-				savedMeditationIds.add(newMeditationId);
-				PreferenceUtil.setSharedPreferenceIntList(R.string.key_saved_meditation_ids, savedMeditationIds);
-				PreferenceUtil.setSharedPreferenceInt(R.string.key_max_saved_meditation_id, newMeditationId);
 				populateRecyclerView(recyclerView);
 			}
 
@@ -78,11 +72,35 @@ public class SavedMeditationsFragment extends Fragment {
 			}
 		}, R.string.title_dialog_save_meditation, R.string.button_save, "", R.string.text_dialog_save_meditation));
 
+		MeditationViewModel events = new androidx.lifecycle.ViewModelProvider(requireActivity()).get(MeditationViewModel.class);
+		de.jeisfeld.mymeditation.audio.MeditationExportService.state().observe(getViewLifecycleOwner(), state -> {
+			if (!state.active && state.savedId > 0) { populateRecyclerView(recyclerView); }
+			if (events.consumeExportResult(state.resultId)) {
+				if (!state.error.isEmpty()) {
+					new androidx.appcompat.app.AlertDialog.Builder(requireContext()).setTitle(R.string.export_title)
+							.setMessage(state.error).setPositiveButton(R.string.button_ok, null).show();
+				} else {
+					android.widget.Toast.makeText(requireContext(), getString(R.string.export_saved, state.name), android.widget.Toast.LENGTH_LONG).show();
+				}
+			}
+		});
+		de.jeisfeld.mymeditation.audio.OfflinePlaybackService.state().observe(getViewLifecycleOwner(), state -> {
+			if (recyclerView.getAdapter() instanceof SavedMeditationsViewAdapter) {
+				((SavedMeditationsViewAdapter) recyclerView.getAdapter()).playbackChanged(lastOfflinePlaybackId, state.id);
+			}
+			lastOfflinePlaybackId = state.id;
+			if (events.consumeOfflineError(state.errorId)) {
+				new androidx.appcompat.app.AlertDialog.Builder(requireContext()).setMessage(state.error)
+						.setPositiveButton(R.string.button_ok, null).show();
+			}
+		});
+
 		return root;
 	}
 
 	@Override
 	public void onDestroyView() {
+		if (touchHelper != null) { touchHelper.attachToRecyclerView(null); touchHelper = null; }
 		super.onDestroyView();
 		binding = null;
 	}
@@ -95,7 +113,8 @@ public class SavedMeditationsFragment extends Fragment {
 	private void populateRecyclerView(final RecyclerView recyclerView) {
 		SavedMeditationsViewAdapter adapter = new SavedMeditationsViewAdapter(this, recyclerView);
 		ItemTouchHelper.Callback callback = new SavedMeditationsItemMoveCallback(adapter);
-		ItemTouchHelper touchHelper = new ItemTouchHelper(callback);
+		if (touchHelper != null) { touchHelper.attachToRecyclerView(null); }
+		touchHelper = new ItemTouchHelper(callback);
 		adapter.setStartDragListener(touchHelper::startDrag);
 		touchHelper.attachToRecyclerView(recyclerView);
 

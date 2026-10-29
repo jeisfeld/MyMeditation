@@ -75,6 +75,42 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 
 		String meditationName = PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, meditationId);
 		holder.mTitle.setText(meditationName);
+		Fragment owner = mFragment.get();
+		boolean offline = owner != null && owner.getContext() != null
+				&& de.jeisfeld.mymeditation.audio.OfflineMeditations.file(owner.requireContext(), meditationId).isFile();
+		holder.mPlayButton.setVisibility(offline ? View.VISIBLE : View.GONE);
+		holder.mShareButton.setVisibility(offline ? View.VISIBLE : View.GONE);
+		de.jeisfeld.mymeditation.audio.OfflinePlaybackService.State state =
+				de.jeisfeld.mymeditation.audio.OfflinePlaybackService.state().getValue();
+		boolean playing = state.id == meditationId && state.playing;
+		holder.mPlayButton.setImageResource(playing ? R.drawable.ic_playback_pause : R.drawable.ic_playback_play);
+		if (owner != null) {
+			String action = owner.getString(playing ? R.string.notification_pause : R.string.button_play_offline);
+			holder.mPlayButton.setContentDescription(action); holder.mPlayButton.setTooltipText(action);
+		}
+		holder.mPlayButton.setOnClickListener(v -> {
+			Fragment fragment = mFragment.get();
+			if (fragment == null || fragment.getContext() == null) { return; }
+			try { de.jeisfeld.mymeditation.audio.OfflinePlaybackService.toggle(fragment.requireContext(), meditationId); }
+			catch (RuntimeException e) { android.widget.Toast.makeText(fragment.requireContext(), R.string.offline_play_failed, android.widget.Toast.LENGTH_LONG).show(); }
+		});
+		holder.mShareButton.setOnClickListener(v -> {
+			Fragment fragment = mFragment.get();
+			if (fragment == null || fragment.getContext() == null) { return; }
+			try {
+				java.io.File file = de.jeisfeld.mymeditation.audio.OfflineMeditations.file(fragment.requireContext(), meditationId);
+				String filename = meditationName.replace('/', '_').replace('\\', '_').replaceAll("[\\p{Cntrl}]", "_") + ".mp3";
+				android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(fragment.requireContext(),
+						fragment.requireContext().getPackageName() + ".offlinefiles", file, filename);
+				android.content.Intent share = new android.content.Intent(android.content.Intent.ACTION_SEND).setType("audio/mpeg")
+						.putExtra(android.content.Intent.EXTRA_STREAM, uri).putExtra(android.content.Intent.EXTRA_TITLE, meditationName)
+						.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+				share.setClipData(android.content.ClipData.newRawUri(meditationName, uri));
+				fragment.startActivity(android.content.Intent.createChooser(share, fragment.getString(R.string.button_share_offline)));
+			} catch (RuntimeException e) {
+				android.widget.Toast.makeText(fragment.requireContext(), R.string.offline_share_failed, android.widget.Toast.LENGTH_LONG).show();
+			}
+		});
 
 		holder.mDragHandle.setOnTouchListener((view, event) -> {
 			if (event.getAction() == MotionEvent.ACTION_DOWN) {
@@ -90,6 +126,9 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 			Fragment fragment = mFragment.get();
 			if (fragment != null && fragment.getActivity() != null) {
 				DialogUtil.displayConfirmationMessage(fragment.getActivity(), dialog -> {
+					de.jeisfeld.mymeditation.audio.OfflinePlaybackService.stopIfPlaying(fragment.requireContext(), meditationId);
+					de.jeisfeld.mymeditation.audio.OfflineMeditations.file(fragment.requireContext(), meditationId).delete();
+					PreferenceUtil.setSharedPreferenceString("offline_settings_" + meditationId, "");
 					PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_meditation_name, meditationId);
 					PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_system_prompt, meditationId);
 					PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_query_template, meditationId);
@@ -98,9 +137,9 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 					ArrayList<Integer> savedMeditationIds = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids);
 					savedMeditationIds.remove(Integer.valueOf(meditationId));
 					PreferenceUtil.setSharedPreferenceIntList(R.string.key_saved_meditation_ids, savedMeditationIds);
+					int removed = mMeditationIds.indexOf(meditationId);
 					mMeditationIds.remove(Integer.valueOf(meditationId));
-					notifyItemRemoved(position);
-					notifyItemRangeChanged(position, mMeditationIds.size() - position);
+					if (removed >= 0) { notifyItemRemoved(removed); notifyItemRangeChanged(removed, mMeditationIds.size() - removed); }
 				}, null, R.string.button_cancel, R.string.button_delete, R.string.message_confirm_delete_meditation, meditationName);
 			}
 		});
@@ -123,6 +162,12 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 			DialogUtil.displayToast(fragment.getActivity(), R.string.toast_meditation_restored, meditationName);
 		});
 
+	}
+
+	public void playbackChanged(int previousId, int currentId) {
+		int previous = mMeditationIds.indexOf(previousId), current = mMeditationIds.indexOf(currentId);
+		if (previous >= 0) { notifyItemChanged(previous); }
+		if (current >= 0 && current != previous) { notifyItemChanged(current); }
 	}
 
 	@Override
@@ -178,6 +223,7 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 		 * The delete button.
 		 */
 		private final ImageView mDeleteButton;
+		private final android.widget.ImageButton mPlayButton, mShareButton;
 
 		/**
 		 * Constructor.
@@ -190,6 +236,8 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 			mTitle = itemView.findViewById(R.id.textViewMeditationName);
 			mDragHandle = itemView.findViewById(R.id.imageViewDragHandle);
 			mDeleteButton = itemView.findViewById(R.id.imageViewDelete);
+			mPlayButton = itemView.findViewById(R.id.buttonPlayOffline);
+			mShareButton = itemView.findViewById(R.id.buttonShareOffline);
 		}
 	}
 

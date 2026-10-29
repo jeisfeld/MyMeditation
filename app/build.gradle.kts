@@ -2,6 +2,15 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+// Keep the portable encoder/decoder core; desktop JavaSound frontends are unavailable on Android.
+val mp3Encoder by configurations.creating
+val androidMp3Encoder by tasks.registering(Jar::class) {
+    from({ mp3Encoder.map { zipTree(it) } })
+    include("de/sciss/jump3r/mp3/**", "de/sciss/jump3r/mpg/**")
+    archiveFileName.set("android-mp3-encoder.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("mp3-encoder"))
+}
+
 android {
     namespace = "de.jeisfeld.mymeditation"
     compileSdk = 37
@@ -32,6 +41,9 @@ android {
 }
 
 dependencies {
+    mp3Encoder("de.sciss:jump3r:1.0.5")
+    implementation(files(androidMp3Encoder.flatMap { it.archiveFile }))
+    implementation("androidx.media3:media3-common:1.8.0")
 
     implementation(libs.appcompat)
     implementation(libs.material)
