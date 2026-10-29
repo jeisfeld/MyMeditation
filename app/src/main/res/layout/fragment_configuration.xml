@@ -5,14 +5,6 @@
     android:orientation="vertical"
     android:paddingBottom="?attr/actionBarSize">
 
-    <Button
-        android:id="@+id/buttonAiSettings"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/activity_horizontal_margin"
-        android:layout_marginEnd="@dimen/activity_horizontal_margin"
-        android:layout_marginTop="@dimen/activity_heading_margin"
-        android:text="@string/ai_settings" />
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -31,6 +23,7 @@
         android:layout_marginStart="@dimen/editText_horizontal_margin"
         android:layout_marginEnd="@dimen/editText_horizontal_margin"
         android:layout_weight="1"
+        android:scrollbars="vertical"
         android:gravity="top"
         android:importantForAutofill="no"
         android:inputType="textMultiLine"
@@ -54,8 +47,94 @@
         android:layout_marginStart="@dimen/editText_horizontal_margin"
         android:layout_marginEnd="@dimen/editText_horizontal_margin"
         android:layout_weight="1"
+        android:scrollbars="vertical"
         android:gravity="top"
         android:importantForAutofill="no"
         android:inputType="textMultiLine"
         android:textSize="@dimen/text_size_content" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/activity_horizontal_margin"
+        android:layout_marginTop="@dimen/activity_heading_margin"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:accessibilityHeading="true"
+                    android:text="@string/ai_settings"
+                    android:textSize="@dimen/text_size_content_heading"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:includeFontPadding="false"
+                    android:labelFor="@id/spinnerAiModelPreset"
+                    android:text="@string/ai_model_presets_label" />
+            </LinearLayout>
+            <Button
+                android:id="@+id/buttonAiSettings"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:text="@string/button_more"
+                android:contentDescription="@string/ai_settings"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <Spinner
+            android:id="@+id/spinnerAiModelPreset"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:saveEnabled="false" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:labelFor="@id/spinnerSpeechModel"
+            android:text="@string/speech_model_label" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:orientation="horizontal">
+            <Spinner
+                android:id="@+id/spinnerSpeechBackend"
+                android:layout_width="120dp"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/speech_output_label"
+                android:saveEnabled="false" />
+            <Spinner
+                android:id="@+id/spinnerSpeechModel"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:saveEnabled="false" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:labelFor="@id/spinnerSpeechVoice"
+            android:text="@string/speech_voice_label" />
+        <Spinner
+            android:id="@+id/spinnerSpeechVoice"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:saveEnabled="false" />
+    </LinearLayout>
 </LinearLayout>

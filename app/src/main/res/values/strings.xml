@@ -102,4 +102,13 @@
     <string name="export_failed">Could not create the MP3. No incomplete recording was saved. Check your connection and available storage, then try again.</string>
     <string name="export_saved">“%1$s” is ready in Saved meditations. Use Play to listen offline or Share to copy the MP3.</string>
     <string name="default_offline_name">Offline meditation</string>
+    <string name="button_more">More</string>
+    <string name="device_speech_default">Device default</string>
+    <string-array name="speech_backend_short_options">
+        <item>Device</item>
+        <item>OpenAI</item>
+        <item>Gemini</item>
+        <item>Qwen</item>
+        <item>ElevenLabs</item>
+    </string-array>
 </resources>

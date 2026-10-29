@@ -2,6 +2,14 @@
 
 Create Meditation calls the selected provider directly over HTTPS. Configure its native model ID in **Configuration → AI settings**. Existing prompts, the `@TEXT@` query template, and saved model selection are retained. Speak Meditation supports device TTS or OpenAI speech.
 
+## Configuration page
+
+System instruction and Query template are the first two sections. The AI settings section below them provides four directly accessible dropdowns: AI model presets, Speech output, Speech model and Voice. Each selection saves immediately; speech changes also apply to a running meditation. The lists retain the current custom model ID, remember provider-specific model/voice selections, and use the existing model-specific voice catalogs and named ElevenLabs voices. Device TTS shows disabled model/voice controls with “Device default”. To use ElevenLabs, first add a voice in the full dialog if none is saved.
+
+The speech provider and speech model share one row under “Speech model”. Labels and controls have compact spacing, and the two prompt editors share the remaining height without scrolling the page.
+
+The small **More** button beside the AI settings heading and model-presets label opens the existing AI settings dialog for manually entering a model ID, voice instructions and adding/editing/removing ElevenLabs voices. Changes inside that dialog still require Save; Cancel discards them. Closing the dialog refreshes the inline selections. The prompt editors scroll internally when their text exceeds the available space.
+
 ## Local API keys
 
 In your local `app/src/main/java/de/jeisfeld/mymeditation/http/HttpCredentials.java`, add the constants for whichever providers you use:

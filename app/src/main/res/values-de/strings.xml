@@ -87,4 +87,13 @@
     <string name="export_failed">Die MP3 konnte nicht erstellt werden. Es wurde keine unvollständige Aufnahme gespeichert. Prüfe die Verbindung und den verfügbaren Speicher und versuche es erneut.</string>
     <string name="export_saved">„%1$s“ ist unter Gespeicherte Meditationen verfügbar. Mit Abspielen kannst du offline hören und mit Teilen die MP3 kopieren.</string>
     <string name="default_offline_name">Offline-Meditation</string>
+    <string name="button_more">Mehr</string>
+    <string name="device_speech_default">Gerätestandard</string>
+    <string-array name="speech_backend_short_options">
+        <item>Gerät</item>
+        <item>OpenAI</item>
+        <item>Gemini</item>
+        <item>Qwen</item>
+        <item>ElevenLabs</item>
+    </string-array>
 </resources>

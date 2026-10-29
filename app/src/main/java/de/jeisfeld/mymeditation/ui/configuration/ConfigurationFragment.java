@@ -28,6 +28,7 @@ import de.jeisfeld.mymeditation.databinding.FragmentConfigurationBinding;
 public class ConfigurationFragment extends Fragment {
 
     private FragmentConfigurationBinding binding;
+    private InlineAiSettings inlineAiSettings;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -71,6 +72,8 @@ public class ConfigurationFragment extends Fragment {
         });
 
 
+        inlineAiSettings = new InlineAiSettings(binding);
+        inlineAiSettings.refresh();
         binding.buttonAiSettings.setOnClickListener(v -> showAiSettings());
 
         return root;
@@ -252,7 +255,16 @@ public class ConfigurationFragment extends Fragment {
                 dialog.dismiss();
             });
         });
+        dialog.setOnDismissListener(d -> {
+            if (inlineAiSettings != null) { inlineAiSettings.refresh(); }
+        });
         dialog.show();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (inlineAiSettings != null) { inlineAiSettings.refresh(); }
     }
 
     private ArrayAdapter<String> modelAdapter(java.util.List<String> models) {
@@ -296,6 +308,8 @@ public class ConfigurationFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        inlineAiSettings.dispose();
+        inlineAiSettings = null;
         binding = null;
     }
 }
