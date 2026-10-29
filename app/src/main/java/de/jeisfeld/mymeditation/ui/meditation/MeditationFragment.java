@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.ui.meditation;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 import android.os.Bundle;
 import de.jeisfeld.mymeditation.http.SpeechBackend;
 import de.jeisfeld.mymeditation.audio.MeditationPlaybackService;
@@ -87,7 +88,7 @@ public class MeditationFragment extends Fragment {
             binding.textSpeechStatus.setVisibility(state.status.isEmpty() ? View.GONE : View.VISIBLE);
             if (!state.error.isEmpty() && meditationViewModel.consumePlaybackError(state.errorId)) {
                 new AlertDialog.Builder(requireContext()).setTitle(R.string.button_speak_meditation)
-                        .setMessage(state.error).setPositiveButton(android.R.string.ok, null).show();
+                        .setMessage(state.error).setPositiveButton(R.string.button_ok, null).show();
             }
         });
 
@@ -113,8 +114,8 @@ public class MeditationFragment extends Fragment {
                     meditationViewModel.setSeekBarProgress(0);
                 } else {
                     new AlertDialog.Builder(requireContext())
-                            .setTitle("Create Meditation").setMessage(error)
-                            .setPositiveButton(android.R.string.ok, null).show();
+                            .setTitle(R.string.button_create_meditation).setMessage(error)
+                            .setPositiveButton(R.string.button_ok, null).show();
                 }
             });
         });
@@ -195,8 +196,8 @@ public class MeditationFragment extends Fragment {
         catch (RuntimeException e) {
             meditationViewModel.setMeditationRunning(false);
             new AlertDialog.Builder(requireContext()).setTitle(R.string.button_speak_meditation)
-                    .setMessage("Could not start the playback service. Please try again while the app is visible.")
-                    .setPositiveButton(android.R.string.ok, null).show();
+                    .setMessage(UiText.VISIBLE_SERVICE_FAILED.text())
+                    .setPositiveButton(R.string.button_ok, null).show();
         }
     }
 

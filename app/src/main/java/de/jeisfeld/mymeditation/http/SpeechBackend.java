@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.http;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 import java.util.Arrays;
 import java.util.List;
 
@@ -38,10 +39,10 @@ public enum SpeechBackend {
         if (this == OPENAI) { SpeechProtocol.validate(model, voice); return; }
         if (this == ELEVENLABS) {
             if (model == null || !model.matches("eleven_[A-Za-z0-9_]+")) {
-                throw new IllegalArgumentException("Use an ElevenLabs TTS model such as eleven_multilingual_v2 or eleven_v3.");
+                throw new IllegalArgumentException(UiText.ELEVEN_MODEL.text());
             }
             if (voice == null || !voice.matches("[A-Za-z0-9_-]{10,128}")) {
-                throw new IllegalArgumentException("Paste a voice ID from your ElevenLabs Voices page.");
+                throw new IllegalArgumentException(UiText.ELEVEN_VOICE_ID.text());
             }
             return;
         }
@@ -49,10 +50,10 @@ public enum SpeechBackend {
         valid &= this == GEMINI ? model != null && model.startsWith("gemini-2.5-") && model.contains("-tts")
                 : model != null && (model.startsWith("qwen3-tts-") || model.startsWith("qwen-tts-"));
         if (this == GEMINI && !valid) {
-            throw new IllegalArgumentException("Use gemini-2.5-flash-preview-tts or gemini-2.5-pro-preview-tts. Newer Interactions speech models are not supported here.");
+            throw new IllegalArgumentException(UiText.GEMINI_TTS_MODEL.text());
         }
         if (!valid || !voices().contains(voice)) {
-            throw new IllegalArgumentException("Choose a native " + id + " TTS model and a supported voice (not a realtime/audio-understanding model).");
+            throw new IllegalArgumentException(UiText.NATIVE_MODEL.text(id));
         }
     }
 }

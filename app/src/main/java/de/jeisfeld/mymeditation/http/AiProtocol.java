@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.http;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -42,7 +43,7 @@ final class AiProtocol {
                 if (provider == AiProvider.QWEN) { body.put("enable_thinking", false); }
                 break;
             default:
-                throw new IllegalArgumentException("Unsupported provider.");
+                throw new IllegalArgumentException(UiText.UNSUPPORTED_PROVIDER.text());
         }
         return body;
     }
@@ -95,18 +96,18 @@ final class AiProtocol {
                 text.append(choice.getJSONObject("message").optString("content", ""));
                 break;
             default:
-                throw new IllegalArgumentException("Unsupported provider.");
+                throw new IllegalArgumentException(UiText.UNSUPPORTED_PROVIDER.text());
         }
         String result = text.toString().trim();
         if (result.isEmpty()) {
-            throw new IllegalStateException(provider.displayName + " returned no meditation text. The request may have been declined.");
+            throw new IllegalStateException(UiText.NO_TEXT.text(provider.displayName));
         }
         return result;
     }
 
     private static void requireComplete(AiProvider provider, boolean complete) {
         if (!complete) {
-            throw new IllegalStateException(provider.displayName + " did not return a complete meditation. Try a shorter or revised request.");
+            throw new IllegalStateException(UiText.INCOMPLETE_MEDITATION.text(provider.displayName));
         }
     }
 }

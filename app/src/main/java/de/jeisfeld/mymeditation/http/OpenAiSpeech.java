@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.http;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -38,11 +39,11 @@ public final class OpenAiSpeech {
     private File attempt(File cacheRoot, String model, String voice, String text, double speed, String style) throws Exception {
         checkCancelled();
         File directory = new File(cacheRoot, "openai-speech");
-        if (!directory.isDirectory() && !directory.mkdirs()) { throw new java.io.IOException("Speech cache unavailable."); }
+        if (!directory.isDirectory() && !directory.mkdirs()) { throw new java.io.IOException(UiText.CACHE_UNAVAILABLE.text()); }
         File target = new File(directory, SpeechProtocol.cacheName(model, voice, text, speed, style));
         if (target.isFile() && target.length() > 0) { target.setLastModified(System.currentTimeMillis()); return target; }
         String key = LocalCredentials.read("OPENAI_API_KEY");
-        if (key.isEmpty()) { throw new IllegalStateException("Set HttpCredentials.OPENAI_API_KEY and rebuild the app to use OpenAI speech."); }
+        if (key.isEmpty()) { throw new IllegalStateException(UiText.OPENAI_KEY_MISSING.text()); }
         File temporary = null;
         try {
             connection = (HttpsURLConnection) new URL("https://api.openai.com/v1/audio/speech").openConnection();
@@ -63,7 +64,7 @@ public final class OpenAiSpeech {
             }
             String contentType = connection.getContentType();
             if (contentType == null || !(contentType.startsWith("audio/") || contentType.startsWith("application/octet-stream"))) {
-                throw new java.io.IOException("Expected audio response.");
+                throw new java.io.IOException(UiText.EXPECTED_AUDIO.text());
             }
             temporary = File.createTempFile("speech-", ".tmp", directory);
             try (InputStream in = connection.getInputStream(); FileOutputStream out = new FileOutputStream(temporary)) {
@@ -73,12 +74,12 @@ public final class OpenAiSpeech {
                 while ((count = in.read(buffer)) != -1) {
                     checkCancelled();
                     total += count;
-                    if (total > 20 * 1024 * 1024) { throw new java.io.IOException("Audio segment too large."); }
+                    if (total > 20 * 1024 * 1024) { throw new java.io.IOException(UiText.AUDIO_TOO_LARGE.text()); }
                     out.write(buffer, 0, count);
                 }
             }
             checkCancelled();
-            if (temporary.length() == 0) { throw new java.io.IOException("Empty speech response."); }
+            if (temporary.length() == 0) { throw new java.io.IOException(UiText.EMPTY_SPEECH.text()); }
             synchronized (OpenAiSpeech.class) {
                 checkCancelled();
                 trimCache(directory, target);

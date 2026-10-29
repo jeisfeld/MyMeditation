@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.http;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.nio.ByteBuffer;
@@ -23,7 +24,7 @@ final class NativeSpeechProtocol {
     static JSONObject request(SpeechBackend backend, String model, String voice, String text, String style) throws Exception {
         backend.validate(model, voice);
         if (text == null || text.trim().isEmpty() || text.length() > backend.segmentLimit) {
-            throw new IllegalArgumentException("Speech segment too long or empty for " + backend.id + ".");
+            throw new IllegalArgumentException(UiText.PROVIDER_SEGMENT.text(backend.id));
         }
         if (backend == SpeechBackend.ELEVENLABS) {
             return new JSONObject().put("model_id", model).put("text", text)
@@ -53,13 +54,13 @@ final class NativeSpeechProtocol {
         return value + ".audio";
     }
     static java.net.URL qwenAudioUrl(JSONObject response) throws Exception {
-        if (!response.optString("code", "").isEmpty()) { throw new IllegalStateException("Qwen TTS rejected the request. Check model, voice, region and credit."); }
+        if (!response.optString("code", "").isEmpty()) { throw new IllegalStateException(UiText.QWEN_REJECTED.text()); }
         java.net.URL url = new java.net.URL(response.getJSONObject("output").getJSONObject("audio").getString("url"));
         String host = url.getHost().toLowerCase(java.util.Locale.ROOT);
         if (!host.endsWith(".aliyuncs.com") || url.getUserInfo() != null
                 || !("https".equals(url.getProtocol()) || "http".equals(url.getProtocol()))
                 || (url.getPort() != -1 && url.getPort() != 443 && !("http".equals(url.getProtocol()) && url.getPort() == 80))) {
-            throw new IllegalStateException("Qwen returned an unsupported audio download address (" + url.getProtocol() + "://" + host + ").");
+            throw new IllegalStateException(UiText.QWEN_ADDRESS.text(url.getProtocol(), host));
         }
         // Some DashScope responses contain HTTP OSS links. Upgrade known Alibaba storage to TLS.
         if ("http".equals(url.getProtocol())) { url = new java.net.URL("https", host, url.getFile()); }
@@ -71,21 +72,21 @@ final class NativeSpeechProtocol {
             JSONObject feedback = response.optJSONObject("promptFeedback");
             String block = feedback == null ? "" : feedback.optString("blockReason", "");
             if (!block.isEmpty() && !"BLOCK_REASON_UNSPECIFIED".equals(block)) {
-                throw new IllegalStateException("Gemini blocked the speech request (" + block + "). Revise the text or instructions.");
+                throw new IllegalStateException(UiText.GEMINI_BLOCKED.text(block));
             }
-            throw new SpeechRetry.TransientGenerationFailure("Gemini returned no speech candidates.");
+            throw new SpeechRetry.TransientGenerationFailure(UiText.GEMINI_NO_CANDIDATES.text());
         }
         JSONObject candidate = candidates.getJSONObject(0);
         String finish = candidate.optString("finishReason");
         if (!"STOP".equals(finish)) {
             if (java.util.Arrays.asList("", "OTHER", "MAX_TOKENS", "FINISH_REASON_UNSPECIFIED").contains(finish)) {
-                throw new SpeechRetry.TransientGenerationFailure("Gemini returned incomplete speech.");
+                throw new SpeechRetry.TransientGenerationFailure(UiText.GEMINI_INCOMPLETE.text());
             }
-            throw new IllegalStateException("Gemini could not generate speech (" + finish + "). Revise the text or instructions.");
+            throw new IllegalStateException(UiText.GEMINI_FAILED.text(finish));
         }
         JSONObject content = candidate.optJSONObject("content");
         JSONArray parts = content == null ? null : content.optJSONArray("parts");
-        if (parts == null) { throw new SpeechRetry.TransientGenerationFailure("Gemini returned no audio parts."); }
+        if (parts == null) { throw new SpeechRetry.TransientGenerationFailure(UiText.GEMINI_NO_PARTS.text()); }
         java.io.ByteArrayOutputStream pcm = new java.io.ByteArrayOutputStream();
         int rate = 24000;
         for (int i = 0; i < parts.length(); i++) {
@@ -97,20 +98,20 @@ final class NativeSpeechProtocol {
                 if (pcm.size() != 0 || parts.length() != 1 || wav.length < 44 || wav.length > 20 * 1024 * 1024
                         || !"RIFF".equals(new String(wav, 0, 4, StandardCharsets.US_ASCII))
                         || !"WAVE".equals(new String(wav, 8, 4, StandardCharsets.US_ASCII))) {
-                    throw new SpeechRetry.TransientGenerationFailure("Gemini returned invalid WAV audio.");
+                    throw new SpeechRetry.TransientGenerationFailure(UiText.GEMINI_INVALID_WAV.text());
                 }
                 return wav;
             }
-            if (!mime.startsWith("audio/L16") && !mime.startsWith("audio/pcm")) { throw new IllegalStateException("Unsupported Gemini audio format."); }
+            if (!mime.startsWith("audio/L16") && !mime.startsWith("audio/pcm")) { throw new IllegalStateException(UiText.GEMINI_UNSUPPORTED_AUDIO.text()); }
             java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("rate=(\\d+)").matcher(mime);
             int partRate = matcher.find() ? Integer.parseInt(matcher.group(1)) : 24000;
-            if (partRate < 8000 || partRate > 96000 || (pcm.size() > 0 && rate != partRate)) { throw new IllegalStateException("Invalid Gemini sample rate."); }
+            if (partRate < 8000 || partRate > 96000 || (pcm.size() > 0 && rate != partRate)) { throw new IllegalStateException(UiText.GEMINI_INVALID_RATE.text()); }
             rate = partRate;
             byte[] bytes = java.util.Base64.getDecoder().decode(data.getString("data"));
-            if ((bytes.length & 1) != 0 || pcm.size() + bytes.length > 20 * 1024 * 1024) { throw new IllegalStateException("Invalid Gemini audio size."); }
+            if ((bytes.length & 1) != 0 || pcm.size() + bytes.length > 20 * 1024 * 1024) { throw new IllegalStateException(UiText.GEMINI_INVALID_SIZE.text()); }
             pcm.write(bytes);
         }
-        if (pcm.size() == 0) { throw new SpeechRetry.TransientGenerationFailure("Gemini returned no audio."); }
+        if (pcm.size() == 0) { throw new SpeechRetry.TransientGenerationFailure(UiText.GEMINI_NO_AUDIO.text()); }
         byte[] bytes = pcm.toByteArray();
         ByteBuffer wav = ByteBuffer.allocate(44 + bytes.length).order(ByteOrder.LITTLE_ENDIAN);
         wav.put("RIFF".getBytes(StandardCharsets.US_ASCII)).putInt(36 + bytes.length)

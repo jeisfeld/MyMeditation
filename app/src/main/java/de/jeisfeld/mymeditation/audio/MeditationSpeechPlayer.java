@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.audio;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 import android.content.Context;
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
@@ -81,7 +82,7 @@ public final class MeditationSpeechPlayer {
                     if (change < 0 && valid(token)) { stop(); }
                 }, handler).build();
         if (audio.requestAudioFocus(focus) != android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-            fail("Audio output is currently unavailable. Please try again.");
+            fail(UiText.AUDIO_UNAVAILABLE.text());
             return;
         }
         if (backend != SpeechBackend.DEVICE) {
@@ -89,12 +90,12 @@ public final class MeditationSpeechPlayer {
         } else {
             tts = new TextToSpeech(context, status -> handler.post(() -> {
                 if (!valid(token)) { return; }
-                if (status != TextToSpeech.SUCCESS) { fail("Device text-to-speech could not start."); return; }
+                if (status != TextToSpeech.SUCCESS) { fail(UiText.DEVICE_START_FAILED.text()); return; }
                 tts.setAudioAttributes(attributes());
                 tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                     @Override public void onStart(String id) { }
                     @Override public void onDone(String id) { handler.post(() -> complete(token)); }
-                    @Override public void onError(String id) { handler.post(() -> { if (valid(token)) { fail("Device speech failed."); } }); }
+                    @Override public void onError(String id) { handler.post(() -> { if (valid(token)) { fail(UiText.DEVICE_SPEECH_FAILED.text()); } }); }
                 });
                 next(token, true);
             }));
@@ -111,8 +112,7 @@ public final class MeditationSpeechPlayer {
             final int token = session;
             current.request.setRetryListener((attempt, delay) -> handler.post(() -> {
                 if (!valid(token)) { return; }
-                current.waiting = "ElevenLabs temporarily unavailable. Retrying in " + (delay / 1000)
-                        + " s (retry " + attempt + "). Pause to stop.";
+                current.waiting = UiText.ELEVEN_RETRY.text(delay / 1000, attempt);
                 if (index == position) { listener.onStatus(current.waiting); }
             }));
             final String text = sentences.get(position);
@@ -136,7 +136,7 @@ public final class MeditationSpeechPlayer {
         if (backend != SpeechBackend.DEVICE) {
             final int position = index;
             Download job = download(position);
-            listener.onStatus(job.waiting.isEmpty() && backend == SpeechBackend.ELEVENLABS ? "Preparing ElevenLabs audio…" : job.waiting);
+            listener.onStatus(job.waiting.isEmpty() && backend == SpeechBackend.ELEVENLABS ? UiText.PREPARING_ELEVEN.text() : job.waiting);
             if (backend != SpeechBackend.ELEVENLABS && position + 1 < sentences.size()) { download(position + 1); }
             job.result.whenComplete((file, error) -> handler.post(() -> {
                 if (!valid(token) || index != position) { return; }
@@ -146,7 +146,7 @@ public final class MeditationSpeechPlayer {
                         reported = reported.getCause();
                     }
                     fail(reported instanceof IllegalArgumentException || reported instanceof IllegalStateException
-                            ? reported.getMessage() : "Could not generate speech. Check your connection and try again.");
+                            ? reported.getMessage() : UiText.GENERATE_SPEECH_FAILED.text());
                     return;
                 }
                 // Queue speculative synthesis only after the current recording is available.
@@ -160,7 +160,7 @@ public final class MeditationSpeechPlayer {
         } else {
             waitSilently(first ? 500 : pauseMs, token, () -> {
                 if (tts.speak(sentences.get(index), TextToSpeech.QUEUE_FLUSH, null, "sentence-" + token + "-" + index) == TextToSpeech.ERROR) {
-                    fail("Device speech failed.");
+                    fail(UiText.DEVICE_SPEECH_FAILED.text());
                 }
             });
         }
@@ -184,19 +184,19 @@ public final class MeditationSpeechPlayer {
                         if (backend != SpeechBackend.OPENAI) {
                             player.setPlaybackParams(new android.media.PlaybackParams().setSpeed((float) speed).setPitch(1.0f));
                         }
-                    } catch (RuntimeException e) { fail("Audio playback failed. Try speed 1.0."); }
+                    } catch (RuntimeException e) { fail(UiText.PLAYBACK_SPEED_FAILED.text()); }
                 }
             });
             media.setOnCompletionListener(player -> { if (valid(token) && media == player) { releaseMedia(); complete(token); } });
             media.setOnErrorListener((player, what, extra) -> {
                 if (valid(token) && media == player) {
                     file.delete();
-                    fail("Could not play the generated audio. Please try again.");
+                    fail(UiText.GENERATED_PLAYBACK_FAILED.text());
                 }
                 return true;
             });
             media.prepareAsync();
-        } catch (Exception e) { file.delete(); fail("Could not play the generated audio. Please try again."); }
+        } catch (Exception e) { file.delete(); fail(UiText.GENERATED_PLAYBACK_FAILED.text()); }
     }
 
     private void complete(int token) {

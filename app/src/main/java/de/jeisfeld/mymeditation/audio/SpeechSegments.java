@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.audio;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -14,7 +15,7 @@ public final class SpeechSegments {
     }
 
     public static List<String> split(String text, int limit) {
-        if (limit < 2 || limit > 3500) { throw new IllegalArgumentException("Invalid speech segment limit."); }
+        if (limit < 2 || limit > 3500) { throw new IllegalArgumentException(UiText.INVALID_SEGMENT_LIMIT.text()); }
         List<String> result = new ArrayList<>();
         if (text == null) { return result; }
         Matcher matcher = Pattern.compile("[^.!?。！？]+(?:[.!?。！？]+|$)").matcher(text);

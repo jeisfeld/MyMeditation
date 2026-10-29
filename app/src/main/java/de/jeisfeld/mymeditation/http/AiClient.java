@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.http;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 import android.os.Handler;
 import android.os.Looper;
 import org.json.JSONObject;
@@ -24,7 +25,7 @@ public final class AiClient {
                 AiProvider provider = AiProvider.forModel(modelId);
                 String apiKey = LocalCredentials.read(provider.keyField);
                 if (apiKey.isEmpty()) {
-                    throw new IllegalStateException("Set HttpCredentials." + provider.keyField + " in your local credentials file, then rebuild the app.");
+                    throw new IllegalStateException(UiText.LOCAL_KEY.text(provider.keyField));
                 }
                 JSONObject body = AiProtocol.request(provider, modelId, system, prompt);
                 connection = (HttpsURLConnection) new URL(provider.url(modelId)).openConnection();
@@ -47,8 +48,7 @@ public final class AiClient {
                 }
                 int status = connection.getResponseCode();
                 if (status < 200 || status >= 300) {
-                    throw new IllegalStateException(provider.displayName + " request failed (HTTP " + status
-                            + "). Check your API key, model, credit balance and rate limit.");
+                    throw new IllegalStateException(UiText.AI_HTTP.text(provider.displayName, status));
                 }
                 ByteArrayOutputStream bytes = new ByteArrayOutputStream();
                 try (InputStream in = connection.getInputStream()) {
@@ -60,7 +60,7 @@ public final class AiClient {
             } catch (IllegalArgumentException | IllegalStateException e) {
                 error = e.getMessage();
             } catch (Exception e) {
-                error = "Could not create meditation. Check your connection and local API key, then try again.";
+                error = UiText.CREATE_FAILED.text();
             } finally {
                 if (connection != null) { connection.disconnect(); }
             }

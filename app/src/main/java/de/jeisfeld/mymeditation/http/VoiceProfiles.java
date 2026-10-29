@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.http;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.ArrayList;
@@ -55,11 +56,11 @@ public final class VoiceProfiles {
     }
     public void saveVoice(String id, String name) {
         id = id.trim(); name = name.trim();
-        if (!id.matches("[A-Za-z0-9_-]{10,128}")) { throw new IllegalArgumentException("Enter a valid ElevenLabs voice ID."); }
-        if (name.isEmpty()) { throw new IllegalArgumentException("Enter a name for this voice."); }
+        if (!id.matches("[A-Za-z0-9_-]{10,128}")) { throw new IllegalArgumentException(UiText.INVALID_VOICE_ID.text()); }
+        if (name.isEmpty()) { throw new IllegalArgumentException(UiText.VOICE_NAME_REQUIRED.text()); }
         for (Map.Entry<String, String> entry : names.entrySet()) {
             if (!entry.getKey().equals(id) && entry.getValue().equalsIgnoreCase(name)) {
-                throw new IllegalArgumentException("That name is already used by another voice.");
+                throw new IllegalArgumentException(UiText.DUPLICATE_VOICE_NAME.text());
             }
         }
         names.put(id, name);
@@ -69,7 +70,7 @@ public final class VoiceProfiles {
         if (id == null || id.isEmpty() || names.containsKey(id)) { return; }
         int number = 1;
         while (true) {
-            String label = "Saved voice " + number++;
+            String label = UiText.SAVED_VOICE.text(number++);
             boolean exists = false;
             for (String name : names.values()) { if (name.equalsIgnoreCase(label)) { exists = true; break; } }
             if (!exists) { try { saveVoice(id, label); } catch (IllegalArgumentException ignored) { } return; }
@@ -91,6 +92,6 @@ public final class VoiceProfiles {
             JSONObject values = new JSONObject();
             for (Map.Entry<String, Double> entry : speeds.entrySet()) { values.put(entry.getKey(), entry.getValue()); }
             return new JSONObject().put("voices", voices).put("speeds", values).toString();
-        } catch (org.json.JSONException e) { throw new IllegalStateException("Could not save voice profiles.", e); }
+        } catch (org.json.JSONException e) { throw new IllegalStateException(UiText.SAVE_VOICES_FAILED.text(), e); }
     }
 }

@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.http;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 /** Provider selection uses native model IDs and never guesses for an unknown prefix. */
 public enum AiProvider {
     CLAUDE("Claude", "CLAUDE_API_KEY", "https://api.anthropic.com/v1/messages"),
@@ -32,13 +33,13 @@ public enum AiProvider {
                 return OPENAI;
             }
         }
-        throw new IllegalArgumentException("Unsupported model ID. Use claude-, gpt-, chatgpt-, an OpenAI o-series model, gemini-, grok-, deepseek-, kimi-/moonshot-, or qwen-/qwen3-.");
+        throw new IllegalArgumentException(UiText.UNSUPPORTED_MODEL.text());
     }
 
     String url(String model) {
         if (this == GEMINI) {
             if (!model.matches("gemini-[A-Za-z0-9._-]+")) {
-                throw new IllegalArgumentException("Invalid Gemini model ID.");
+                throw new IllegalArgumentException(UiText.INVALID_GEMINI_MODEL.text());
             }
             return endpoint + model + ":generateContent";
         }

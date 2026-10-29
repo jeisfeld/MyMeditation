@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.http;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.nio.charset.StandardCharsets;
@@ -20,17 +21,17 @@ public final class SpeechProtocol {
     public static void validate(String model, String voice) {
         if (model == null || !(DEFAULT_MODEL.equals(model) || model.startsWith(DEFAULT_MODEL + "-")
                 || "tts-1".equals(model) || "tts-1-hd".equals(model))) {
-            throw new IllegalArgumentException("Use gpt-4o-mini-tts, tts-1 or tts-1-hd for OpenAI speech.");
+            throw new IllegalArgumentException(UiText.OPENAI_TTS_MODEL.text());
         }
-        if (!VOICES.contains(voice)) { throw new IllegalArgumentException("Choose a supported OpenAI voice."); }
+        if (!VOICES.contains(voice)) { throw new IllegalArgumentException(UiText.OPENAI_VOICE.text()); }
         if (model.startsWith("tts-1") && !Arrays.asList("shimmer", "nova", "alloy", "fable", "echo", "onyx").contains(voice)) {
-            throw new IllegalArgumentException("For tts-1 models, choose shimmer, nova, alloy, fable, echo or onyx.");
+            throw new IllegalArgumentException(UiText.LEGACY_VOICES.text());
         }
     }
 
     public static void validateSpeed(double speed) {
         if (Double.isNaN(speed) || Double.isInfinite(speed) || speed < 0.25 || speed > 4.0) {
-            throw new IllegalArgumentException("Speed must be between 0.25 and 4.0 (1.0 is normal).");
+            throw new IllegalArgumentException(UiText.INVALID_SPEED.text());
         }
     }
 
@@ -42,7 +43,7 @@ public final class SpeechProtocol {
         validateSpeed(speed);
         validate(model, voice);
         if (text == null || text.trim().isEmpty() || text.length() > 3500) {
-            throw new IllegalArgumentException("Speech segments must contain 1–3500 characters.");
+            throw new IllegalArgumentException(UiText.SEGMENT_LENGTH.text());
         }
         JSONObject body = new JSONObject().put("model", model).put("voice", voice).put("input", text)
                 .put("response_format", "mp3").put("speed", speed);

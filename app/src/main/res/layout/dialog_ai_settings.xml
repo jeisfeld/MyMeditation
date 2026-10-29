@@ -86,7 +86,7 @@
                 android:paddingEnd="8dp"
                 android:singleLine="true"
                 android:textAllCaps="false"
-                android:text="@string/add_saved_voice" />
+                android:text="@string/button_add_voice" />
             <Button
                 android:id="@+id/buttonEditVoice"
                 android:layout_width="0dp"
@@ -113,6 +113,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="numberDecimal"
+            android:digits="0123456789.,"
             android:importantForAutofill="no"
             android:singleLine="true" />
         <TextView

@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.audio;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -92,14 +93,14 @@ public final class MeditationPlaybackService extends Service {
 
     @Override public void onCreate() {
         super.onCreate();
-        NotificationChannel channel = new NotificationChannel(CHANNEL, "Meditation playback", NotificationManager.IMPORTANCE_LOW);
+        NotificationChannel channel = new NotificationChannel(CHANNEL, getString(R.string.notification_channel_playback), NotificationManager.IMPORTANCE_LOW);
         channel.setSound(null, null); channel.setShowBadge(false);
         getSystemService(NotificationManager.class).createNotificationChannel(channel);
         wakeLock = ((PowerManager) getSystemService(POWER_SERVICE)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, getPackageName() + ":meditation");
         wakeLock.setReferenceCounted(false);
         session = new MediaSession(this, "Meditation");
         session.setMetadata(new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE, getString(R.string.app_name))
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, "Guided meditation").build());
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, getString(R.string.notification_guided_meditation)).build());
         session.setCallback(new MediaSession.Callback() {
             @Override public void onPlay() { resumePlayback(); }
             @Override public void onPause() { pausePlayback(); }
@@ -252,7 +253,7 @@ public final class MeditationPlaybackService extends Service {
         idleHandler.postDelayed(stopIdle, 10 * 60 * 1000L);
     }
     private void playbackError(Exception exception) {
-        error = exception instanceof IllegalArgumentException ? exception.getMessage() : "Could not start meditation playback. Please open the app and try again.";
+        error = exception instanceof IllegalArgumentException ? exception.getMessage() : UiText.SERVICE_START_FAILED.text();
         errorId = System.nanoTime(); running = false; publish(); finishService(false);
     }
     private void finishService(boolean keep) {
@@ -280,16 +281,16 @@ public final class MeditationPlaybackService extends Service {
     }
     private Notification notification(boolean active) {
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        String description = status.isEmpty() ? (active ? "Playing" : "Paused") + " · sentence " + (position + 1) + " of " + sentences.size() : status;
+        String description = status.isEmpty() ? getString(R.string.notification_sentence, getString(active ? R.string.notification_playing : R.string.notification_paused), position + 1, sentences.size()) : status;
         return new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_meditation).setContentTitle(getString(R.string.app_name))
                 .setContentText(description).setContentIntent(open).setDeleteIntent(command(STOP, 5, false))
                 .setOnlyAlertOnce(true).setOngoing(active)
                 .setVisibility(Notification.VISIBILITY_PUBLIC).setCategory(Notification.CATEGORY_TRANSPORT)
-                .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_previous, "Previous", command(PREVIOUS, 1, true)).build())
+                .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_previous, getString(R.string.notification_previous), command(PREVIOUS, 1, true)).build())
                 .addAction(new Notification.Action.Builder(active ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play,
-                        active ? "Pause" : "Resume", command(active ? PAUSE : RESUME, 2, !active)).build())
-                .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_next, "Next", command(NEXT, 3, true)).build())
-                .addAction(new Notification.Action.Builder(android.R.drawable.ic_menu_close_clear_cancel, "Stop", command(STOP, 4, false)).build())
+                        getString(active ? R.string.notification_pause : R.string.notification_resume), command(active ? PAUSE : RESUME, 2, !active)).build())
+                .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_next, getString(R.string.notification_next), command(NEXT, 3, true)).build())
+                .addAction(new Notification.Action.Builder(android.R.drawable.ic_menu_close_clear_cancel, getString(R.string.notification_stop), command(STOP, 4, false)).build())
                 .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(0, 1, 2)).build();
     }
     private void updateNotification() { if (!destroying) { getSystemService(NotificationManager.class).notify(NOTIFICATION, notification(running)); } }

@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.http;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 import java.io.IOException;
 import java.net.ProtocolException;
 import java.nio.file.FileSystemException;
@@ -15,7 +16,7 @@ final class SpeechRetry {
         final int status;
         final long retryAfterMs;
         HttpFailure(int status, long retryAfterMs) {
-            super("Speech service failed (HTTP " + status + "). Check your key, model access, credit and rate limit.");
+            super(UiText.SPEECH_HTTP.text(status));
             this.status = status;
             this.retryAfterMs = retryAfterMs;
         }
@@ -46,8 +47,7 @@ final class SpeechRetry {
                     throw failure;
                 }
                 if (!unlimited && attempt >= 2) {
-                    throw new IllegalStateException("Speech service failed after 3 attempts. "
-                            + (failure instanceof HttpFailure ? failure.getMessage() : "Check your connection and try again."), failure);
+                    throw new IllegalStateException(UiText.RETRY_EXHAUSTED.text(failure instanceof HttpFailure ? failure.getMessage() : UiText.CONNECTION_AGAIN.text()), failure);
                 }
                 long delay = Math.min(30000, 1000L << Math.min(attempt, 5));
                 if (failure instanceof HttpFailure) {

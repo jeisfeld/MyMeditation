@@ -80,8 +80,8 @@ public class ConfigurationFragment extends Fragment {
                 DialogAiSettingsBinding.inflate(getLayoutInflater());
         settings.editTextAiModel.setText(PreferenceUtil.getSharedPreferenceString(
                 R.string.key_ai_model, R.string.default_ai_model));
-        settings.editTextSpeechSpeed.setText(PreferenceUtil.getSharedPreferenceString(
-                R.string.key_speech_speed, R.string.default_speech_speed));
+        settings.editTextSpeechSpeed.setText(localSpeed(PreferenceUtil.getSharedPreferenceString(
+                R.string.key_speech_speed, R.string.default_speech_speed)));
         settings.editTextSpeechStyle.setText(PreferenceUtil.getSharedPreferenceString(
                 R.string.key_speech_style, R.string.default_speech_style));
         SpeechBackend[] selected = {SpeechBackend.fromId(PreferenceUtil.getSharedPreferenceString(
@@ -90,7 +90,7 @@ public class ConfigurationFragment extends Fragment {
         String priorVoice = PreferenceUtil.getSharedPreferenceString(selected[0].voiceKey(), selected[0].defaultVoice);
         profiles.migrateVoice(PreferenceUtil.getSharedPreferenceString(SpeechBackend.ELEVENLABS.voiceKey(), ""));
         if (!profiles.hasSpeed(selected[0], priorVoice)) {
-            try { profiles.setSpeed(selected[0], priorVoice, Double.parseDouble(settings.editTextSpeechSpeed.getText().toString())); }
+            try { profiles.setSpeed(selected[0], priorVoice, Double.parseDouble(settings.editTextSpeechSpeed.getText().toString().replace(',', '.'))); }
             catch (IllegalArgumentException ignored) { }
         }
         String[] activeVoice = {""};
@@ -134,7 +134,7 @@ public class ConfigurationFragment extends Fragment {
             settings.spinnerSpeechVoice.setVisibility(View.VISIBLE);
             settings.elevenVoiceButtons.setVisibility(backend == SpeechBackend.ELEVENLABS ? View.VISIBLE : View.GONE);
             settings.buttonEditVoice.setEnabled(!activeVoice[0].isEmpty());
-            settings.editTextSpeechSpeed.setText(Double.toString(profiles.speed(backend, activeVoice[0], 1.0)));
+            settings.editTextSpeechSpeed.setText(localSpeed(Double.toString(profiles.speed(backend, activeVoice[0], 1.0))));
             loading[0] = false;
         };
         settings.spinnerSpeechVoice.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -144,7 +144,7 @@ public class ConfigurationFragment extends Fragment {
                 if (!next.equals(activeVoice[0])) {
                     rememberSpeed.run();
                     activeVoice[0] = next;
-                    settings.editTextSpeechSpeed.setText(Double.toString(profiles.speed(selected[0], next, 1.0)));
+                    settings.editTextSpeechSpeed.setText(localSpeed(Double.toString(profiles.speed(selected[0], next, 1.0))));
                 }
             }
             @Override public void onNothingSelected(AdapterView<?> parent) { }
@@ -181,7 +181,7 @@ public class ConfigurationFragment extends Fragment {
         AlertDialog dialog = new AlertDialog.Builder(requireContext())
                 .setTitle(R.string.ai_settings)
                 .setView(settings.getRoot())
-                .setNegativeButton(android.R.string.cancel, null)
+                .setNegativeButton(R.string.button_cancel, null)
                 .setPositiveButton(R.string.ai_settings_save, null).create();
         dialog.setOnShowListener(d -> {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button -> {
@@ -202,7 +202,7 @@ public class ConfigurationFragment extends Fragment {
                     catch (IllegalArgumentException e) {
                         if (backend == SpeechBackend.ELEVENLABS && !voices.get(backend).matches("[A-Za-z0-9_-]{10,128}")) {
                             new AlertDialog.Builder(requireContext()).setMessage(R.string.add_voice_first)
-                                    .setPositiveButton(android.R.string.ok, null).show();
+                                    .setPositiveButton(R.string.button_ok, null).show();
                         } else { settings.editTextSpeechModel.setError(e.getMessage()); }
                         return;
                     }
@@ -233,6 +233,12 @@ public class ConfigurationFragment extends Fragment {
         dialog.show();
     }
 
+    private String localSpeed(String canonical) {
+        char separator = java.text.DecimalFormatSymbols.getInstance(
+                getResources().getConfiguration().getLocales().get(0)).getDecimalSeparator();
+        return canonical.replace('.', separator);
+    }
+
     private void editSavedVoice(VoiceProfiles profiles, String existingId, java.util.function.Consumer<String> onSaved) {
         android.widget.LinearLayout layout = new android.widget.LinearLayout(requireContext());
         layout.setOrientation(android.widget.LinearLayout.VERTICAL);
@@ -251,7 +257,7 @@ public class ConfigurationFragment extends Fragment {
         if (existingId != null) { id.setText(existingId); id.setEnabled(false); name.setText(profiles.name(existingId)); }
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext())
                 .setTitle(existingId == null ? R.string.add_saved_voice : R.string.edit_saved_voice)
-                .setView(layout).setNegativeButton(android.R.string.cancel, null).setPositiveButton(R.string.button_save, null);
+                .setView(layout).setNegativeButton(R.string.button_cancel, null).setPositiveButton(R.string.button_save, null);
         if (existingId != null) { builder.setNeutralButton(R.string.remove_saved_voice, (dialog, which) -> onSaved.accept(null)); }
         AlertDialog dialog = builder.create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {

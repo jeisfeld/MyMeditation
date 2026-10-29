@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.audio;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 import de.jeisfeld.mymeditation.http.SpeechBackend;
 import de.jeisfeld.mymeditation.http.SpeechProtocol;
 import org.json.JSONObject;
@@ -11,7 +12,7 @@ public final class PlaybackRequest {
     public final double speed;
     public final int pauseSeconds;
     public PlaybackRequest(String text, SpeechBackend backend, String model, String voice, double speed, String style, int pauseSeconds) {
-        if (SpeechSegments.split(text, backend.segmentLimit).isEmpty()) { throw new IllegalArgumentException("There is no meditation text to speak."); }
+        if (SpeechSegments.split(text, backend.segmentLimit).isEmpty()) { throw new IllegalArgumentException(UiText.NO_MEDITATION.text()); }
         SpeechProtocol.validateSpeed(speed);
         if (backend != SpeechBackend.DEVICE) { backend.validate(model, voice); }
         this.text = text; this.backend = backend; this.model = model; this.voice = voice;
@@ -31,7 +32,7 @@ public final class PlaybackRequest {
     }
     /** Match the current text location when providers have different segment length limits. */
     public int positionFor(PlaybackRequest replacement, int currentPosition) {
-        if (!text.equals(replacement.text)) { throw new IllegalArgumentException("Playback settings must preserve the active text."); }
+        if (!text.equals(replacement.text)) { throw new IllegalArgumentException(UiText.PRESERVE_TEXT.text()); }
         java.util.List<String> oldSegments = SpeechSegments.split(text, backend.segmentLimit);
         java.util.List<String> newSegments = SpeechSegments.split(text, replacement.backend.segmentLimit);
         int target = Math.max(0, Math.min(currentPosition, oldSegments.size() - 1));
@@ -59,7 +60,7 @@ public final class PlaybackRequest {
         JSONObject value = new JSONObject(json);
         String id = value.getString("backend");
         SpeechBackend backend = SpeechBackend.fromId(id);
-        if (!backend.id.equals(id)) { throw new IllegalArgumentException("Unknown saved speech provider."); }
+        if (!backend.id.equals(id)) { throw new IllegalArgumentException(UiText.UNKNOWN_SAVED_PROVIDER.text()); }
         return new PlaybackRequest(value.getString("text"), backend, value.getString("model"), value.getString("voice"),
                 value.getDouble("speed"), value.optString("style", ""), value.getInt("pause"));
     }

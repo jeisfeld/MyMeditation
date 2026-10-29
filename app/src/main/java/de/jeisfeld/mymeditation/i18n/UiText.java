@@ -1,0 +1,78 @@
+package de.jeisfeld.mymeditation.i18n;
+
+/** Resource-backed production messages with an English fallback for platform-independent tests. */
+public enum UiText {
+    AUDIO_UNAVAILABLE("Audio output is currently unavailable. Please try again."),
+    DEVICE_START_FAILED("Device text-to-speech could not start."),
+    DEVICE_SPEECH_FAILED("Device speech failed."),
+    PREPARING_ELEVEN("Preparing ElevenLabs audio…"),
+    GENERATE_SPEECH_FAILED("Could not generate speech. Check your connection and try again."),
+    PLAYBACK_SPEED_FAILED("Audio playback failed. Try speed 1.0."),
+    GENERATED_PLAYBACK_FAILED("Could not play the generated audio. Please try again."),
+    SERVICE_START_FAILED("Could not start meditation playback. Please open the app and try again."),
+    VISIBLE_SERVICE_FAILED("Could not start the playback service. Please try again while the app is visible."),
+    CONNECTION_AGAIN("Check your connection and try again."),
+    CREATE_FAILED("Could not create meditation. Check your connection and local API key, then try again."),
+    UNSUPPORTED_MODEL("Unsupported model ID. Use claude-, gpt-, chatgpt-, an OpenAI o-series model, gemini-, grok-, deepseek-, kimi-/moonshot-, or qwen-/qwen3-."),
+    INVALID_GEMINI_MODEL("Invalid Gemini model ID."),
+    UNSUPPORTED_PROVIDER("Unsupported provider."),
+    CACHE_UNAVAILABLE("Speech cache unavailable."),
+    OPENAI_KEY_MISSING("Set HttpCredentials.OPENAI_API_KEY and rebuild the app to use OpenAI speech."),
+    EXPECTED_AUDIO("Expected audio response."),
+    AUDIO_TOO_LARGE("Audio segment too large."),
+    EMPTY_SPEECH("Empty speech response."),
+    QWEN_REJECTED("Qwen TTS rejected the request. Check model, voice, region and credit."),
+    GEMINI_NO_CANDIDATES("Gemini returned no speech candidates."),
+    GEMINI_INCOMPLETE("Gemini returned incomplete speech."),
+    GEMINI_NO_PARTS("Gemini returned no audio parts."),
+    GEMINI_INVALID_WAV("Gemini returned invalid WAV audio."),
+    GEMINI_UNSUPPORTED_AUDIO("Unsupported Gemini audio format."),
+    GEMINI_INVALID_RATE("Invalid Gemini sample rate."),
+    GEMINI_INVALID_SIZE("Invalid Gemini audio size."),
+    GEMINI_NO_AUDIO("Gemini returned no audio."),
+    GEMINI_MALFORMED("Gemini returned malformed speech data."),
+    ELEVEN_INCOMPLETE("Incomplete ElevenLabs audio download."),
+    EMPTY_PROVIDER_AUDIO("Provider returned empty audio."),
+    ELEVEN_NON_AUDIO("ElevenLabs returned a non-audio response."),
+    SPEECH_RESPONSE_LARGE("Speech response too large."),
+    ELEVEN_MODEL("Use an ElevenLabs TTS model such as eleven_multilingual_v2 or eleven_v3."),
+    ELEVEN_VOICE_ID("Paste a voice ID from your ElevenLabs Voices page."),
+    GEMINI_TTS_MODEL("Use gemini-2.5-flash-preview-tts or gemini-2.5-pro-preview-tts. Newer Interactions speech models are not supported here."),
+    OPENAI_TTS_MODEL("Use gpt-4o-mini-tts, tts-1 or tts-1-hd for OpenAI speech."),
+    OPENAI_VOICE("Choose a supported OpenAI voice."),
+    LEGACY_VOICES("For tts-1 models, choose shimmer, nova, alloy, fable, echo or onyx."),
+    INVALID_SPEED("Speed must be between 0.25 and 4.0 (1.0 is normal)."),
+    SEGMENT_LENGTH("Speech segments must contain 1–3500 characters."),
+    INVALID_VOICE_ID("Enter a valid ElevenLabs voice ID."),
+    VOICE_NAME_REQUIRED("Enter a name for this voice."),
+    DUPLICATE_VOICE_NAME("That name is already used by another voice."),
+    SAVE_VOICES_FAILED("Could not save voice profiles."),
+    NO_MEDITATION("There is no meditation text to speak."),
+    PRESERVE_TEXT("Playback settings must preserve the active text."),
+    UNKNOWN_SAVED_PROVIDER("Unknown saved speech provider."),
+    INVALID_SEGMENT_LIMIT("Invalid speech segment limit."),
+    NO_TEXT("%1$s returned no meditation text. The request may have been declined."),
+    INCOMPLETE_MEDITATION("%1$s did not return a complete meditation. Try a shorter or revised request."),
+    LOCAL_KEY("Set HttpCredentials.%1$s in your local credentials file, then rebuild the app."),
+    AI_HTTP("%1$s request failed (HTTP %2$d). Check your API key, model, credit balance and rate limit."),
+    SPEECH_HTTP("Speech service failed (HTTP %1$d). Check your key, model access, credit and rate limit."),
+    RETRY_EXHAUSTED("Speech service failed after 3 attempts. %1$s"),
+    PROVIDER_SEGMENT("Speech segment too long or empty for %1$s."),
+    QWEN_ADDRESS("Qwen returned an unsupported audio download address (%1$s://%2$s)."),
+    GEMINI_BLOCKED("Gemini blocked the speech request (%1$s). Revise the text or instructions."),
+    GEMINI_FAILED("Gemini could not generate speech (%1$s). Revise the text or instructions."),
+    NATIVE_MODEL("Choose a native %1$s TTS model and a supported voice (not a realtime/audio-understanding model)."),
+    SPEECH_KEY("Set HttpCredentials.%1$s and rebuild the app."),
+    NON_AUDIO("%1$s returned a non-audio response."),
+    PROVIDER_SPEECH_HTTP("%1$s speech failed (HTTP %2$d). Check key, model access, region and credit."),
+    SAVED_VOICE("Saved voice %1$d"),
+    ELEVEN_RETRY("ElevenLabs temporarily unavailable. Retrying in %1$d s (retry %2$d). Pause to stop.");
+    public final String english;
+    UiText(String english) { this.english = english; }
+    private static volatile java.util.function.BiFunction<UiText, Object[], String> translator;
+    public static void setTranslator(java.util.function.BiFunction<UiText, Object[], String> value) { translator = value; }
+    public String text(Object... arguments) {
+        java.util.function.BiFunction<UiText, Object[], String> current = translator;
+        return current == null ? String.format(java.util.Locale.ROOT, english, arguments) : current.apply(this, arguments);
+    }
+}

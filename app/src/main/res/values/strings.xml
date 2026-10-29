@@ -68,4 +68,15 @@
     <string name="add_voice_first">Use Add voice to save an ElevenLabs voice with its name and ID first.</string>
     <string name="button_edit_voice">Edit</string>
     <string name="remove_saved_voice">Remove voice</string>
+    <string name="notification_channel_playback">Meditation playback</string>
+    <string name="notification_guided_meditation">Guided meditation</string>
+    <string name="notification_playing">Playing</string>
+    <string name="notification_paused">Paused</string>
+    <string name="notification_sentence">%1$s · sentence %2$d of %3$d</string>
+    <string name="notification_previous">Previous</string>
+    <string name="notification_next">Next</string>
+    <string name="notification_pause">Pause</string>
+    <string name="notification_resume">Resume</string>
+    <string name="notification_stop">Stop</string>
+    <string name="button_add_voice">Add voice</string>
 </resources>

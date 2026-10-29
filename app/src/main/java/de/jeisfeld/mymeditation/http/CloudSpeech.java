@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.http;
 
+import de.jeisfeld.mymeditation.i18n.UiText;
 import java.io.File;
 import java.io.InputStream;
 import java.net.URL;
@@ -63,7 +64,7 @@ public final class CloudSpeech {
                 }
                 return attempt(root, backend, model, voice, text, style);
             } catch (org.json.JSONException e) {
-                if (backend == SpeechBackend.GEMINI) { throw new SpeechRetry.TransientGenerationFailure("Gemini returned malformed speech data."); }
+                if (backend == SpeechBackend.GEMINI) { throw new SpeechRetry.TransientGenerationFailure(UiText.GEMINI_MALFORMED.text()); }
                 throw e;
             } finally { if (acquired) { gate.release(); } }
         };
@@ -75,11 +76,11 @@ public final class CloudSpeech {
         check();
         String name = NativeSpeechProtocol.cacheName(backend, model, voice, text, style);
         File directory = new File(root, "native-speech");
-        if (!directory.isDirectory() && !directory.mkdirs()) { throw new IllegalStateException("Speech cache unavailable."); }
+        if (!directory.isDirectory() && !directory.mkdirs()) { throw new IllegalStateException(UiText.CACHE_UNAVAILABLE.text()); }
         File target = new File(directory, name);
         if (target.isFile() && target.length() > 0) { target.setLastModified(System.currentTimeMillis()); return target; }
         String key = LocalCredentials.read(backend.key);
-        if (key.isEmpty()) { throw new IllegalStateException("Set HttpCredentials." + backend.key + " and rebuild the app."); }
+        if (key.isEmpty()) { throw new IllegalStateException(UiText.SPEECH_KEY.text(backend.key)); }
         File temporary = null;
         try {
             connection = connect(new URL(NativeSpeechProtocol.endpoint(backend, model, voice)));
@@ -97,7 +98,7 @@ public final class CloudSpeech {
                 requireAudio(connection, "ElevenLabs");
                 long expected = connection.getContentLengthLong();
                 audio = read(connection.getInputStream(), 20 * 1024 * 1024);
-                if (expected > 0 && audio.length != expected) { throw new java.io.EOFException("Incomplete ElevenLabs audio download."); }
+                if (expected > 0 && audio.length != expected) { throw new java.io.EOFException(UiText.ELEVEN_INCOMPLETE.text()); }
             } else {
                 byte[] json = read(connection.getInputStream(), 32 * 1024 * 1024);
                 JSONObject response = new JSONObject(new String(json, StandardCharsets.UTF_8));
@@ -112,7 +113,7 @@ public final class CloudSpeech {
                 }
             }
             check();
-            if (audio.length == 0) { throw new SpeechRetry.TransientGenerationFailure("Provider returned empty audio."); }
+            if (audio.length == 0) { throw new SpeechRetry.TransientGenerationFailure(UiText.EMPTY_PROVIDER_AUDIO.text()); }
             temporary = File.createTempFile("speech-", ".tmp", directory);
             Files.write(temporary.toPath(), audio);
             synchronized (CloudSpeech.class) {
@@ -140,8 +141,8 @@ public final class CloudSpeech {
     private static void requireAudio(HttpsURLConnection connection, String provider) throws java.io.IOException {
         String type = connection.getContentType();
         if (type == null || !(type.startsWith("audio/") || type.startsWith("application/octet-stream"))) {
-            if ("ElevenLabs".equals(provider)) { throw new SpeechRetry.TransientGenerationFailure("ElevenLabs returned a non-audio response."); }
-            throw new IllegalStateException(provider + " returned a non-audio response.");
+            if ("ElevenLabs".equals(provider)) { throw new SpeechRetry.TransientGenerationFailure(UiText.ELEVEN_NON_AUDIO.text()); }
+            throw new IllegalStateException(UiText.NON_AUDIO.text(provider));
         }
     }
     private HttpsURLConnection connect(URL url) throws Exception {
@@ -158,13 +159,13 @@ public final class CloudSpeech {
             if (status == 408 || status == 429 || status == 500 || status == 502 || status == 503 || status == 504) {
                 throw new SpeechRetry.HttpFailure(status, SpeechRetry.retryAfter(c.getHeaderField("Retry-After")));
             }
-            throw new IllegalStateException(provider + " speech failed (HTTP " + status + "). Check key, model access, region and credit.");
+            throw new IllegalStateException(UiText.PROVIDER_SPEECH_HTTP.text(provider, status));
         }
     }
     private byte[] read(InputStream input, int limit) throws Exception {
         try (InputStream in = input; java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
             byte[] bytes = new byte[8192]; int count;
-            while ((count = in.read(bytes)) != -1) { check(); if (out.size() + count > limit) { throw new IllegalStateException("Speech response too large."); } out.write(bytes, 0, count); }
+            while ((count = in.read(bytes)) != -1) { check(); if (out.size() + count > limit) { throw new IllegalStateException(UiText.SPEECH_RESPONSE_LARGE.text()); } out.write(bytes, 0, count); }
             return out.toByteArray();
         }
     }

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MyMeditation</string>
+    <string name="title_meditation">Meditation</string>
+    <string name="title_configuration">Einstellungen</string>
+    <string name="title_saved_meditations">Gespeichert</string>
+    <string name="button_create_meditation">Meditation erstellen</string>
+    <string name="button_speak_meditation">Meditation vorlesen</string>
+    <string name="button_pause_meditation">Meditation pausieren</string>
+    <string name="label_meditation_text">Meditationstext</string>
+    <string name="label_pause_duration">Pausendauer (Sekunden)</string>
+    <string name="label_meditation_content">Inhalt der Meditation</string>
+    <string name="label_system_prompt">Systemanweisung</string>
+    <string name="label_query_template">Anfragevorlage</string>
+    <string name="button_ok">OK</string>
+    <string name="button_cancel">Abbrechen</string>
+    <string name="button_delete">Löschen</string>
+    <string name="button_save">Speichern</string>
+    <string name="button_save_current_meditation">Meditation speichern</string>
+    <string name="text_creating_meditation">Die Meditation wird erstellt. Bitte warten…</string>
+    <string name="title_dialog_confirmation">Bestätigung</string>
+    <string name="message_confirm_delete_meditation">Möchtest du die Meditation „%1$s“ aus der App löschen?</string>
+    <string name="title_dialog_save_meditation">Meditation speichern</string>
+    <string name="text_dialog_save_meditation">Bitte gib einen Namen für die Meditation ein</string>
+    <string name="toast_meditation_restored">Die Meditation „%1$s“ wurde geladen</string>
+    <string name="text_pause_duration">%1$d s</string>
+    <string name="ai_settings">KI-Einstellungen</string>
+    <string name="ai_settings_description">Modell-ID auswählen: claude-… für Claude, gpt-… oder ein Modell der o-Serie für OpenAI, gemini-… für Gemini, grok-… für Grok, deepseek-… für DeepSeek, kimi-… für Kimi oder qwen-… / qwen3-… für Qwen. Anfragen werden an diesen Anbieter gesendet und über dein API-Guthaben abgerechnet.</string>
+    <string name="ai_settings_save">Speichern</string>
+    <string name="ai_model_hint">KI-Modell-ID</string>
+    <string name="ai_model_invalid">Verwende eine Modell-ID von Claude, OpenAI, Gemini, Grok, DeepSeek, Kimi oder Qwen.</string>
+    <string name="speech_output_label">Sprachausgabe</string>
+    <string name="speech_model_label">Sprachmodell</string>
+    <string name="speech_voice_label">Stimme</string>
+    <string name="speech_notice">Diese Stimmen sind KI-generiert. Noch nicht gespeicherte Sätze werden an den ausgewählten Anbieter gesendet und über dein API-Konto abgerechnet.</string>
+    <string name="speech_speed_label">Sprechgeschwindigkeit (0,25–4,0; 1,0 ist normal)</string>
+    <string name="speech_style_label">Anweisungen zur Stimme</string>
+    <string name="speech_style_hint">Zum Beispiel: warm und sinnlich oder bestimmt und befehlend. Sprich in natürlichem Tempo.</string>
+    <string name="speech_style_note">Anweisungen funktionieren mit Gemini, gpt-4o-mini-tts und Qwen instruct. ElevenLabs, Standard-Qwen und tts-1-Modelle ignorieren sie.</string>
+    <string name="speech_voice_hint">Der Stimmcharakter hängt von der Sprache ab.</string>
+    <string name="default_speech_style">Sprich natürlich wie bei einer geführten Meditation, mit einem warmen, klaren Ton.</string>
+    <string name="elevenlabs_voice_id_hint">ElevenLabs-Stimmen-ID (von deiner Seite „Voices“ kopieren)</string>
+    <string name="add_saved_voice">Stimme hinzufügen</string>
+    <string name="edit_saved_voice">Stimme bearbeiten</string>
+    <string name="saved_voice_name">Name der Stimme</string>
+    <string name="add_voice_first">Füge zuerst über „Stimme hinzufügen“ eine ElevenLabs-Stimme mit Namen und ID hinzu.</string>
+    <string name="button_edit_voice">Bearbeiten</string>
+    <string name="remove_saved_voice">Stimme entfernen</string>
+    <string name="notification_channel_playback">Meditationswiedergabe</string>
+    <string name="notification_guided_meditation">Geführte Meditation</string>
+    <string name="notification_playing">Wiedergabe</string>
+    <string name="notification_paused">Pausiert</string>
+    <string name="notification_sentence">%1$s · Satz %2$d von %3$d</string>
+    <string name="notification_previous">Zurück</string>
+    <string name="notification_next">Weiter</string>
+    <string name="notification_pause">Pausieren</string>
+    <string name="notification_resume">Fortsetzen</string>
+    <string name="notification_stop">Beenden</string>
+    <string-array name="speech_backend_options">
+        <item>Sprachausgabe des Geräts</item>
+        <item>OpenAI-Sprachausgabe</item>
+        <item>Gemini-Sprachausgabe</item>
+        <item>Qwen TTS (international)</item>
+        <item>ElevenLabs-Sprachausgabe</item>
+    </string-array>
+    <string name="button_add_voice">Hinzufügen</string>
+</resources>
