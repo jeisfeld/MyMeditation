@@ -80,8 +80,6 @@ public class ConfigurationFragment extends Fragment {
                 DialogAiSettingsBinding.inflate(getLayoutInflater());
         settings.editTextAiModel.setText(PreferenceUtil.getSharedPreferenceString(
                 R.string.key_ai_model, R.string.default_ai_model));
-        settings.editTextSpeechSpeed.setText(localSpeed(PreferenceUtil.getSharedPreferenceString(
-                R.string.key_speech_speed, R.string.default_speech_speed)));
         settings.editTextSpeechStyle.setText(PreferenceUtil.getSharedPreferenceString(
                 R.string.key_speech_style, R.string.default_speech_style));
         SpeechBackend[] selected = {SpeechBackend.fromId(PreferenceUtil.getSharedPreferenceString(
@@ -90,23 +88,16 @@ public class ConfigurationFragment extends Fragment {
         String priorVoice = PreferenceUtil.getSharedPreferenceString(selected[0].voiceKey(), selected[0].defaultVoice);
         profiles.migrateVoice(PreferenceUtil.getSharedPreferenceString(SpeechBackend.ELEVENLABS.voiceKey(), ""));
         if (!profiles.hasSpeed(selected[0], priorVoice)) {
-            try { profiles.setSpeed(selected[0], priorVoice, Double.parseDouble(settings.editTextSpeechSpeed.getText().toString().replace(',', '.'))); }
+            try { profiles.setSpeed(selected[0], priorVoice, Double.parseDouble(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_speed, R.string.default_speech_speed))); }
             catch (IllegalArgumentException ignored) { }
         }
         String[] activeVoice = {""};
         boolean[] loading = {false};
         java.util.List<String> voiceIds = new java.util.ArrayList<>();
-        Runnable rememberSpeed = () -> {
-            try {
-                profiles.setSpeed(selected[0], activeVoice[0], Double.parseDouble(
-                        settings.editTextSpeechSpeed.getText().toString().trim().replace(',', '.')));
-            } catch (IllegalArgumentException ignored) { }
-        };
         java.util.Map<SpeechBackend, String> models = new java.util.HashMap<>();
         java.util.Map<SpeechBackend, String> voices = new java.util.HashMap<>();
         Runnable remember = () -> {
             if (selected[0] != SpeechBackend.DEVICE) {
-                rememberSpeed.run();
                 models.put(selected[0], settings.editTextSpeechModel.getText().toString().trim());
                 voices.put(selected[0], activeVoice[0]);
             }
@@ -134,7 +125,6 @@ public class ConfigurationFragment extends Fragment {
             settings.spinnerSpeechVoice.setVisibility(View.VISIBLE);
             settings.elevenVoiceButtons.setVisibility(backend == SpeechBackend.ELEVENLABS ? View.VISIBLE : View.GONE);
             settings.buttonEditVoice.setEnabled(!activeVoice[0].isEmpty());
-            settings.editTextSpeechSpeed.setText(localSpeed(Double.toString(profiles.speed(backend, activeVoice[0], 1.0))));
             loading[0] = false;
         };
         settings.spinnerSpeechVoice.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -142,9 +132,7 @@ public class ConfigurationFragment extends Fragment {
                 if (loading[0] || position < 0 || position >= voiceIds.size()) { return; }
                 String next = voiceIds.get(position);
                 if (!next.equals(activeVoice[0])) {
-                    rememberSpeed.run();
-                    activeVoice[0] = next;
-                    settings.editTextSpeechSpeed.setText(localSpeed(Double.toString(profiles.speed(selected[0], next, 1.0))));
+                        activeVoice[0] = next;
                 }
             }
             @Override public void onNothingSelected(AdapterView<?> parent) { }
@@ -207,17 +195,10 @@ public class ConfigurationFragment extends Fragment {
                         return;
                     }
                 }
-                double speed;
-                try {
-                    speed = Double.parseDouble(settings.editTextSpeechSpeed.getText().toString().trim().replace(',', '.'));
-                    SpeechProtocol.validateSpeed(speed);
-                } catch (IllegalArgumentException e) {
-                    settings.editTextSpeechSpeed.setError(getString(R.string.speech_speed_label));
-                    return;
+                if (backend != SpeechBackend.DEVICE && !profiles.hasSpeed(backend, activeVoice[0])) {
+                    profiles.setSpeed(backend, activeVoice[0], 1.0);
                 }
-                profiles.setSpeed(backend, activeVoice[0], speed);
                 PreferenceUtil.setSharedPreferenceString(VoiceProfiles.PREFERENCE, profiles.json());
-                PreferenceUtil.setSharedPreferenceString(R.string.key_speech_speed, Double.toString(speed));
                 PreferenceUtil.setSharedPreferenceString(R.string.key_speech_style, settings.editTextSpeechStyle.getText().toString().trim());
                 PreferenceUtil.setSharedPreferenceString(R.string.key_speech_backend, backend.id);
                 for (SpeechBackend provider : models.keySet()) {
@@ -231,12 +212,6 @@ public class ConfigurationFragment extends Fragment {
             });
         });
         dialog.show();
-    }
-
-    private String localSpeed(String canonical) {
-        char separator = java.text.DecimalFormatSymbols.getInstance(
-                getResources().getConfiguration().getLocales().get(0)).getDecimalSeparator();
-        return canonical.replace('.', separator);
     }
 
     private void editSavedVoice(VoiceProfiles profiles, String existingId, java.util.function.Consumer<String> onSaved) {

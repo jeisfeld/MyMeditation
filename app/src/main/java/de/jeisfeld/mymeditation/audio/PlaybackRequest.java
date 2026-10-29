@@ -10,15 +10,15 @@ public final class PlaybackRequest {
     public final String text, model, voice, style;
     public final SpeechBackend backend;
     public final double speed;
-    public final int pauseSeconds;
-    public PlaybackRequest(String text, SpeechBackend backend, String model, String voice, double speed, String style, int pauseSeconds) {
+    public final double pauseSeconds;
+    public PlaybackRequest(String text, SpeechBackend backend, String model, String voice, double speed, String style, double pauseSeconds) {
         if (SpeechSegments.split(text, backend.segmentLimit).isEmpty()) { throw new IllegalArgumentException(UiText.NO_MEDITATION.text()); }
         SpeechProtocol.validateSpeed(speed);
         if (backend != SpeechBackend.DEVICE) { backend.validate(model, voice); }
         this.text = text; this.backend = backend; this.model = model; this.voice = voice;
         this.speed = speed; this.style = style; this.pauseSeconds = Math.max(0, Math.min(30, pauseSeconds));
     }
-    public PlaybackRequest withPause(int pause) { return new PlaybackRequest(text, backend, model, voice, speed, style, pause); }
+    public PlaybackRequest withPause(double pause) { return new PlaybackRequest(text, backend, model, voice, speed, style, pause); }
     /** Compare effective synthesis settings so renames/ignored instructions do not restart audio. */
     public boolean sameSynthesis(PlaybackRequest other) {
         return text.equals(other.text) && backend == other.backend && model.equals(other.model) && voice.equals(other.voice)
@@ -62,6 +62,6 @@ public final class PlaybackRequest {
         SpeechBackend backend = SpeechBackend.fromId(id);
         if (!backend.id.equals(id)) { throw new IllegalArgumentException(UiText.UNKNOWN_SAVED_PROVIDER.text()); }
         return new PlaybackRequest(value.getString("text"), backend, value.getString("model"), value.getString("voice"),
-                value.getDouble("speed"), value.optString("style", ""), value.getInt("pause"));
+                value.getDouble("speed"), value.optString("style", ""), value.getDouble("pause"));
     }
 }

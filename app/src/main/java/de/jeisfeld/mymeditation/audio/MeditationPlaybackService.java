@@ -64,7 +64,7 @@ public final class MeditationPlaybackService extends Service {
             context.startService(new Intent(context, MeditationPlaybackService.class).setAction(APPLY_SETTINGS));
         }
     }
-    public static void setPause(Context context, int seconds) {
+    public static void setPause(Context context, double seconds) {
         if (STATE.getValue().running) { context.startService(new Intent(context, MeditationPlaybackService.class).setAction(SET_PAUSE).putExtra("seconds", seconds)); }
     }
 
@@ -143,7 +143,7 @@ public final class MeditationPlaybackService extends Service {
             } else { if (request == null) { stopSelf(); } }
         }
         else if (SET_PAUSE.equals(action)) {
-            if (request != null) { request = request.withPause(intent.getIntExtra("seconds", request.pauseSeconds)); saveRequest(); player.setPauseSeconds(request.pauseSeconds); }
+            if (request != null) { request = request.withPause(intent.getDoubleExtra("seconds", request.pauseSeconds)); saveRequest(); player.setPauseSeconds(request.pauseSeconds); }
         } else {
             // Promotion precedes audio focus and any synthesis work (Android 15+ requirement).
             try {
@@ -163,9 +163,9 @@ public final class MeditationPlaybackService extends Service {
 
     private PlaybackRequest configuredRequest() {
         return configuredRequest(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text),
-                PreferenceUtil.getSharedPreferenceInt(R.string.key_pause_duration, 1));
+                PreferenceUtil.getPauseSeconds());
     }
-    private PlaybackRequest configuredRequest(String activeText, int pauseSeconds) {
+    private PlaybackRequest configuredRequest(String activeText, double pauseSeconds) {
         SpeechBackend backend = SpeechBackend.fromId(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend, R.string.default_speech_backend));
         String voice = PreferenceUtil.getSharedPreferenceString(backend.voiceKey(), backend.defaultVoice);
         double speed = 1.0;
@@ -184,7 +184,7 @@ public final class MeditationPlaybackService extends Service {
         PlaybackRequest updated = configuredRequest(previous.text, previous.pauseSeconds);
         int mapped = previous.positionFor(updated, position);
         if (previous.sameSynthesis(updated)) {
-            if (updated.backend == SpeechBackend.DEVICE || Double.compare(previous.speed, updated.speed) == 0 || player.setPlaybackSpeed(updated.speed)) {
+            if (Double.compare(previous.speed, updated.speed) == 0 || player.setPlaybackSpeed(updated.speed)) {
                 request = updated;
                 saveRequest();
                 return;
@@ -221,7 +221,7 @@ public final class MeditationPlaybackService extends Service {
         try {
             startForeground(NOTIFICATION, notification(true));
             restoreRequest();
-            PlaybackRequest updated = configuredRequest(request.text, request.pauseSeconds);
+            PlaybackRequest updated = configuredRequest(request.text, PreferenceUtil.getPauseSeconds());
             position = request.positionFor(updated, position);
             request = updated;
             startAt(position);
@@ -231,7 +231,7 @@ public final class MeditationPlaybackService extends Service {
     private void skip(int direction) {
         try {
             restoreRequest();
-            PlaybackRequest updated = configuredRequest(request.text, request.pauseSeconds);
+            PlaybackRequest updated = configuredRequest(request.text, PreferenceUtil.getPauseSeconds());
             position = request.positionFor(updated, position);
             request = updated;
             startAt(position + direction);

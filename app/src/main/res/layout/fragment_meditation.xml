@@ -43,8 +43,7 @@
         android:layout_marginEnd="@dimen/activity_horizontal_margin"
         android:layout_marginTop="@dimen/activity_heading_margin"
         android:labelFor="@id/seekBarPauseDuration"
-        android:text="@string/label_pause_duration"
-        android:textSize="@dimen/text_size_content" />
+        android:text="@string/label_pause_duration" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -59,14 +58,42 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:indeterminate="false"
-            android:max="30"
-            android:min="1"
+            android:max="40"
+            android:min="0"
             android:progress="1" />
 
         <TextView
             android:id="@+id/textPauseDuration"
-            android:layout_width="30dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_width="64dp"
             android:layout_height="wrap_content"
+            android:textAlignment="viewEnd" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/activity_horizontal_margin"
+        android:text="@string/label_voice_speed" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/activity_horizontal_margin"
+        android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:orientation="horizontal">
+        <SeekBar
+            android:id="@+id/seekBarVoiceSpeed"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:max="1000" />
+        <TextView
+            android:id="@+id/textVoiceSpeed"
+            android:layout_width="64dp"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
             android:textAlignment="viewEnd" />
     </LinearLayout>
 

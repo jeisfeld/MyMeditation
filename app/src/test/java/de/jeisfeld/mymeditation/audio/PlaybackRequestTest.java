@@ -15,7 +15,7 @@ public class PlaybackRequestTest {
         assertEquals(request.voice, restored.voice);
         assertEquals(request.model, restored.model);
         assertEquals(1.2, restored.speed, 0.001);
-        assertEquals(4, restored.pauseSeconds);
+        assertEquals(4, restored.pauseSeconds, 0.001);
         assertEquals("Warm", restored.style);
         assertEquals(7, new JSONObject(request.json()).length());
         assertFalse(request.json().contains("API_KEY"));
@@ -23,8 +23,8 @@ public class PlaybackRequestTest {
     @Test public void devicePlaybackCanBeSavedWithoutCloudCredentials() throws Exception {
         PlaybackRequest request = new PlaybackRequest("Breathe", SpeechBackend.DEVICE, "", "", 1.0, "", 2);
         assertEquals(SpeechBackend.DEVICE, PlaybackRequest.parse(request.json()).backend);
-        assertEquals(7, request.withPause(7).pauseSeconds);
-        assertEquals(2, request.pauseSeconds);
+        assertEquals(7, request.withPause(7).pauseSeconds, 0.001);
+        assertEquals(2, request.pauseSeconds, 0.001);
     }
     @Test public void rejectsInvalidSavedSessionsAndClampsPauseBounds() throws Exception {
         assertThrows(IllegalArgumentException.class, () -> new PlaybackRequest(" ", SpeechBackend.DEVICE, "", "", 1, "", 1));
@@ -32,8 +32,8 @@ public class PlaybackRequestTest {
         PlaybackRequest request = new PlaybackRequest("Breathe", SpeechBackend.DEVICE, "", "", 1, "", 1);
         String invalid = new JSONObject(request.json()).put("backend", "unknown").toString();
         assertThrows(IllegalArgumentException.class, () -> PlaybackRequest.parse(invalid));
-        assertEquals(30, request.withPause(900).pauseSeconds);
-        assertEquals(0, request.withPause(-1).pauseSeconds);
+        assertEquals(30, request.withPause(900).pauseSeconds, 0.001);
+        assertEquals(0, request.withPause(-1).pauseSeconds, 0.001);
     }
     @Test public void providerSwitchMapsTheCurrentTextLocationAcrossDifferentChunkSizes() {
         String text = String.join("", java.util.Collections.nCopies(3400, "x")) + ". Same. Same.";
@@ -57,6 +57,13 @@ public class PlaybackRequestTest {
         assertFalse(gemini.sameSynthesis(newStyle));
         PlaybackRequest differentText = new PlaybackRequest("Different text.", SpeechBackend.DEVICE, "", "", 1, "", 1);
         assertThrows(IllegalArgumentException.class, () -> gemini.positionFor(differentText, 0));
+    }
+
+    @Test public void fractionalPauseSurvivesSessionSaveAndResume() throws Exception {
+        PlaybackRequest request = new PlaybackRequest("Breathe.", SpeechBackend.DEVICE, "", "", 1, "", 4.5);
+        assertEquals(4.5, PlaybackRequest.parse(request.json()).pauseSeconds, 0.001);
+        assertEquals(0.5, request.withPause(0.5).pauseSeconds, 0.001);
+        assertEquals(0, request.withPause(0).pauseSeconds, 0.001);
     }
 
 }

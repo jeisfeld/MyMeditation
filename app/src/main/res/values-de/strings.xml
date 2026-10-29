@@ -64,4 +64,6 @@
         <item>ElevenLabs-Sprachausgabe</item>
     </string-array>
     <string name="button_add_voice">Hinzufügen</string>
+    <string name="label_voice_speed">Sprechgeschwindigkeit</string>
+    <string name="pause_value_range">Gib eine Pause zwischen 0 und 30 Sekunden ein.</string>
 </resources>

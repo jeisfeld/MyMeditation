@@ -72,10 +72,10 @@ public class MeditationFragment extends Fragment {
         meditationViewModel.getMeditationText().observe(getViewLifecycleOwner(), binding.editTextMeditationText::setText);
         meditationViewModel.getPauseDuration().observe(getViewLifecycleOwner(), pauseDuration -> {
             if (pauseDuration == null) {
-                pauseDuration = 1;
+                pauseDuration = 1.0;
             }
-            binding.seekBarPauseDuration.setProgress(pauseDuration);
-            binding.textPauseDuration.setText(getString(R.string.text_pause_duration, pauseDuration));
+            binding.seekBarPauseDuration.setProgress(de.jeisfeld.mymeditation.audio.PlaybackScales.pauseProgress(pauseDuration));
+            binding.textPauseDuration.setText(number(pauseDuration) + " s");
         });
         meditationViewModel.getSeekBarMax().observe(getViewLifecycleOwner(), binding.seekBarAudio::setMax);
         meditationViewModel.getSeekBarProgress().observe(getViewLifecycleOwner(), binding.seekBarAudio::setProgress);
@@ -127,7 +127,7 @@ public class MeditationFragment extends Fragment {
         });
 
         binding.buttonSpeakMeditation.setOnClickListener(v -> {
-            meditationViewModel.setPauseDuration(binding.seekBarPauseDuration.getProgress());
+            meditationViewModel.setPauseDuration(PreferenceUtil.getPauseSeconds());
             meditationViewModel.setMeditationText(binding.editTextMeditationText.getText().toString());
 
             String meditationText = binding.editTextMeditationText.getText().toString();
@@ -153,8 +153,7 @@ public class MeditationFragment extends Fragment {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
-                    meditationViewModel.setPauseDuration(progress);
-                    MeditationPlaybackService.setPause(requireContext(), progress);
+                    setPause(de.jeisfeld.mymeditation.audio.PlaybackScales.pause(progress));
                 }
             }
 
@@ -189,7 +188,77 @@ public class MeditationFragment extends Fragment {
             }
         });
 
+        binding.seekBarVoiceSpeed.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+            private boolean dragging;
+            @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
+                if (fromUser) {
+                    double speed = de.jeisfeld.mymeditation.audio.PlaybackScales.speed(progress);
+                    binding.textVoiceSpeed.setText(number(speed) + "×");
+                    if (!dragging) { setSpeed(speed); }
+                }
+            }
+            @Override public void onStartTrackingTouch(SeekBar bar) { dragging = true; }
+            @Override public void onStopTrackingTouch(SeekBar bar) { dragging = false; setSpeed(de.jeisfeld.mymeditation.audio.PlaybackScales.speed(bar.getProgress())); }
+        });
+        binding.textPauseDuration.setOnClickListener(v -> valueDialog(false));
+        binding.textVoiceSpeed.setOnClickListener(v -> valueDialog(true));
+        refreshSpeed();
         return root;
+    }
+
+    @Override public void onResume() {
+        super.onResume();
+        if (binding != null) { refreshSpeed(); }
+    }
+    private String number(double value) {
+        java.text.NumberFormat format = java.text.NumberFormat.getNumberInstance(getResources().getConfiguration().getLocales().get(0));
+        format.setMaximumFractionDigits(3);
+        format.setGroupingUsed(false);
+        return format.format(value);
+    }
+    private double voiceSpeed() {
+        try {
+            return new de.jeisfeld.mymeditation.http.VoiceProfiles(PreferenceUtil.getSharedPreferenceString(
+                    de.jeisfeld.mymeditation.http.VoiceProfiles.PREFERENCE, "{}")).speed(speechBackend(),
+                    PreferenceUtil.getSharedPreferenceString(speechBackend().voiceKey(), speechBackend().defaultVoice),
+                    Double.parseDouble(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_speed, R.string.default_speech_speed)));
+        } catch (IllegalArgumentException e) { return 1; }
+    }
+    private void refreshSpeed() {
+        double speed = voiceSpeed();
+        binding.seekBarVoiceSpeed.setProgress(de.jeisfeld.mymeditation.audio.PlaybackScales.speedProgress(speed));
+        binding.textVoiceSpeed.setText(number(speed) + "×");
+    }
+    private void setPause(double value) {
+        meditationViewModel.setPauseDuration(value);
+        MeditationPlaybackService.setPause(requireContext(), value);
+    }
+    private void setSpeed(double value) {
+        de.jeisfeld.mymeditation.http.SpeechProtocol.validateSpeed(value);
+        de.jeisfeld.mymeditation.http.VoiceProfiles profiles = new de.jeisfeld.mymeditation.http.VoiceProfiles(
+                PreferenceUtil.getSharedPreferenceString(de.jeisfeld.mymeditation.http.VoiceProfiles.PREFERENCE, "{}"));
+        profiles.setSpeed(speechBackend(), PreferenceUtil.getSharedPreferenceString(speechBackend().voiceKey(), speechBackend().defaultVoice), value);
+        PreferenceUtil.setSharedPreferenceString(de.jeisfeld.mymeditation.http.VoiceProfiles.PREFERENCE, profiles.json());
+        PreferenceUtil.setSharedPreferenceString(R.string.key_speech_speed, Double.toString(value));
+        refreshSpeed();
+        MeditationPlaybackService.applySavedSettings(requireContext());
+    }
+    private void valueDialog(boolean speed) {
+        android.widget.EditText input = new android.widget.EditText(requireContext());
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        input.setKeyListener(android.text.method.DigitsKeyListener.getInstance("0123456789.,"));
+        input.setText(number(speed ? voiceSpeed() : PreferenceUtil.getPauseSeconds()));
+        AlertDialog dialog = new AlertDialog.Builder(requireContext()).setTitle(speed ? R.string.label_voice_speed : R.string.label_pause_duration)
+                .setView(input).setNegativeButton(R.string.button_cancel, null).setPositiveButton(R.string.button_save, null).create();
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            try {
+                double value = Double.parseDouble(input.getText().toString().trim().replace(',', '.'));
+                if (!Double.isFinite(value) || value < (speed ? 0.25 : 0) || value > (speed ? 4 : 30)) { throw new IllegalArgumentException(); }
+                if (speed) { setSpeed(value); } else { setPause(value); }
+                dialog.dismiss();
+            } catch (IllegalArgumentException e) { input.setError(getString(speed ? R.string.speech_speed_label : R.string.pause_value_range)); }
+        }));
+        dialog.show();
     }
 
     public static List<String> splitIntoIndividualSentences(String input) {

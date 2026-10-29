@@ -19,7 +19,7 @@ public class MeditationViewModel extends ViewModel {
 
 	private final MutableLiveData<String> mMeditationText;
 
-	private final MutableLiveData<Integer> mPauseDuration;
+	private final MutableLiveData<Double> mPauseDuration;
 
 	private final MutableLiveData<Integer> mSeekBarMax;
 
@@ -43,7 +43,7 @@ public class MeditationViewModel extends ViewModel {
 	public void getStoredData() {
 		mMeditationContent.setValue(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content));
 		mMeditationText.setValue(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text));
-		mPauseDuration.setValue(PreferenceUtil.getSharedPreferenceInt(R.string.key_pause_duration, 0));
+		mPauseDuration.setValue(PreferenceUtil.getPauseSeconds());
 	}
 
 	protected LiveData<String> getMeditationContent() {
@@ -54,7 +54,7 @@ public class MeditationViewModel extends ViewModel {
 		return mMeditationText;
 	}
 
-	protected LiveData<Integer> getPauseDuration() {
+	protected LiveData<Double> getPauseDuration() {
 		return mPauseDuration;
 	}
 
@@ -80,9 +80,9 @@ public class MeditationViewModel extends ViewModel {
 		PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_text, meditationText);
 	}
 
-	protected void setPauseDuration(final int pauseDuration) {
+	protected void setPauseDuration(final double pauseDuration) {
 		mPauseDuration.postValue(pauseDuration);
-		PreferenceUtil.setSharedPreferenceInt(R.string.key_pause_duration, pauseDuration);
+		PreferenceUtil.setPauseSeconds(pauseDuration);
 	}
 
 	protected void setSeekBarMax(final int seekBarMax) {

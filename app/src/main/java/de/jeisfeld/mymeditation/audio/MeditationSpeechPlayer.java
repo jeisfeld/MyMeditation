@@ -62,12 +62,12 @@ public final class MeditationSpeechPlayer {
         this.listener = listener;
     }
 
-    public void start(List<String> text, int position, int pauseSeconds, SpeechBackend backend, String model, String voice, double speed, String style) {
+    public void start(List<String> text, int position, double pauseSeconds, SpeechBackend backend, String model, String voice, double speed, String style) {
         stop();
         if (text.isEmpty()) { return; }
         sentences = new ArrayList<>(text);
         index = Math.max(0, Math.min(position, text.size() - 1));
-        pauseMs = Math.max(0, pauseSeconds) * 1000;
+        pauseMs = (int) Math.round(Math.max(0, pauseSeconds) * 1000);
         this.backend = backend;
         this.model = model;
         this.voice = voice;
@@ -92,6 +92,7 @@ public final class MeditationSpeechPlayer {
                 if (!valid(token)) { return; }
                 if (status != TextToSpeech.SUCCESS) { fail(UiText.DEVICE_START_FAILED.text()); return; }
                 tts.setAudioAttributes(attributes());
+                tts.setSpeechRate((float) speed);
                 tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                     @Override public void onStart(String id) { }
                     @Override public void onDone(String id) { handler.post(() -> complete(token)); }
@@ -233,8 +234,9 @@ public final class MeditationSpeechPlayer {
     /** Native providers use local speed; update the current recording without regeneration. */
     public boolean setPlaybackSpeed(double value) {
         de.jeisfeld.mymeditation.http.SpeechProtocol.validateSpeed(value);
-        if (backend == SpeechBackend.OPENAI || backend == SpeechBackend.DEVICE) { return false; }
+        if (backend == SpeechBackend.OPENAI) { return false; }
         speed = value;
+        if (backend == SpeechBackend.DEVICE) { if (tts != null) { tts.setSpeechRate((float) value); } return true; }
         try {
             if (media != null && media.isPlaying()) {
                 media.setPlaybackParams(new android.media.PlaybackParams().setSpeed((float) value).setPitch(1.0f));
@@ -243,7 +245,7 @@ public final class MeditationSpeechPlayer {
         } catch (RuntimeException e) { return false; }
     }
 
-    public void setPauseSeconds(int seconds) { pauseMs = Math.max(0, seconds) * 1000; }
+    public void setPauseSeconds(double seconds) { pauseMs = (int) Math.round(Math.max(0, seconds) * 1000); }
 
     public void stop() {
         session++;

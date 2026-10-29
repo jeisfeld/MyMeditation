@@ -106,20 +106,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/activity_heading_margin"
-            android:labelFor="@id/editTextSpeechSpeed"
-            android:text="@string/speech_speed_label" />
-        <EditText
-            android:id="@+id/editTextSpeechSpeed"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="numberDecimal"
-            android:digits="0123456789.,"
-            android:importantForAutofill="no"
-            android:singleLine="true" />
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/activity_heading_margin"
             android:labelFor="@id/editTextSpeechStyle"
             android:text="@string/speech_style_label" />
         <EditText

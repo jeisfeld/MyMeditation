@@ -79,4 +79,6 @@
     <string name="notification_resume">Resume</string>
     <string name="notification_stop">Stop</string>
     <string name="button_add_voice">Add voice</string>
+    <string name="label_voice_speed">Voice speed</string>
+    <string name="pause_value_range">Enter a pause from 0 to 30 seconds.</string>
 </resources>

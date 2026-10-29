@@ -47,6 +47,12 @@ public final class PreferenceUtil {
         getSharedPreferences().edit().putString(key, value).apply();
     }
 
+    public static double getPauseSeconds() {
+        try { return Math.max(0, Math.min(30, Double.parseDouble(getSharedPreferenceString("pause_seconds", "")))); }
+        catch (NumberFormatException e) { return getSharedPreferenceInt(de.jeisfeld.mymeditation.R.string.key_pause_duration, 1); }
+    }
+    public static void setPauseSeconds(double seconds) { setSharedPreferenceString("pause_seconds", Double.toString(seconds)); }
+
 	/**
 	 * Retrieve a String shared preference.
 	 *
