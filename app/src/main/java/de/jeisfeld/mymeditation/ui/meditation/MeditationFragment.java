@@ -2,7 +2,7 @@ package de.jeisfeld.mymeditation.ui.meditation;
 
 import android.os.Bundle;
 import de.jeisfeld.mymeditation.http.SpeechBackend;
-import de.jeisfeld.mymeditation.audio.MeditationSpeechPlayer;
+import de.jeisfeld.mymeditation.audio.MeditationPlaybackService;
 import de.jeisfeld.mymeditation.audio.SpeechSegments;
 import androidx.appcompat.app.AlertDialog;
 
@@ -29,7 +29,6 @@ public class MeditationFragment extends Fragment {
 
     private FragmentMeditationBinding binding;
 
-    private MeditationSpeechPlayer speechPlayer;
     private List<String> sentences;
 
     private MeditationViewModel meditationViewModel;
@@ -41,24 +40,6 @@ public class MeditationFragment extends Fragment {
 
         binding = FragmentMeditationBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
-        speechPlayer = new MeditationSpeechPlayer(requireContext(),
-                new MeditationSpeechPlayer.Listener() {
-                    @Override public void onSentence(int index) { meditationViewModel.setSeekBarProgress(index); }
-                    @Override public void onRunning(boolean running) { meditationViewModel.setMeditationRunning(running); }
-                    @Override public void onStatus(String status) {
-                        if (binding != null) {
-                            binding.textSpeechStatus.setText(status);
-                            binding.textSpeechStatus.setVisibility(status.isEmpty() ? View.GONE : View.VISIBLE);
-                        }
-                    }
-                    @Override public void onError(String error) {
-                        if (binding != null) {
-                            new AlertDialog.Builder(requireContext())
-                                    .setTitle(R.string.button_speak_meditation).setMessage(error)
-                                    .setPositiveButton(android.R.string.ok, null).show();
-                        }
-                    }
-                });
 
         root.post(() -> {
             WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(requireActivity().getWindow().getDecorView());
@@ -93,6 +74,21 @@ public class MeditationFragment extends Fragment {
         meditationViewModel.isMeditationRunning().observe(getViewLifecycleOwner(), isMeditationRunning -> {
             binding.buttonSpeakMeditation.setVisibility(isMeditationRunning ? View.GONE : View.VISIBLE);
             binding.buttonPauseMeditation.setVisibility(isMeditationRunning ? View.VISIBLE : View.GONE);
+        });
+
+        MeditationPlaybackService.state().observe(getViewLifecycleOwner(), state -> {
+            meditationViewModel.setMeditationRunning(state.running);
+            if (!state.sentences.isEmpty()) {
+                sentences = state.sentences;
+                meditationViewModel.setSeekBarMax(Math.max(0, sentences.size() - 1));
+                meditationViewModel.setSeekBarProgress(state.position);
+            }
+            binding.textSpeechStatus.setText(state.status);
+            binding.textSpeechStatus.setVisibility(state.status.isEmpty() ? View.GONE : View.VISIBLE);
+            if (!state.error.isEmpty() && meditationViewModel.consumePlaybackError(state.errorId)) {
+                new AlertDialog.Builder(requireContext()).setTitle(R.string.button_speak_meditation)
+                        .setMessage(state.error).setPositiveButton(android.R.string.ok, null).show();
+            }
         });
 
 
@@ -151,7 +147,7 @@ public class MeditationFragment extends Fragment {
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
                     meditationViewModel.setPauseDuration(progress);
-                    if (speechPlayer != null) { speechPlayer.setPauseSeconds(progress); }
+                    MeditationPlaybackService.setPause(requireContext(), progress);
                 }
             }
 
@@ -182,7 +178,7 @@ public class MeditationFragment extends Fragment {
                 if (resumeAfterSeek) { stopAudio(); }
             }
             @Override public void onStopTrackingTouch(SeekBar seekBar) {
-                if (resumeAfterSeek) { startAudio(seekBar.getProgress()); }
+                if (resumeAfterSeek) { MeditationPlaybackService.seek(requireContext(), seekBar.getProgress()); }
             }
         });
 
@@ -194,34 +190,23 @@ public class MeditationFragment extends Fragment {
     }
 
     private void startAudio(int position) {
-        if (speechPlayer == null || sentences == null || sentences.isEmpty()) { return; }
-        speechPlayer.start(sentences, position, binding.seekBarPauseDuration.getProgress(),
-                speechBackend(),
-                PreferenceUtil.getSharedPreferenceString(speechBackend().modelKey(), speechBackend().defaultModel),
-                PreferenceUtil.getSharedPreferenceString(speechBackend().voiceKey(), speechBackend().defaultVoice),
-                speechSpeed(), PreferenceUtil.getSharedPreferenceString(R.string.key_speech_style, R.string.default_speech_style));
+        if (sentences == null || sentences.isEmpty()) { return; }
+        try { MeditationPlaybackService.play(requireContext(), position); }
+        catch (RuntimeException e) {
+            meditationViewModel.setMeditationRunning(false);
+            new AlertDialog.Builder(requireContext()).setTitle(R.string.button_speak_meditation)
+                    .setMessage("Could not start the playback service. Please try again while the app is visible.")
+                    .setPositiveButton(android.R.string.ok, null).show();
+        }
     }
 
     private SpeechBackend speechBackend() {
         return SpeechBackend.fromId(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend, R.string.default_speech_backend));
     }
 
-    private double speechSpeed() {
-        try {
-            double legacySpeed = Double.parseDouble(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_speed, R.string.default_speech_speed));
-            de.jeisfeld.mymeditation.http.VoiceProfiles profiles = new de.jeisfeld.mymeditation.http.VoiceProfiles(
-                    PreferenceUtil.getSharedPreferenceString(de.jeisfeld.mymeditation.http.VoiceProfiles.PREFERENCE, "{}"));
-            double speed = profiles.speed(speechBackend(), PreferenceUtil.getSharedPreferenceString(
-                    speechBackend().voiceKey(), speechBackend().defaultVoice), legacySpeed);
-            de.jeisfeld.mymeditation.http.SpeechProtocol.validateSpeed(speed);
-            return speed;
-        } catch (IllegalArgumentException e) { return 1.0; }
-    }
-
-    private void stopAudio() { if (speechPlayer != null) { speechPlayer.stop(); } }
+    private void stopAudio() { MeditationPlaybackService.pause(requireContext()); }
 
     @Override public void onDestroyView() {
-        if (speechPlayer != null) { speechPlayer.close(); speechPlayer = null; }
         binding = null;
         super.onDestroyView();
     }

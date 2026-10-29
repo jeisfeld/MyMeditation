@@ -9,7 +9,7 @@ public enum SpeechBackend {
     OPENAI("openai", "OPENAI_API_KEY", "gpt-4o-mini-tts", "coral", 3500),
     GEMINI("gemini", "GEMINI_API_KEY", "gemini-2.5-flash-preview-tts", "Kore", 1500),
     QWEN("qwen", "QWEN_API_KEY", "qwen3-tts-flash", "Cherry", 500),
-    ELEVENLABS("elevenlabs", "ELEVENLABS_API_KEY", "eleven_multilingual_v2", "", 3500);
+    ELEVENLABS("elevenlabs", "ELEVENLABS_API_KEY", "eleven_v4", "", 3500);
 
     public final String id;
     final String key;
@@ -28,7 +28,7 @@ public enum SpeechBackend {
     public String voiceKey() { return this == OPENAI ? "speech_voice" : id + "_speech_voice"; }
     public List<String> voices() {
         switch (this) {
-            case GEMINI: return Arrays.asList("Kore", "Aoede", "Leda", "Zephyr", "Sulafat", "Puck", "Charon", "Fenrir", "Orus", "Gacrux");
+            case GEMINI: return Arrays.asList("Kore", "Aoede", "Leda", "Zephyr", "Sulafat", "Gacrux", "Puck", "Charon", "Fenrir", "Orus");
             case ELEVENLABS: return java.util.Collections.emptyList();
             case QWEN: return Arrays.asList("Cherry", "Serena", "Chelsie", "Ethan");
             default: return SpeechProtocol.VOICES;

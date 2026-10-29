@@ -7,6 +7,13 @@ import de.jeisfeld.mymeditation.R;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
 
 public class MeditationViewModel extends ViewModel {
+    private long lastPlaybackError;
+    protected boolean consumePlaybackError(long id) {
+        if (id == 0 || id == lastPlaybackError) { return false; }
+        lastPlaybackError = id;
+        return true;
+    }
+
 
 	private final MutableLiveData<String> mMeditationContent;
 

@@ -12,7 +12,7 @@ public final class SpeechProtocol {
     public static final String DEFAULT_MODEL = "gpt-4o-mini-tts";
     public static final String DEFAULT_VOICE = "coral";
     public static final List<String> VOICES = java.util.Collections.unmodifiableList(Arrays.asList(
-            "alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse", "marin", "cedar"));
+            "shimmer", "sage", "coral", "nova", "marin", "alloy", "fable", "verse", "cedar", "ash", "ballad", "echo", "onyx"));
     public static final String DEFAULT_STYLE = "Speak naturally as a meditation guide, with a warm, clear tone.";
     private static final String INSTRUCTIONS = "Read only the supplied text, in its original language. Do not add words.";
     private SpeechProtocol() { }
@@ -23,8 +23,8 @@ public final class SpeechProtocol {
             throw new IllegalArgumentException("Use gpt-4o-mini-tts, tts-1 or tts-1-hd for OpenAI speech.");
         }
         if (!VOICES.contains(voice)) { throw new IllegalArgumentException("Choose a supported OpenAI voice."); }
-        if (model.startsWith("tts-1") && !Arrays.asList("alloy", "echo", "fable", "onyx", "nova", "shimmer").contains(voice)) {
-            throw new IllegalArgumentException("For tts-1 models, choose alloy, echo, fable, onyx, nova or shimmer.");
+        if (model.startsWith("tts-1") && !Arrays.asList("shimmer", "nova", "alloy", "fable", "echo", "onyx").contains(voice)) {
+            throw new IllegalArgumentException("For tts-1 models, choose shimmer, nova, alloy, fable, echo or onyx.");
         }
     }
 

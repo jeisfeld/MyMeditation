@@ -27,6 +27,7 @@ public final class MeditationSpeechPlayer {
         void onRunning(boolean running);
         void onError(String error);
         default void onStatus(String status) { }
+        default void onFinished() { }
     }
     private final Context context;
     private final Listener listener;
@@ -196,7 +197,7 @@ public final class MeditationSpeechPlayer {
     private void complete(int token) {
         if (!valid(token)) { return; }
         downloads.remove(index);
-        if (++index >= sentences.size()) { stop(); }
+        if (++index >= sentences.size()) { stop(); listener.onFinished(); }
         else { next(token, false); }
     }
 

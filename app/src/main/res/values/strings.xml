@@ -55,8 +55,8 @@
     <string name="speech_speed_label">Speech speed (0.25–4.0; 1.0 is normal)</string>
     <string name="speech_style_label">Voice instructions</string>
     <string name="speech_style_hint">For example: warm and sensual, or firm and commanding. Use a natural pace.</string>
-    <string name="speech_style_note">Instructions work with Gemini and gpt-4o-mini-tts. For Qwen, select an instruct TTS model to use them; standard Qwen and tts-1 models ignore them. Gemini, Qwen and ElevenLabs speed is adjusted locally. ElevenLabs ignores this instructions field; eleven_v3 can use audio tags in the meditation text.</string>
-    <string name="speech_voice_hint">For a feminine sound, try OpenAI coral/nova, Gemini Kore/Aoede/Leda, or Qwen Cherry/Serena/Chelsie. Voice character varies with language.</string>
+    <string name="speech_style_note">Instructions work with Gemini, gpt-4o-mini-tts and Qwen instruct. ElevenLabs, standard Qwen and tts-1 models ignore them.</string>
+    <string name="speech_voice_hint">Voice character varies with language.</string>
     <string name="key_speech_speed" translatable="false">speech_speed</string>
     <string name="default_speech_speed" translatable="false">1.0</string>
     <string name="key_speech_style" translatable="false">speech_style</string>
