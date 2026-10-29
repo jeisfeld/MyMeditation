@@ -35,4 +35,28 @@ public class PlaybackRequestTest {
         assertEquals(30, request.withPause(900).pauseSeconds);
         assertEquals(0, request.withPause(-1).pauseSeconds);
     }
+    @Test public void providerSwitchMapsTheCurrentTextLocationAcrossDifferentChunkSizes() {
+        String text = String.join("", java.util.Collections.nCopies(3400, "x")) + ". Same. Same.";
+        PlaybackRequest gemini = new PlaybackRequest(text, SpeechBackend.GEMINI, "gemini-2.5-flash-preview-tts", "Kore", 1, "Warm", 3);
+        PlaybackRequest qwen = new PlaybackRequest(text, SpeechBackend.QWEN, "qwen3-tts-flash", "Cherry", 1, "Warm", 3);
+        assertEquals(3, gemini.positionFor(qwen, 1));
+        assertEquals(6, gemini.positionFor(qwen, 2));
+        // Identical repeated sentences still map to their own occurrence.
+        assertEquals(7, gemini.positionFor(qwen, 3));
+        assertEquals(8, gemini.positionFor(qwen, 4));
+        assertEquals(4, gemini.positionFor(gemini, 4));
+    }
+    @Test public void speedChangesDoNotRequireNewSynthesisForNativeProvidersAndIgnoredStylesAreEqual() {
+        PlaybackRequest first = new PlaybackRequest("Breathe.", SpeechBackend.ELEVENLABS, "eleven_v4", "EXAVITQu4vr4xnSDxMaL", 1, "Warm", 3);
+        PlaybackRequest faster = new PlaybackRequest("Breathe.", SpeechBackend.ELEVENLABS, "eleven_v4", "EXAVITQu4vr4xnSDxMaL", 1.3, "Different ignored style", 3);
+        assertTrue(first.sameSynthesis(faster));
+        PlaybackRequest voice = new PlaybackRequest("Breathe.", SpeechBackend.ELEVENLABS, "eleven_v4", "JBFqnCBsd6RMkjVDRZzb", 1, "Warm", 3);
+        assertFalse(first.sameSynthesis(voice));
+        PlaybackRequest gemini = new PlaybackRequest("Breathe.", SpeechBackend.GEMINI, "gemini-2.5-flash-preview-tts", "Kore", 1, "Warm", 3);
+        PlaybackRequest newStyle = new PlaybackRequest("Breathe.", SpeechBackend.GEMINI, "gemini-2.5-flash-preview-tts", "Kore", 1, "Commanding", 3);
+        assertFalse(gemini.sameSynthesis(newStyle));
+        PlaybackRequest differentText = new PlaybackRequest("Different text.", SpeechBackend.DEVICE, "", "", 1, "", 1);
+        assertThrows(IllegalArgumentException.class, () -> gemini.positionFor(differentText, 0));
+    }
+
 }

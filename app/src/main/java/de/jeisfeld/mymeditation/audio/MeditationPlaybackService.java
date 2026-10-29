@@ -32,7 +32,7 @@ public final class MeditationPlaybackService extends Service {
     private static final String CHANNEL = "meditation_playback";
     private static final int NOTIFICATION = 42;
     private static final String START = "meditation.START", RESUME = "meditation.RESUME", PAUSE = "meditation.PAUSE",
-            STOP = "meditation.STOP", SEEK = "meditation.SEEK", NEXT = "meditation.NEXT", PREVIOUS = "meditation.PREVIOUS", SET_PAUSE = "meditation.SET_PAUSE";
+            APPLY_SETTINGS = "meditation.APPLY_SETTINGS", STOP = "meditation.STOP", SEEK = "meditation.SEEK", NEXT = "meditation.NEXT", PREVIOUS = "meditation.PREVIOUS", SET_PAUSE = "meditation.SET_PAUSE";
     private static final String SAVED = "playback_session", POSITION = "playback_position";
 
     public static final class State {
@@ -57,6 +57,11 @@ public final class MeditationPlaybackService extends Service {
     }
     public static void pause(Context context) {
         if (STATE.getValue().running) { context.startService(new Intent(context, MeditationPlaybackService.class).setAction(PAUSE)); }
+    }
+    public static void applySavedSettings(Context context) {
+        if (STATE.getValue().running) {
+            context.startService(new Intent(context, MeditationPlaybackService.class).setAction(APPLY_SETTINGS));
+        }
     }
     public static void setPause(Context context, int seconds) {
         if (STATE.getValue().running) { context.startService(new Intent(context, MeditationPlaybackService.class).setAction(SET_PAUSE).putExtra("seconds", seconds)); }
@@ -131,6 +136,11 @@ public final class MeditationPlaybackService extends Service {
         String action = intent.getAction();
         if (PAUSE.equals(action)) { pausePlayback(); }
         else if (STOP.equals(action)) { stopPlayback(); }
+        else if (APPLY_SETTINGS.equals(action)) {
+            if (running && request != null) {
+                try { applyCurrentSettings(); } catch (Exception e) { playbackError(e); }
+            } else { if (request == null) { stopSelf(); } }
+        }
         else if (SET_PAUSE.equals(action)) {
             if (request != null) { request = request.withPause(intent.getIntExtra("seconds", request.pauseSeconds)); saveRequest(); player.setPauseSeconds(request.pauseSeconds); }
         } else {
@@ -143,7 +153,7 @@ public final class MeditationPlaybackService extends Service {
                     if (SEEK.equals(action)) { startAt(intent.getIntExtra("position", position)); }
                     else if (NEXT.equals(action)) { skip(1); }
                     else if (PREVIOUS.equals(action)) { skip(-1); }
-                    else { startAt(position); }
+                    else { resumePlayback(); }
                 }
             } catch (Exception e) { playbackError(e); }
         }
@@ -151,6 +161,10 @@ public final class MeditationPlaybackService extends Service {
     }
 
     private PlaybackRequest configuredRequest() {
+        return configuredRequest(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text),
+                PreferenceUtil.getSharedPreferenceInt(R.string.key_pause_duration, 1));
+    }
+    private PlaybackRequest configuredRequest(String activeText, int pauseSeconds) {
         SpeechBackend backend = SpeechBackend.fromId(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend, R.string.default_speech_backend));
         String voice = PreferenceUtil.getSharedPreferenceString(backend.voiceKey(), backend.defaultVoice);
         double speed = 1.0;
@@ -159,10 +173,24 @@ public final class MeditationPlaybackService extends Service {
             speed = new VoiceProfiles(PreferenceUtil.getSharedPreferenceString(VoiceProfiles.PREFERENCE, "{}")).speed(backend, voice, legacy);
             SpeechProtocol.validateSpeed(speed);
         } catch (IllegalArgumentException e) { speed = 1.0; }
-        return new PlaybackRequest(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text), backend,
+        return new PlaybackRequest(activeText, backend,
                 PreferenceUtil.getSharedPreferenceString(backend.modelKey(), backend.defaultModel), voice, speed,
                 PreferenceUtil.getSharedPreferenceString(R.string.key_speech_style, R.string.default_speech_style),
-                PreferenceUtil.getSharedPreferenceInt(R.string.key_pause_duration, 1));
+                pauseSeconds);
+    }
+    private void applyCurrentSettings() {
+        PlaybackRequest previous = request;
+        PlaybackRequest updated = configuredRequest(previous.text, previous.pauseSeconds);
+        int mapped = previous.positionFor(updated, position);
+        if (previous.sameSynthesis(updated)) {
+            if (updated.backend == SpeechBackend.DEVICE || Double.compare(previous.speed, updated.speed) == 0 || player.setPlaybackSpeed(updated.speed)) {
+                request = updated;
+                saveRequest();
+                return;
+            }
+        }
+        request = updated;
+        startAt(mapped);
     }
     private void restoreRequest() throws Exception {
         if (request != null) { return; }
@@ -189,11 +217,24 @@ public final class MeditationPlaybackService extends Service {
         if (!stopping) { publish(); updateSession(); updateNotification(); }
     }
     private void resumePlayback() {
-        try { startForeground(NOTIFICATION, notification(true)); restoreRequest(); startAt(position); }
+        try {
+            startForeground(NOTIFICATION, notification(true));
+            restoreRequest();
+            PlaybackRequest updated = configuredRequest(request.text, request.pauseSeconds);
+            position = request.positionFor(updated, position);
+            request = updated;
+            startAt(position);
+        }
         catch (Exception e) { playbackError(e); }
     }
     private void skip(int direction) {
-        try { restoreRequest(); startAt(position + direction); }
+        try {
+            restoreRequest();
+            PlaybackRequest updated = configuredRequest(request.text, request.pauseSeconds);
+            position = request.positionFor(updated, position);
+            request = updated;
+            startAt(position + direction);
+        }
         catch (Exception e) { playbackError(e); }
     }
     private void pausePlayback() {

@@ -124,7 +124,7 @@ public class ConfigurationFragment extends Fragment {
                 for (VoiceProfiles.Voice saved : profiles.voices()) { labels.add(saved.name); voiceIds.add(saved.id); }
             } else { labels.addAll(backend.voices()); voiceIds.addAll(backend.voices()); }
             ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, labels);
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            adapter.setDropDownViewResource(R.layout.dropdown_voice_item);
             settings.spinnerSpeechVoice.setAdapter(adapter);
             String voice = voices.containsKey(backend) ? voices.get(backend)
                     : PreferenceUtil.getSharedPreferenceString(backend.voiceKey(), backend.defaultVoice);
@@ -226,6 +226,7 @@ public class ConfigurationFragment extends Fragment {
                     PreferenceUtil.setSharedPreferenceString(provider.voiceKey(), voices.get(provider));
                 }
                 PreferenceUtil.setSharedPreferenceString(R.string.key_ai_model, model);
+                de.jeisfeld.mymeditation.audio.MeditationPlaybackService.applySavedSettings(requireContext());
                 dialog.dismiss();
             });
         });

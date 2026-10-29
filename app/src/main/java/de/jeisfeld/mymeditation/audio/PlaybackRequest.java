@@ -18,6 +18,37 @@ public final class PlaybackRequest {
         this.speed = speed; this.style = style; this.pauseSeconds = Math.max(0, Math.min(30, pauseSeconds));
     }
     public PlaybackRequest withPause(int pause) { return new PlaybackRequest(text, backend, model, voice, speed, style, pause); }
+    /** Compare effective synthesis settings so renames/ignored instructions do not restart audio. */
+    public boolean sameSynthesis(PlaybackRequest other) {
+        return text.equals(other.text) && backend == other.backend && model.equals(other.model) && voice.equals(other.voice)
+                && java.util.Objects.equals(effectiveStyle(), other.effectiveStyle());
+    }
+    private String effectiveStyle() {
+        if (backend == SpeechBackend.DEVICE || backend == SpeechBackend.ELEVENLABS
+                || (backend == SpeechBackend.OPENAI && model.startsWith("tts-1"))
+                || (backend == SpeechBackend.QWEN && !model.contains("instruct"))) { return ""; }
+        return style == null ? "" : style.trim();
+    }
+    /** Match the current text location when providers have different segment length limits. */
+    public int positionFor(PlaybackRequest replacement, int currentPosition) {
+        if (!text.equals(replacement.text)) { throw new IllegalArgumentException("Playback settings must preserve the active text."); }
+        java.util.List<String> oldSegments = SpeechSegments.split(text, backend.segmentLimit);
+        java.util.List<String> newSegments = SpeechSegments.split(text, replacement.backend.segmentLimit);
+        int target = Math.max(0, Math.min(currentPosition, oldSegments.size() - 1));
+        int offset = 0;
+        for (int i = 0; i <= target; i++) {
+            offset = text.indexOf(oldSegments.get(i), offset);
+            if (i < target) { offset += oldSegments.get(i).length(); }
+        }
+        int search = 0;
+        for (int i = 0; i < newSegments.size(); i++) {
+            int start = text.indexOf(newSegments.get(i), search);
+            int end = start + newSegments.get(i).length();
+            if (offset < end) { return i; }
+            search = end;
+        }
+        return newSegments.size() - 1;
+    }
     public String json() {
         try {
             return new JSONObject().put("text", text).put("backend", backend.id).put("model", model).put("voice", voice)

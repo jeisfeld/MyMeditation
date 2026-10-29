@@ -230,6 +230,19 @@ public final class MeditationSpeechPlayer {
     private void releaseMedia() { if (media != null) { media.release(); media = null; } }
     private void releaseSilence() { if (silence != null) { silence.release(); silence = null; } }
 
+    /** Native providers use local speed; update the current recording without regeneration. */
+    public boolean setPlaybackSpeed(double value) {
+        de.jeisfeld.mymeditation.http.SpeechProtocol.validateSpeed(value);
+        if (backend == SpeechBackend.OPENAI || backend == SpeechBackend.DEVICE) { return false; }
+        speed = value;
+        try {
+            if (media != null && media.isPlaying()) {
+                media.setPlaybackParams(new android.media.PlaybackParams().setSpeed((float) value).setPitch(1.0f));
+            }
+            return true;
+        } catch (RuntimeException e) { return false; }
+    }
+
     public void setPauseSeconds(int seconds) { pauseMs = Math.max(0, seconds) * 1000; }
 
     public void stop() {
