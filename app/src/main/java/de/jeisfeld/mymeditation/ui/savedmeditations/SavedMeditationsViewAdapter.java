@@ -132,11 +132,8 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 				&& de.jeisfeld.mymeditation.audio.SavedAudioLibrary.hasAudio(owner.requireContext(), meditationId);
 		holder.mPlayButton.setVisibility(offline ? View.VISIBLE : View.GONE);
 		holder.mShareButton.setVisibility(offline ? View.VISIBLE : View.GONE);
-		de.jeisfeld.mymeditation.audio.OfflinePlaybackService.State state =
-				de.jeisfeld.mymeditation.audio.OfflinePlaybackService.state().getValue();
-		de.jeisfeld.mymeditation.audio.MeditationPlaybackService.State live = de.jeisfeld.mymeditation.audio.MeditationPlaybackService.state().getValue();
-        boolean playing = state.id == meditationId && (state.playing || state.waitingForAudioFocus)
-                || live.savedId == meditationId && (live.running || live.waitingForAudioFocus);
+        de.jeisfeld.mymeditation.audio.MeditationPlaybackService.State live = de.jeisfeld.mymeditation.audio.MeditationPlaybackService.state().getValue();
+        boolean playing = live.savedId == meditationId && (live.running || live.waitingForAudioFocus);
 		holder.mPlayButton.setImageResource(playing ? R.drawable.ic_playback_pause : R.drawable.ic_playback_play);
 		if (owner != null) {
 			String action = owner.getString(playing ? R.string.notification_pause : R.string.button_play_offline);
@@ -156,7 +153,7 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
                     de.jeisfeld.mymeditation.audio.MeditationPlaybackService.playSaved(fragment.requireContext(), meditationId);
                     ((com.google.android.material.bottomnavigation.BottomNavigationView) fragment.requireActivity().findViewById(R.id.nav_view))
                             .setSelectedItemId(R.id.navigation_meditation);
-                } else { de.jeisfeld.mymeditation.audio.OfflinePlaybackService.toggle(fragment.requireContext(), meditationId); }
+                } else { throw new IllegalStateException(); }
             }
 			catch (RuntimeException e) { android.widget.Toast.makeText(fragment.requireContext(), R.string.offline_play_failed, android.widget.Toast.LENGTH_LONG).show(); }
 		});
@@ -181,8 +178,6 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 			Fragment fragment = mFragment.get();
 			if (fragment != null && fragment.getActivity() != null) {
 				DialogUtil.displayConfirmationMessage(fragment.getActivity(), dialog -> {
-					de.jeisfeld.mymeditation.audio.OfflinePlaybackService.stopIfPlaying(fragment.requireContext(), meditationId);
-					de.jeisfeld.mymeditation.audio.OfflineMeditations.file(fragment.requireContext(), meditationId).delete();
                     if (de.jeisfeld.mymeditation.audio.MeditationPlaybackService.state().getValue().savedId == meditationId) {
                         de.jeisfeld.mymeditation.audio.MeditationPlaybackService.end(fragment.requireContext());
                     }
@@ -210,8 +205,6 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
             if (de.jeisfeld.mymeditation.audio.MeditationPlaybackService.state().getValue().active) {
                 de.jeisfeld.mymeditation.audio.MeditationPlaybackService.end(fragment.requireContext());
             }
-            de.jeisfeld.mymeditation.audio.OfflinePlaybackService.State previous = de.jeisfeld.mymeditation.audio.OfflinePlaybackService.state().getValue();
-            if (previous.id > 0) { de.jeisfeld.mymeditation.audio.OfflinePlaybackService.stopIfPlaying(fragment.requireContext(), previous.id); }
             de.jeisfeld.mymeditation.audio.SavedAudioLibrary.restore(fragment.requireContext(), meditationId);
             refreshDraft(fragment);
             DialogUtil.displayToast(fragment.requireActivity(), R.string.toast_meditation_restored, meditationName);

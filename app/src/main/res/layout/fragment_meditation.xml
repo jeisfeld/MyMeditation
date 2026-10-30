@@ -105,6 +105,7 @@
         android:layout_marginStart="@dimen/activity_horizontal_margin"
         android:layout_marginEnd="@dimen/activity_horizontal_margin"
         android:layout_marginTop="@dimen/activity_heading_margin"
+        android:id="@+id/labelMeditationText"
         android:labelFor="@id/editTextMeditationText"
         android:text="@string/label_meditation_text"
         android:textSize="@dimen/text_size_content_heading"
@@ -152,14 +153,6 @@
             android:layout_weight="1"
             android:text="@string/button_speak_meditation" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonExportMeditation"
-            style="@style/PlaybackControl"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="0dp"
-            android:contentDescription="@string/button_export_meditation"
-            android:tooltipText="@string/button_export_meditation"
-            app:icon="@drawable/ic_save_audio" />
     </LinearLayout>
 
     <LinearLayout
@@ -209,15 +202,6 @@
             android:enabled="false" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/textExportStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="@dimen/activity_horizontal_margin"
-        android:accessibilityLiveRegion="polite"
-        android:maxLines="2"
-        android:textSize="12sp"
-        android:visibility="gone" />
     <SeekBar
         android:id="@+id/seekBarAudio"
         android:layout_width="match_parent"

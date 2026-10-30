@@ -22,11 +22,18 @@ public final class SavedAudioLibrary {
     });
     private SavedAudioLibrary() { }
     public static LiveData<Long> changes() { return CHANGES; }
+    private static final String RESTORED_SOURCE = "restored_meditation_source";
+    public static void clearSource() { PreferenceUtil.setSharedPreferenceString(RESTORED_SOURCE, "0"); }
     private static String link(int id) { return "sentence_audio_" + id; }
 
     public static final class Snapshot {
         public final String name, system, query, content;
+        public final int sourceId;
         public Snapshot(String name, String system, String query, String content) {
+            this(name, system, query, content, 0);
+        }
+        private Snapshot(String name, String system, String query, String content, int sourceId) {
+            this.sourceId = sourceId;
             this.name = clean(name); this.system = clean(system); this.query = clean(query); this.content = clean(content);
         }
         public static Snapshot current(Context context) {
@@ -34,8 +41,17 @@ public final class SavedAudioLibrary {
             String name = content.trim();
             if (name.length() > 80) { name = name.substring(0, Character.isHighSurrogate(name.charAt(79)) ? 79 : 80); }
             if (name.isEmpty()) { name = context.getString(R.string.default_offline_name); }
-            return new Snapshot(name, PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt),
+            Snapshot draft = new Snapshot(name, PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt),
                     PreferenceUtil.getSharedPreferenceString(R.string.key_query_template), content);
+            int source;
+            try { source = Integer.parseInt(PreferenceUtil.getSharedPreferenceString(RESTORED_SOURCE, "0")); }
+            catch (NumberFormatException e) { source = 0; }
+            if (PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).contains(source)
+                    && draft.matches(source, PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text))) {
+                return new Snapshot(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, source),
+                        draft.system, draft.query, draft.content, source);
+            }
+            return draft;
         }
         boolean matches(int id, String text) {
             return Objects.equals(system, clean(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_system_prompt, id)))
@@ -53,7 +69,7 @@ public final class SavedAudioLibrary {
         SentenceAudioStore.Book book = book(context, id);
         // The completion marker is atomic publication. Full file validation happens on play/share,
         // rather than opening hundreds of MP3s every time a saved-list row is bound or filtered.
-        return book != null && book.isPublished() || OfflineMeditations.file(context, id).isFile();
+        return book != null && book.isPublished();
     }
     public static void begin(PlaybackRequest request) {
         synchronized (LIFECYCLE) {
@@ -62,23 +78,45 @@ public final class SavedAudioLibrary {
     }
 
     /** Only called on main: ID allocation remains serialized with ordinary text saves. */
-    public static int keepComplete(Context context, PlaybackRequest request, Snapshot snapshot, boolean explicit) {
-        synchronized (LIFECYCLE) { return keep(context, request, snapshot, explicit); }
+    public static int keepComplete(Context context, PlaybackRequest request, Snapshot snapshot) {
+        synchronized (LIFECYCLE) { return keep(context, request, snapshot); }
     }
-    private static int keep(Context context, PlaybackRequest request, Snapshot snapshot, boolean explicit) {
+    private static int keep(Context context, PlaybackRequest request, Snapshot snapshot) {
         SentenceAudioStore.Book book = SentenceAudio.store(context).open(request);
-        if (!book.isComplete() || !explicit && DELETED.contains(book.identity)) { return 0; }
+        if (!book.isComplete() || DELETED.contains(book.identity)) { return 0; }
         int target = 0;
-        if (!explicit) {
-            for (int id : PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids)) {
+        List<Integer> ids = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids);
+        int source = ids.contains(snapshot.sourceId) && snapshot.matches(snapshot.sourceId, request.text) ? snapshot.sourceId : 0;
+        if (source > 0) {
+            if (book.identity.equals(PreferenceUtil.getSharedPreferenceString(link(source), ""))) { return source; }
+            if (!hasAudio(context, source)) { target = source; }
+            else {
+                // Repeated completion callbacks/replays reuse the already-created variant.
+                for (int id : ids) {
+                    if (PreferenceUtil.getSharedPreferenceString("audio_variant_source_" + id, "").equals(Integer.toString(source))
+                            && book.identity.equals(PreferenceUtil.getSharedPreferenceString(link(id), ""))
+                            && snapshot.matches(id, request.text)) { return id; }
+                }
+            }
+        } else {
+            for (int id : ids) {
                 if (book.identity.equals(PreferenceUtil.getSharedPreferenceString(link(id), ""))
                         && request.text.equals(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id))) { return id; }
                 if (target == 0 && snapshot.matches(id, request.text) && !hasAudio(context, id)) { target = id; }
             }
         }
-        if (target == 0) { target = OfflineMeditations.save(snapshot.name, snapshot.system, snapshot.query, snapshot.content, request.text); }
+        if (target == 0) {
+            String name = source > 0 ? PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, source) : snapshot.name;
+            target = SavedMeditations.save(name, snapshot.system, snapshot.query, snapshot.content, request.text);
+            if (source > 0) {
+                java.util.ArrayList<Integer> order = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids);
+                order.remove(Integer.valueOf(target));
+                order.add(order.indexOf(source) + 1, target);
+                PreferenceUtil.setSharedPreferenceIntList(R.string.key_saved_meditation_ids, order);
+                PreferenceUtil.setSharedPreferenceString("audio_variant_source_" + target, Integer.toString(source));
+            }
+        }
         PreferenceUtil.setSharedPreferenceString(link(target), book.identity);
-        PreferenceUtil.setSharedPreferenceString("offline_settings_" + target, request.json());
         DELETED.remove(book.identity);
         CHANGES.setValue(CHANGES.getValue() + 1);
         return target;
@@ -92,7 +130,6 @@ public final class SavedAudioLibrary {
                     PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id), PreferenceUtil.getPauseSeconds());
             if (request.backend != SpeechBackend.DEVICE && SentenceAudio.store(context).open(request).isComplete()) {
                 PreferenceUtil.setSharedPreferenceString(link(id), SentenceAudioStore.key(request));
-                PreferenceUtil.setSharedPreferenceString("offline_settings_" + id, request.json());
             }
         } catch (IllegalArgumentException ignored) { }
     }
@@ -109,6 +146,7 @@ public final class SavedAudioLibrary {
         PreferenceUtil.setSharedPreferenceString(R.string.key_speech_style, request.style);
     }
     public static void restore(Context context, int id) {
+        PreferenceUtil.setSharedPreferenceString(RESTORED_SOURCE, Integer.toString(id));
         int[][] fields = {{R.string.key_system_prompt, R.string.key_saved_system_prompt},
                 {R.string.key_query_template, R.string.key_saved_query_template},
                 {R.string.key_meditation_content, R.string.key_saved_meditation_content},
@@ -118,16 +156,15 @@ public final class SavedAudioLibrary {
         }
         SentenceAudioStore.Book recording = book(context, id);
         if (recording != null) { restoreVoice(recording.request); return; }
-        try {
-            PlaybackRequest request = PlaybackRequest.parse(PreferenceUtil.getSharedPreferenceString("offline_settings_" + id, ""));
-            if (request.text.equals(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id))) { restoreVoice(request); }
-        } catch (Exception ignored) { }
+
     }
     public static void unlink(int id) {
         synchronized (LIFECYCLE) {
             String identity = PreferenceUtil.getSharedPreferenceString(link(id), "");
             if (!identity.isEmpty()) { DELETED.add(identity); }
             PreferenceUtil.setSharedPreferenceString(link(id), "");
+            PreferenceUtil.setSharedPreferenceString("audio_variant_source_" + id, "");
+            if (Integer.toString(id).equals(PreferenceUtil.getSharedPreferenceString(RESTORED_SOURCE, "0"))) { clearSource(); }
         }
     }
     public static void cleanupDeleted(Context context) {

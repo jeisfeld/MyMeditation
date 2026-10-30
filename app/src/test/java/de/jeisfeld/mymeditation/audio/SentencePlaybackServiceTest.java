@@ -68,7 +68,6 @@ public class SentencePlaybackServiceTest extends BaselineTest {
         assertTrue(book.isComplete());
         int id = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).get(0);
         assertTrue(SavedAudioLibrary.hasAudio(Application.getAppContext(), id));
-        assertFalse(OfflineMeditations.file(Application.getAppContext(), id).exists());
         assertEquals(request(1).text, PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id));
     }
     @Test public void changingVoiceSpeedMidMeditationDoesNotPublishAMixedRecording() throws Exception {

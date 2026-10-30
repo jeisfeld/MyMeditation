@@ -55,7 +55,7 @@ With a disposable emulator/test device connected:
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-Current device suites are `OfflineAudioRendererTest`, `SentenceAudioDeviceTest`, `OfflinePlaybackInterruptionTest` and `NotificationNavigationTest`. They exercise real platform decoding, audio-focus requests, foreground playback and PendingIntent/activity lifecycle. They require no provider keys. Instrumentation installs/runs the app and the audio tests create and remove temporary private files; use a test installation rather than your personal meditation library.
+Current device suites are `OfflineAudioRendererTest`, `SentenceAudioDeviceTest`, `NotificationNavigationTest`. They exercise real platform decoding/speed/assembly and PendingIntent/activity lifecycle. They require no provider keys. Instrumentation installs/runs the app and the audio tests create and remove temporary private files; use a test installation rather than your personal meditation library.
 
 Compiling `assembleDebugAndroidTest` does **not** run these tests. Robolectric TTS callbacks also do not replace a listening check on an actual device.
 
@@ -80,3 +80,5 @@ Cloud creation and listening checks require a locally configured provider key an
 ## Validation environment for this change
 
 This workspace has SDK 36, AGP 8.13.0, Gradle 8.14.3 and JDK 21 available, rather than the repository's configured SDK 37/AGP 9.5.0/Gradle 9.6.0. Validation therefore uses an ignored copy under `work/speech-validation`, with compatibility toolchain/dependency versions. The checked-in build configuration is not downgraded. Robolectric tests execute locally in that copy; device tests are compiled only because no emulator/device is attached. Full verification with the configured toolchain and actual devices remains a separate check.
+
+Sentence recording regression tests also cover upgrade cleanup, restored-source attachment, same-named variant insertion and deduplication, and the offline heading reacting to exact text/settings while ignoring pauses.

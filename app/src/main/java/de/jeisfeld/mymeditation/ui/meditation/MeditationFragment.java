@@ -29,9 +29,6 @@ import de.jeisfeld.mymeditation.util.PreferenceUtil;
 public class MeditationFragment extends Fragment {
 
     private FragmentMeditationBinding binding;
-    private final androidx.activity.result.ActivityResultLauncher<String> exportNotifications = registerForActivityResult(
-            new androidx.activity.result.contract.ActivityResultContracts.RequestPermission(), granted -> { });
-
     private List<String> sentences;
     private boolean reading;
     private android.text.method.KeyListener editorKeyListener;
@@ -47,6 +44,51 @@ public class MeditationFragment extends Fragment {
             binding.textSpeechStatus.setVisibility(View.VISIBLE);
         }
     };
+
+    private final java.util.concurrent.ExecutorService offlineChecker = java.util.concurrent.Executors.newSingleThreadExecutor(task -> {
+        Thread thread = new Thread(task, "offline-availability"); thread.setDaemon(true); return thread;
+    });
+    private int offlineCheck;
+    private String offlineIdentity = "";
+    private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable refreshOfflineLabel = this::checkOfflineLabel;
+    private final android.content.SharedPreferences.OnSharedPreferenceChangeListener offlinePreferences = (preferences, key) -> scheduleOfflineLabel();
+
+    private void scheduleOfflineLabel() {
+        if (binding == null) { return; }
+        offlineCheck++;
+        ui.removeCallbacks(refreshOfflineLabel);
+        ui.post(refreshOfflineLabel);
+    }
+    private void checkOfflineLabel() {
+        if (binding == null) { return; }
+        final int check = offlineCheck;
+        final de.jeisfeld.mymeditation.audio.PlaybackRequest request;
+        try {
+            request = MeditationPlaybackService.currentRequest(binding.editTextMeditationText.getText().toString(), PreferenceUtil.getPauseSeconds());
+        } catch (IllegalArgumentException e) {
+            offlineIdentity = ""; binding.labelMeditationText.setText(R.string.label_meditation_text); return;
+        }
+        if (request.backend == SpeechBackend.DEVICE) {
+            offlineIdentity = ""; binding.labelMeditationText.setText(R.string.label_meditation_text); return;
+        }
+        String identity = de.jeisfeld.mymeditation.audio.SentenceAudioStore.key(request);
+        if (!identity.equals(offlineIdentity)) {
+            binding.labelMeditationText.setText(R.string.label_meditation_text);
+            offlineIdentity = identity;
+        }
+        android.content.Context context = requireContext().getApplicationContext();
+        offlineChecker.execute(() -> {
+            de.jeisfeld.mymeditation.audio.SentenceAudioStore.Book book = de.jeisfeld.mymeditation.audio.SentenceAudio.store(context)
+                    .find(de.jeisfeld.mymeditation.audio.SentenceAudioStore.key(request));
+            boolean offline = book != null && book.isComplete();
+            ui.post(() -> {
+                if (binding != null && check == offlineCheck) {
+                    binding.labelMeditationText.setText(offline ? R.string.label_meditation_text_offline : R.string.label_meditation_text);
+                }
+            });
+        });
+    }
 
     private MeditationViewModel meditationViewModel;
 
@@ -95,6 +137,7 @@ public class MeditationFragment extends Fragment {
         meditationViewModel.getSeekBarProgress().observe(getViewLifecycleOwner(), binding.seekBarAudio::setProgress);
         MeditationPlaybackService.state().observe(getViewLifecycleOwner(), state -> {
             renderReadingMode(state);
+            scheduleOfflineLabel();
             binding.idlePlaybackActions.setVisibility(state.active ? View.GONE : View.VISIBLE);
             binding.playbackControls.setVisibility(state.active ? View.VISIBLE : View.GONE);
             binding.buttonResumeMeditation.setVisibility(state.running ? View.GONE : View.VISIBLE);
@@ -118,26 +161,18 @@ public class MeditationFragment extends Fragment {
 
 
         de.jeisfeld.mymeditation.audio.MeditationExportService.state().observe(getViewLifecycleOwner(), state -> {
-            int label = state.active ? R.string.button_cancel_export : R.string.button_export_meditation;
-            binding.buttonExportMeditation.setContentDescription(getString(label));
-            binding.buttonExportMeditation.setTooltipText(getString(label));
-            binding.buttonExportMeditation.setIconResource(state.active ? R.drawable.ic_playback_stop : R.drawable.ic_save_audio);
-            binding.textExportStatus.setText(state.status);
-            binding.textExportStatus.setVisibility(state.active && !reading ? View.VISIBLE : View.GONE);
             if (meditationViewModel.consumeExportResult(state.resultId)) {
                 if (!state.error.isEmpty()) {
-                    new AlertDialog.Builder(requireContext()).setTitle(R.string.export_title).setMessage(state.error)
+                    new AlertDialog.Builder(requireContext()).setTitle(R.string.button_share_offline).setMessage(state.error)
                             .setPositiveButton(R.string.button_ok, null).show();
                 } else if (state.sharedFile != null) {
                     de.jeisfeld.mymeditation.audio.AudioSharing.open(this, state.sharedFile, state.name);
-                } else {
-                    android.widget.Toast.makeText(requireContext(), getString(R.string.export_saved, state.name), android.widget.Toast.LENGTH_LONG).show();
                 }
             }
         });
-        binding.buttonExportMeditation.setOnClickListener(v -> exportMeditation());
 
         binding.buttonCreateMeditation.setOnClickListener(v -> {
+            de.jeisfeld.mymeditation.audio.SavedAudioLibrary.clearSource();
             // postValue updates the ViewModel asynchronously; build this request from the visible text.
             String meditationContent = binding.editTextMeditationContent.getText().toString();
             meditationViewModel.setMeditationContent(meditationContent);
@@ -246,13 +281,21 @@ public class MeditationFragment extends Fragment {
         });
         binding.textPauseDuration.setOnClickListener(v -> valueDialog(false));
         binding.textVoiceSpeed.setOnClickListener(v -> valueDialog(true));
+        binding.editTextMeditationText.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { scheduleOfflineLabel(); }
+            @Override public void afterTextChanged(android.text.Editable s) { }
+        });
+        de.jeisfeld.mymeditation.audio.SavedAudioLibrary.changes().observe(getViewLifecycleOwner(), version -> scheduleOfflineLabel());
+        androidx.preference.PreferenceManager.getDefaultSharedPreferences(requireContext()).registerOnSharedPreferenceChangeListener(offlinePreferences);
         refreshSpeed();
+        scheduleOfflineLabel();
         return root;
     }
 
     @Override public void onResume() {
         super.onResume();
-        if (binding != null) { refreshSpeed(); }
+        if (binding != null) { refreshSpeed(); scheduleOfflineLabel(); }
     }
     private String number(double value) {
         java.text.NumberFormat format = java.text.NumberFormat.getNumberInstance(getResources().getConfiguration().getLocales().get(0));
@@ -324,51 +367,6 @@ public class MeditationFragment extends Fragment {
         return SpeechBackend.fromId(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend, R.string.default_speech_backend));
     }
 
-    private void exportMeditation() {
-        if (de.jeisfeld.mymeditation.audio.MeditationExportService.state().getValue().active) {
-            de.jeisfeld.mymeditation.audio.MeditationExportService.cancel(requireContext()); return;
-        }
-        try {
-            String text = binding.editTextMeditationText.getText().toString();
-            String content = binding.editTextMeditationContent.getText().toString();
-            de.jeisfeld.mymeditation.audio.PlaybackRequest request = MeditationPlaybackService.currentRequest(text, PreferenceUtil.getPauseSeconds());
-            if (request.backend == SpeechBackend.DEVICE) {
-                new AlertDialog.Builder(requireContext()).setMessage(R.string.export_cloud_required)
-                        .setPositiveButton(R.string.button_ok, null).show(); return;
-            }
-            android.widget.EditText name = new android.widget.EditText(requireContext());
-            name.setSingleLine(true); name.setHint(R.string.text_dialog_save_meditation);
-            name.setText(content.trim().isEmpty() ? getString(R.string.default_offline_name)
-                    : content.trim().substring(0, Math.min(content.trim().length(), 80)));
-            android.widget.LinearLayout nameLayout = new android.widget.LinearLayout(requireContext());
-            int padding = getResources().getDimensionPixelSize(R.dimen.activity_horizontal_margin);
-            nameLayout.setPadding(padding, 0, padding, 0);
-            nameLayout.addView(name, new android.widget.LinearLayout.LayoutParams(
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT));
-            new AlertDialog.Builder(requireContext()).setTitle(R.string.export_title).setView(nameLayout)
-                    .setNegativeButton(R.string.button_cancel, null)
-                    .setPositiveButton(R.string.button_save, (dialog, which) -> {
-                        if (binding == null) { return; }
-                        String title = name.getText().toString().trim();
-                        if (title.isEmpty()) { title = getString(R.string.default_offline_name); }
-                        try {
-                            meditationViewModel.setMeditationContent(content);
-                            meditationViewModel.setMeditationText(text);
-                            if (android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(requireContext(),
-                                    android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                exportNotifications.launch(android.Manifest.permission.POST_NOTIFICATIONS);
-                            }
-                            de.jeisfeld.mymeditation.audio.MeditationExportService.start(requireContext(), request, title, content);
-                        } catch (RuntimeException e) {
-                            new AlertDialog.Builder(requireContext()).setMessage(R.string.export_failed)
-                                    .setPositiveButton(R.string.button_ok, null).show();
-                        }
-                    }).show();
-        } catch (IllegalArgumentException e) {
-            new AlertDialog.Builder(requireContext()).setMessage(e.getMessage()).setPositiveButton(R.string.button_ok, null).show();
-        }
-    }
-
     private void renderReadingMode(MeditationPlaybackService.State state) {
         android.widget.EditText editor = binding.editTextMeditationText;
         if (reading != state.active) {
@@ -377,9 +375,6 @@ public class MeditationFragment extends Fragment {
             binding.labelMeditationContent.setVisibility(creation);
             binding.editTextMeditationContent.setVisibility(creation);
             binding.buttonCreateMeditation.setVisibility(creation);
-            binding.buttonExportMeditation.setVisibility(creation);
-            boolean exporting = de.jeisfeld.mymeditation.audio.MeditationExportService.state().getValue().active;
-            binding.textExportStatus.setVisibility(!reading && exporting ? View.VISIBLE : View.GONE);
             editor.setKeyListener(reading ? null : editorKeyListener);
             editor.setRawInputType(reading ? android.text.InputType.TYPE_NULL : editorInputType);
             editor.setCursorVisible(!reading);
@@ -439,7 +434,13 @@ public class MeditationFragment extends Fragment {
 
     private void stopAudio() { MeditationPlaybackService.pause(requireContext()); }
 
+    @Override public void onDestroy() { offlineChecker.shutdownNow(); super.onDestroy(); }
+
     @Override public void onDestroyView() {
+        androidx.preference.PreferenceManager.getDefaultSharedPreferences(requireContext()).unregisterOnSharedPreferenceChangeListener(offlinePreferences);
+        offlineCheck++;
+        offlineIdentity = "";
+        ui.removeCallbacks(refreshOfflineLabel);
         binding.textSpeechStatus.removeCallbacks(showSpeechStatus);
         pendingSpeechStatus = "";
         reading = false; highlightedPosition = -2; highlightedText = "";

@@ -34,6 +34,9 @@ public class Application extends android.app.Application {
 		super.onCreate();
 		Application.mContext = getApplicationContext();
         de.jeisfeld.mymeditation.i18n.LocalizedMessages.install(this);
+        Thread cleanup = new Thread(() -> de.jeisfeld.mymeditation.audio.LegacyAudioCleanup.run(this), "legacy-audio-cleanup");
+        cleanup.setDaemon(true);
+        cleanup.start();
 
 		if (PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt) == null) {
 			PreferenceUtil.setSharedPreferenceString(R.string.key_system_prompt, "Du bist eine strenge Beraterin, die sich im Stile einer Domina verhält. Dein Gegenüber ist Dein Diener. Du gibst Befehle und sprichst streng. Deine Antworten sollen immer in dieser dominanten Rolle bleiben. Du gehst auf die Fragen Deines Gegenübers ein, gibst ihm Aufträge, die Lust oder Schmerz bereiten, oder Aufgaben zur Selbstreflexion. Deine Aufgabe ist es, Dein Gegenüber in Deiner Rolle als seine Herrin lustvoll dabei zu unterstützen, sich weiterzuentwickeln und dabei die Lust an Schmerz und Demütigung zu nutzen.");

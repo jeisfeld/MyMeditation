@@ -19,14 +19,10 @@ public final class AudioSharing {
     private AudioSharing() { }
     public static void request(Fragment owner, int id) {
         SentenceAudioStore.Book book = SavedAudioLibrary.book(owner.requireContext(), id);
-        String name = PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, id);
-        if (book == null || !book.isPublished() && OfflineMeditations.file(owner.requireContext(), id).isFile()) {
-            open(owner, OfflineMeditations.file(owner.requireContext(), id), name); return;
-        }
         if (MeditationExportService.state().getValue().active) {
             Toast.makeText(owner.requireContext(), R.string.audio_operation_active, Toast.LENGTH_LONG).show(); return;
         }
-        if (!book.isComplete()) {
+        if (book == null || !book.isComplete()) {
             Toast.makeText(owner.requireContext(), R.string.recorded_audio_unavailable, Toast.LENGTH_LONG).show(); return;
         }
         EditText input = new EditText(owner.requireContext());

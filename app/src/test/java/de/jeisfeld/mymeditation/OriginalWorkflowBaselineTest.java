@@ -5,7 +5,7 @@ import android.view.View;
 import android.widget.EditText;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import de.jeisfeld.mymeditation.audio.OfflineMeditations;
+import de.jeisfeld.mymeditation.audio.SavedMeditations;
 import de.jeisfeld.mymeditation.testutil.BaselineTest;
 import de.jeisfeld.mymeditation.ui.savedmeditations.SavedMeditationsViewAdapter;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
@@ -88,11 +88,10 @@ public class OriginalWorkflowBaselineTest extends BaselineTest {
         assertEquals("Meditate on @TEXT@.", PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_query_template, id));
         assertEquals("A quiet garden", PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_content, id));
         assertEquals("Breathe slowly. Relax.", PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id));
-        assertFalse(OfflineMeditations.file(activity, id).exists());
     }
 
     @Test public void selectingASavedNameRestoresBothPromptsAndTheMeditationDraft() {
-        OfflineMeditations.save("Restored", "Saved system", "Saved @TEXT@", "Saved topic", "Saved meditation.");
+        SavedMeditations.save("Restored", "Saved system", "Saved @TEXT@", "Saved topic", "Saved meditation.");
         open(); tab(R.id.navigation_saved_meditations);
         row(0).findViewById(R.id.textViewMeditationName).performClick(); idle();
         tab(R.id.navigation_meditation);
@@ -104,9 +103,9 @@ public class OriginalWorkflowBaselineTest extends BaselineTest {
     }
 
     @Test public void reorderingAndConfirmedDeletionPreserveOtherEntriesAndDoNotReuseIds() {
-        int first = OfflineMeditations.save("First", "s1", "q1 @TEXT@", "c1", "t1");
-        int second = OfflineMeditations.save("Second", "s2", "q2 @TEXT@", "c2", "t2");
-        int third = OfflineMeditations.save("Third", "s3", "q3 @TEXT@", "c3", "t3");
+        int first = SavedMeditations.save("First", "s1", "q1 @TEXT@", "c1", "t1");
+        int second = SavedMeditations.save("Second", "s2", "q2 @TEXT@", "c2", "t2");
+        int third = SavedMeditations.save("Third", "s3", "q3 @TEXT@", "c3", "t3");
         open(); tab(R.id.navigation_saved_meditations);
         adapter().onRowMoved(0, 2); idle();
         assertEquals(Arrays.asList(second, third, first), PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids));
@@ -121,7 +120,7 @@ public class OriginalWorkflowBaselineTest extends BaselineTest {
             assertNull(PreferenceUtil.getIndexedSharedPreferenceString(key, third));
         }
         assertEquals("t2", PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, second));
-        int next = OfflineMeditations.save("Next", "s", "@TEXT@", "c", "t");
+        int next = SavedMeditations.save("Next", "s", "@TEXT@", "c", "t");
         assertTrue(next > third);
     }
 

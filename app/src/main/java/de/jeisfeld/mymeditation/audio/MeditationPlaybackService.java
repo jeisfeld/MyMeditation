@@ -186,7 +186,7 @@ public final class MeditationPlaybackService extends Service {
                     try {
                         if (SentenceAudio.store(context).open(recording).played(index)) {
                             new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
-                                    SavedAudioLibrary.keepComplete(context, recording, captured, false));
+                                    SavedAudioLibrary.keepComplete(context, recording, captured));
                         }
                     } catch (Exception ignored) {
                         // Audio remains cached; a later playback/save can complete the library recording.
@@ -226,8 +226,8 @@ public final class MeditationPlaybackService extends Service {
             try {
                 startForeground(NOTIFICATION, notification(true));
                 if (START.equals(action)) {
-                    savedId = 0;
                     snapshot = SavedAudioLibrary.Snapshot.current(this);
+                    savedId = snapshot.sourceId;
                     request = configuredRequest();
                     SavedAudioLibrary.begin(request);
                     startAt(intent.getIntExtra("position", 0));

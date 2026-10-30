@@ -1,19 +1,12 @@
 package de.jeisfeld.mymeditation.audio;
 
-import android.content.Context;
-import java.io.File;
 import java.util.ArrayList;
 import de.jeisfeld.mymeditation.R;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
 
-/** Offline files use numeric saved IDs rather than user-provided paths. All saves run on main. */
-public final class OfflineMeditations {
-    private OfflineMeditations() { }
-    public static File directory(Context context) { return new File(context.getFilesDir(), "offline-meditations"); }
-    public static File file(Context context, int id) {
-        if (id <= 0) { throw new IllegalArgumentException("Invalid saved meditation"); }
-        return new File(directory(context), id + ".mp3");
-    }
+/** Saved text entries use stable numeric IDs. All saves run on main. */
+public final class SavedMeditations {
+    private SavedMeditations() { }
     public static int save(String name, String system, String query, String content, String text) {
         int id = PreferenceUtil.getSharedPreferenceInt(R.string.key_max_saved_meditation_id, 0) + 1;
         PreferenceUtil.setIndexedSharedPreferenceString(R.string.key_saved_meditation_name, id, name);

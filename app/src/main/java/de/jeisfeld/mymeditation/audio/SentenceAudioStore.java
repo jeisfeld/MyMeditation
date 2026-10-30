@@ -91,7 +91,7 @@ public final class SentenceAudioStore {
         public File audio(int index) { index(index); return new File(directory, index + ".mp3"); }
         public File available(int index) { File file = audio(index); return mp3(file) ? file : null; }
 
-        /** One producer per sentence, including concurrent live playback and explicit saving. */
+        /** One producer per sentence, including concurrent playback requests. */
         public File obtain(int index, Producer producer, Runnable check) throws Exception {
             File target = audio(index);
             synchronized (LOCKS.computeIfAbsent(target.getAbsolutePath(), ignored -> new Object())) {

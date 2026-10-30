@@ -6,7 +6,7 @@ import de.jeisfeld.mymeditation.http.SpeechBackend;
 import java.io.File;
 import java.io.FileOutputStream;
 
-/** Shared generation path for live playback and explicit saves; speed is baked into each MP3. */
+/** Generation path for cached and live playback; speed is baked into each MP3. */
 public final class SentenceAudio {
     private SentenceAudio() { }
     public static SentenceAudioStore store(Context context) {

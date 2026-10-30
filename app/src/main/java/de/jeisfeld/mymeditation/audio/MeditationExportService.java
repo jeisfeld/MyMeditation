@@ -8,14 +8,12 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import de.jeisfeld.mymeditation.MainActivity;
 import de.jeisfeld.mymeditation.R;
-import de.jeisfeld.mymeditation.http.CloudSpeech;
-import de.jeisfeld.mymeditation.http.SpeechBackend;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.concurrent.*;
 
-/** Saves durable sentence MP3s; assembles a whole MP3 only for an explicit Share action. */
+/** Assembles a temporary whole MP3 only for an explicit Share action. */
 public final class MeditationExportService extends Service {
     private static final String CHANNEL = "meditation_export", CANCEL = "export.CANCEL";
     private static final int NOTIFICATION = 43;
@@ -35,12 +33,6 @@ public final class MeditationExportService extends Service {
     }
     private static final MutableLiveData<State> STATE = new MutableLiveData<>(new State(false, "", "", "", 0, 0));
     public static LiveData<State> state() { return STATE; }
-    public static void start(Context context, PlaybackRequest request, String name, String content) {
-        context.startForegroundService(new Intent(context, MeditationExportService.class)
-                .putExtra("request", request.json()).putExtra("name", name).putExtra("content", content)
-                .putExtra("system", PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt))
-                .putExtra("query", PreferenceUtil.getSharedPreferenceString(R.string.key_query_template)));
-    }
     public static void share(Context context, int id, double pause) {
         if (!Double.isFinite(pause) || pause < 0 || pause > 30) { throw new IllegalArgumentException("Invalid share pause"); }
         context.startForegroundService(new Intent(context, MeditationExportService.class).putExtra("shareId", id).putExtra("pause", pause));
@@ -50,7 +42,6 @@ public final class MeditationExportService extends Service {
     }
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private CloudSpeech speech = new CloudSpeech();
     private volatile int generation;
     private volatile boolean destroyed;
     private boolean working;
@@ -74,31 +65,20 @@ public final class MeditationExportService extends Service {
         if (intent == null || CANCEL.equals(intent.getAction())) { cancelWork(); return START_NOT_STICKY; }
         if (working) { return START_NOT_STICKY; }
         int token = ++generation;
-        speech = new CloudSpeech();
         shareId = intent.getIntExtra("shareId", 0);
-        name = shareId > 0 ? PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, shareId) : intent.getStringExtra("name");
+        name = PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, shareId);
         if (name == null || name.isEmpty()) { name = getString(R.string.default_offline_name); }
         status = getString(R.string.export_preparing);
         startForeground(NOTIFICATION, notification());
         try {
-            PlaybackRequest request;
-            if (shareId > 0) {
-                SentenceAudioStore.Book book = SavedAudioLibrary.book(this, shareId);
-                if (book == null || !book.isComplete()) { throw new IllegalArgumentException(getString(R.string.recorded_audio_unavailable)); }
-                request = book.request.withPause(intent.getDoubleExtra("pause", 2));
-            } else {
-                request = PlaybackRequest.parse(intent.getStringExtra("request"));
-                if (request.backend == SpeechBackend.DEVICE) { throw new IllegalArgumentException(getString(R.string.export_cloud_required)); }
-            }
-            if (shareId == 0) { SavedAudioLibrary.begin(request); }
+            SentenceAudioStore.Book book = SavedAudioLibrary.book(this, shareId);
+            if (book == null || !book.isComplete()) { throw new IllegalArgumentException(getString(R.string.recorded_audio_unavailable)); }
+            PlaybackRequest request = book.request.withPause(intent.getDoubleExtra("pause", 2));
             working = true;
             STATE.setValue(new State(true, status, "", name, 0, 0));
             renew.run();
-            SavedAudioLibrary.Snapshot snapshot = new SavedAudioLibrary.Snapshot(name, intent.getStringExtra("system"),
-                    intent.getStringExtra("query"), intent.getStringExtra("content"));
             int sharing = shareId;
-            CloudSpeech source = speech;
-            executor.execute(() -> render(token, request, snapshot, sharing, source));
+            executor.execute(() -> render(token, request, sharing));
         } catch (Exception e) { failure(e); }
         return START_NOT_STICKY;
     }
@@ -112,48 +92,30 @@ public final class MeditationExportService extends Service {
             getSystemService(NotificationManager.class).notify(NOTIFICATION, notification());
         });
     }
-    private void render(int token, PlaybackRequest request, SavedAudioLibrary.Snapshot snapshot, int sharing, CloudSpeech source) {
+    private void render(int token, PlaybackRequest request, int sharing) {
         File temporary = null;
         try {
             SentenceAudioStore.Book book = SentenceAudio.store(this).open(request);
-            if (sharing == 0) {
-                source.setRetryListener((attempt, delay) -> progress(token, getString(R.string.export_retry, delay / 1000, attempt)));
-                for (int i = 0; i < book.sentences.size(); i++) {
-                    check(token); progress(token, getString(R.string.export_progress, i + 1, book.sentences.size()));
-                    SentenceAudio.obtain(this, request, i, source, () -> check(token));
-                }
-                check(token); book.finish();
-                handler.post(() -> {
-                    if (generation != token || destroyed) { return; }
-                    try {
-                        int id = SavedAudioLibrary.keepComplete(this, request, snapshot, true);
-                        if (id == 0) { throw new IllegalStateException(getString(R.string.recorded_audio_unavailable)); }
-                        STATE.setValue(new State(false, "", "", name, System.nanoTime(), id));
-                        finish();
-                    } catch (Exception e) { failure(e); }
-                });
-            } else {
-                File directory = new File(getCacheDir(), "shared-meditations");
-                if (!directory.isDirectory() && !directory.mkdirs()) { throw new java.io.IOException(); }
-                // Share output is disposable; durable sentence recordings are never removed here.
-                File[] expired = directory.listFiles((dir, filename) -> System.currentTimeMillis() - new File(dir, filename).lastModified() > 86400000L);
-                if (expired != null) { for (File file : expired) { file.delete(); } }
-                temporary = File.createTempFile("share-", ".part", directory);
-                try (FileOutputStream output = new FileOutputStream(temporary)) {
-                    SentenceAudioAssembler.write(book, request.pauseSeconds, output,
-                            (audio, writer, check) -> OfflineAudioRenderer.append(audio, 1, writer, check),
-                            index -> progress(token, getString(R.string.share_audio_progress, index, book.sentences.size())), () -> check(token));
-                }
-                check(token);
-                File target = new File(directory, "meditation-" + sharing + "-" + System.nanoTime() + ".mp3");
-                if (!temporary.renameTo(target)) { throw new java.io.IOException(); }
-                temporary = null;
-                handler.post(() -> {
-                    if (generation != token || destroyed) { target.delete(); return; }
-                    STATE.setValue(new State(false, "", "", name, System.nanoTime(), sharing, target));
-                    finish();
-                });
+            File directory = new File(getCacheDir(), "shared-meditations");
+            if (!directory.isDirectory() && !directory.mkdirs()) { throw new java.io.IOException(); }
+            // Share output is disposable; durable sentence recordings are never removed here.
+            File[] expired = directory.listFiles((dir, filename) -> System.currentTimeMillis() - new File(dir, filename).lastModified() > 86400000L);
+            if (expired != null) { for (File file : expired) { file.delete(); } }
+            temporary = File.createTempFile("share-", ".part", directory);
+            try (FileOutputStream output = new FileOutputStream(temporary)) {
+                SentenceAudioAssembler.write(book, request.pauseSeconds, output,
+                        (audio, writer, check) -> OfflineAudioRenderer.append(audio, 1, writer, check),
+                        index -> progress(token, getString(R.string.share_audio_progress, index, book.sentences.size())), () -> check(token));
             }
+            check(token);
+            File target = new File(directory, "meditation-" + sharing + "-" + System.nanoTime() + ".mp3");
+            if (!temporary.renameTo(target)) { throw new java.io.IOException(); }
+            temporary = null;
+            handler.post(() -> {
+                if (generation != token || destroyed) { target.delete(); return; }
+                STATE.setValue(new State(false, "", "", name, System.nanoTime(), sharing, target));
+                finish();
+            });
         } catch (CancellationException ignored) {
             // The cancel/timeout/destroy path already published its state.
         } catch (Exception e) {
@@ -161,13 +123,13 @@ public final class MeditationExportService extends Service {
         } finally { if (temporary != null) { temporary.delete(); } }
     }
     private void failure(Exception e) {
-        generation++; speech.cancel();
+        generation++;
         String message = e instanceof IllegalArgumentException || e instanceof IllegalStateException ? e.getMessage() : getString(R.string.export_failed);
         STATE.setValue(new State(false, "", message == null ? getString(R.string.export_failed) : message, name, System.nanoTime(), 0));
         finish();
     }
     private void cancelWork() {
-        generation++; speech.cancel();
+        generation++;
         STATE.setValue(new State(false, "", "", name, 0, 0)); finish();
     }
     private void finish() {
@@ -177,17 +139,17 @@ public final class MeditationExportService extends Service {
     }
     private Notification notification() {
         PendingIntent open = PendingIntent.getActivity(this, 0, MainActivity.notificationIntent(this,
-                shareId > 0 ? R.id.navigation_saved_meditations : R.id.navigation_meditation), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+                R.id.navigation_saved_meditations), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         PendingIntent cancel = PendingIntent.getService(this, 43, new Intent(this, MeditationExportService.class).setAction(CANCEL), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         return new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_saved_meditations)
-                .setContentTitle(getString(shareId > 0 ? R.string.button_share_offline : R.string.export_title)).setContentText(status).setContentIntent(open)
+                .setContentTitle(getString(R.string.button_share_offline)).setContentText(status).setContentIntent(open)
                 .setOngoing(true).setOnlyAlertOnce(true).setProgress(0, 0, true)
                 .addAction(new Notification.Action.Builder(R.drawable.ic_playback_stop, getString(R.string.button_cancel), cancel).build()).build();
     }
     @Override public void onTimeout(int startId, int fgsType) { failure(new java.io.IOException()); }
     @Override public IBinder onBind(Intent intent) { return null; }
     @Override public void onDestroy() {
-        destroyed = true; generation++; speech.cancel(); executor.shutdownNow(); handler.removeCallbacksAndMessages(null);
+        destroyed = true; generation++; executor.shutdownNow(); handler.removeCallbacksAndMessages(null);
         if (wakeLock.isHeld()) { wakeLock.release(); }
         if (STATE.getValue().active) { STATE.setValue(new State(false, "", getString(R.string.export_failed), name, System.nanoTime(), 0)); }
         SavedAudioLibrary.cleanupDeleted(getApplicationContext());

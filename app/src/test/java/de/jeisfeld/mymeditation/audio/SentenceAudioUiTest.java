@@ -37,7 +37,7 @@ public class SentenceAudioUiTest extends BaselineTest {
             }, () -> { });
         }
         book.finish();
-        return SavedAudioLibrary.keepComplete(Application.getAppContext(), request, SavedAudioLibrary.Snapshot.current(Application.getAppContext()), true);
+        return SavedAudioLibrary.keepComplete(Application.getAppContext(), request, SavedAudioLibrary.Snapshot.current(Application.getAppContext()));
     }
     private void openSaved() {
         controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
@@ -62,7 +62,7 @@ public class SentenceAudioUiTest extends BaselineTest {
 
     @Test public void audioOnlyFilterIncludesSentenceRecordingsAndPlayUsesTheHighlightedMeditationPage() throws Exception {
         int id = recorded();
-        OfflineMeditations.save("Text only", "s", "@TEXT@", "c", "Unrecorded.");
+        SavedMeditations.save("Text only", "s", "@TEXT@", "c", "Unrecorded.");
         openSaved();
         ((android.widget.CheckBox) activity.findViewById(R.id.checkBoxAudioOnly)).setChecked(true); idle();
         RecyclerView list = activity.findViewById(R.id.recyclerViewSavedMeditations);
@@ -90,4 +90,25 @@ public class SentenceAudioUiTest extends BaselineTest {
         assertEquals(7.5, PreferenceUtil.getPauseSeconds(), 0);
         assertEquals("device", PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend));
     }
+    private void awaitLabel(String expected) throws Exception {
+        long deadline = System.nanoTime() + 5000000000L;
+        android.widget.TextView label = activity.findViewById(R.id.labelMeditationText);
+        while (!expected.equals(label.getText().toString()) && System.nanoTime() < deadline) { idle(); Thread.sleep(2); }
+        assertEquals(expected, label.getText().toString());
+    }
+    @Test public void offlineHeadingTracksExactVoiceSpeedAndTextButIgnoresPauses() throws Exception {
+        int id = recorded(); SavedAudioLibrary.restore(Application.getAppContext(), id);
+        controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
+        awaitLabel(activity.getString(R.string.label_meditation_text_offline));
+        PreferenceUtil.setPauseSeconds(0.5); idle();
+        awaitLabel(activity.getString(R.string.label_meditation_text_offline));
+        SavedAudioLibrary.restoreVoice(new PlaybackRequest("Breathe slowly. Relax.", SpeechBackend.GEMINI,
+                "gemini-3.8-flash-tts", "Kore", 1.5, "Calm", 0)); idle();
+        awaitLabel(activity.getString(R.string.label_meditation_text));
+        SavedAudioLibrary.restore(Application.getAppContext(), id); idle();
+        awaitLabel(activity.getString(R.string.label_meditation_text_offline));
+        ((EditText) activity.findViewById(R.id.editTextMeditationText)).setText("Different meditation."); idle();
+        awaitLabel(activity.getString(R.string.label_meditation_text));
+    }
+
 }
