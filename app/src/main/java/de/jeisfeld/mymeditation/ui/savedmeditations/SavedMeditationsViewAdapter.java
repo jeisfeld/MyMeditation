@@ -134,7 +134,7 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 		holder.mShareButton.setVisibility(offline ? View.VISIBLE : View.GONE);
 		de.jeisfeld.mymeditation.audio.OfflinePlaybackService.State state =
 				de.jeisfeld.mymeditation.audio.OfflinePlaybackService.state().getValue();
-		boolean playing = state.id == meditationId && state.playing;
+		boolean playing = state.id == meditationId && (state.playing || state.waitingForAudioFocus);
 		holder.mPlayButton.setImageResource(playing ? R.drawable.ic_playback_pause : R.drawable.ic_playback_play);
 		if (owner != null) {
 			String action = owner.getString(playing ? R.string.notification_pause : R.string.button_play_offline);

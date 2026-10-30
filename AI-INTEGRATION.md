@@ -223,6 +223,14 @@ Completed files live at app-private `files/offline-meditations/<saved-id>.mp3`, 
 
 Validation: the existing JVM suites plus MP3 encoder tests check compatibility, frame output, pause sample counts and cancellation. An independently decoded fixture verifies real MP3, 44.1 kHz mono, silent pauses and expected duration. Real Sonic-to-MP3 fixtures at 0.25×, 0.5×, 1×, 2× and 4× preserve a 440 Hz test pitch and scale duration correctly (allowing MP3 encoder padding). `OfflineAudioRendererTest` compiles device tests for WAV/resampling/speed/pauses and MP3 decoding/cancellation; running those, live-provider exports, screen-lock/background operation, notification permission, file sharing and lifecycle/cancellation checks still requires an Android device/emulator. Build/lint verification uses the isolated SDK 36 compatibility copy because this environment lacks the configured SDK 37/AGP 9.4.1 toolchain.
 
+### Audio interruptions during offline MP3 playback
+
+Saved MP3s now use the same temporary-focus recovery policy as live meditation speech. Navigation requests for temporary focus (including requests to duck other audio) pause the MP3 while retaining its MediaPlayer, foreground service and audio-focus registration. The waiting notification remains available; playback continues from the paused MP3 position when focus returns, without decoding or generating the recording again. A pre-rendered MP3 resumes at its audio position rather than repeating a text sentence.
+
+Manual Pause or Stop, headphone disconnection, permanent focus loss, playback errors and service shutdown cancel automatic resume. The saved-list button shows Pause while waiting so it can cancel the pending resume. Callbacks from abandoned focus registrations are ignored, and pending seeks cannot restart audio during an interruption. The paused-session idle timeout does not expire while waiting for navigation to release focus.
+
+The JVM suite covers shared focus recovery with millisecond bookmarks and cancellation. `OfflinePlaybackInterruptionTest` exercises real transient, ducking and permanent focus requests against an actual locally encoded MP3, plus manual cancellation while waiting. It requires a device/emulator and no provider credentials; compilation alone does not validate platform focus behavior.
+
 ## Saved meditation names and filters
 
 Use the pencil icon beside a saved meditation to change its name. Save trims surrounding spaces and rejects empty names; Cancel leaves it unchanged. Renaming retains the saved ID, position, text, settings and associated MP3, and sharing subsequently uses the new name.

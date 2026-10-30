@@ -19,36 +19,38 @@ public final class OfflinePlaybackService extends Service {
     private static final int NOTIFICATION = 44;
     public static final class State {
         public final int id, position;
-        public final boolean playing;
+        public final boolean playing, waitingForAudioFocus;
         public final String error;
         public final long errorId;
-        State(int id, int position, boolean playing, String error, long errorId) {
-            this.id = id; this.position = position; this.playing = playing; this.error = error; this.errorId = errorId;
+        State(int id, int position, boolean playing, boolean waitingForAudioFocus, String error, long errorId) {
+            this.id = id; this.position = position; this.playing = playing; this.waitingForAudioFocus = waitingForAudioFocus; this.error = error; this.errorId = errorId;
         }
     }
-    private static final MutableLiveData<State> STATE = new MutableLiveData<>(new State(0, 0, false, "", 0));
+    private static final MutableLiveData<State> STATE = new MutableLiveData<>(new State(0, 0, false, false, "", 0));
     public static LiveData<State> state() { return STATE; }
     public static void toggle(Context context, int id) {
         State state = STATE.getValue();
         Intent intent = new Intent(context, OfflinePlaybackService.class).putExtra("id", id);
-        if (state.id == id && state.playing) { context.startService(intent.setAction(PAUSE)); }
+        if (state.id == id && (state.playing || state.waitingForAudioFocus)) { context.startService(intent.setAction(PAUSE)); }
         else { context.startForegroundService(intent.setAction(PLAY)); }
     }
     public static void stopIfPlaying(Context context, int id) {
         if (STATE.getValue().id == id) { context.startService(new Intent(context, OfflinePlaybackService.class).setAction(STOP)); }
     }
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final Runnable idle = () -> {
-        // Remove controls when releasing the session; the saved-list button can still resume.
-        keepNotification = false; stopSelf();
-    };
     private MediaPlayer player;
     private MediaSession session;
     private AudioManager audioManager;
     private AudioFocusRequest focus;
+    private final AudioFocusRecovery focusRecovery = new AudioFocusRecovery();
+    private int focusGeneration;
     private int id, resumeAt;
     private String title = "";
-    private boolean playing, prepared, keepNotification, destroyed, stopping;
+    private boolean playing, prepared, keepNotification, destroyed, stopping, waitingForAudioFocus, seeking;
+    private final Runnable idle = () -> {
+        // Remove controls when releasing the session; the saved-list button can still resume.
+        if (!waitingForAudioFocus) { keepNotification = false; stopSelf(); }
+    };
     private final BroadcastReceiver noisy = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) { pause(); }
     };
@@ -58,9 +60,6 @@ public final class OfflinePlaybackService extends Service {
         channel.setSound(null, null); channel.setShowBadge(false);
         getSystemService(NotificationManager.class).createNotificationChannel(channel);
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
-        focus = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                .setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
-                .setOnAudioFocusChangeListener(change -> { if (change < 0) { handler.post(this::pause); } }, handler).build();
         session = new MediaSession(this, "Offline meditation");
         session.setCallback(new MediaSession.Callback() {
             @Override public void onPlay() { play(id); }
@@ -77,6 +76,56 @@ public final class OfflinePlaybackService extends Service {
         if (Build.VERSION.SDK_INT >= 33) { registerReceiver(noisy, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY), RECEIVER_NOT_EXPORTED); }
         else { registerReceiver(noisy, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)); }
     }
+    private void startFocusSession() {
+        abandonFocus();
+        focusRecovery.start();
+        int generation = focusGeneration;
+        focus = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                .setWillPauseWhenDucked(true)
+                .setOnAudioFocusChangeListener(change -> {
+                    if (generation == focusGeneration && !destroyed && !stopping) { audioFocusChanged(change); }
+                }, handler).build();
+    }
+    private void abandonFocus() {
+        focusRecovery.cancel();
+        waitingForAudioFocus = false;
+        focusGeneration++;
+        if (focus != null) { audioManager.abandonAudioFocusRequest(focus); focus = null; }
+    }
+    private void audioFocusChanged(int change) {
+        AudioFocusRecovery.Change event;
+        if (change == AudioManager.AUDIOFOCUS_GAIN) { event = AudioFocusRecovery.Change.GAIN; }
+        else if (change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT
+                || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) { event = AudioFocusRecovery.Change.TEMPORARY_LOSS; }
+        else if (change == AudioManager.AUDIOFOCUS_LOSS) { event = AudioFocusRecovery.Change.PERMANENT_LOSS; }
+        else { return; }
+        switch (focusRecovery.change(event, position())) {
+            case SUSPEND:
+                try {
+                    resumeAt = focusRecovery.position();
+                    playing = false; waitingForAudioFocus = true;
+                    if (prepared && player != null && player.isPlaying()) { player.pause(); }
+                    handler.removeCallbacks(idle);
+                    // Retain the foreground service and focus registration to receive navigation's GAIN.
+                    keepNotification = false;
+                    publish(); updateSession();
+                    getSystemService(NotificationManager.class).notify(NOTIFICATION, notification(true));
+                } catch (RuntimeException e) { fail(); }
+                break;
+            case RESUME:
+                waitingForAudioFocus = false;
+                playing = true;
+                publish(); updateSession();
+                if (prepared && !seeking && player != null) { begin(player); }
+                break;
+            case STOP:
+                pause();
+                break;
+            default:
+                break;
+        }
+    }
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null || STOP.equals(intent.getAction())) { stop(); }
         else if (PAUSE.equals(intent.getAction())) { pause(); }
@@ -91,17 +140,19 @@ public final class OfflinePlaybackService extends Service {
             startForeground(NOTIFICATION, notification(true)); // Before requesting audio focus on Android 15+.
             if (!OfflineMeditations.file(this, requested).isFile()) { throw new java.io.IOException(); }
             if (requested == id && player != null) {
+                startFocusSession();
                 playing = true; publish();
                 if (prepared) { begin(player); }
                 return;
             }
             release();
+            startFocusSession();
             State previous = STATE.getValue();
             resumeAt = previous.id == requested ? previous.position : 0;
             id = requested;
             title = PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, id);
             if (title == null) { title = getString(R.string.default_offline_name); }
-            prepared = false; playing = true; publish();
+            prepared = false; seeking = false; playing = true; publish();
             player = new MediaPlayer(); MediaPlayer current = player;
             current.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
             current.setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build());
@@ -116,10 +167,11 @@ public final class OfflinePlaybackService extends Service {
                         .putLong(MediaMetadata.METADATA_KEY_DURATION, mp.getDuration()).build());
                 mp.setOnSeekCompleteListener(done -> {
                     if (done != player || destroyed || stopping) { return; }
-                    if (playing && !done.isPlaying()) { begin(done); }
+                    seeking = false;
+                    if (playing && !waitingForAudioFocus && !done.isPlaying()) { begin(done); }
                     else { publish(); updateSession(); }
                 });
-                if (resumeAt > 0) { mp.seekTo(Math.min(resumeAt, Math.max(0, mp.getDuration() - 1)), MediaPlayer.SEEK_CLOSEST); }
+                if (resumeAt > 0) { seeking = true; mp.seekTo(Math.min(resumeAt, Math.max(0, mp.getDuration() - 1)), MediaPlayer.SEEK_CLOSEST); }
                 else if (playing) { begin(mp); }
             });
             current.prepareAsync();
@@ -127,6 +179,7 @@ public final class OfflinePlaybackService extends Service {
         } catch (Exception e) { fail(); }
     }
     private void begin(MediaPlayer current) {
+        if (destroyed || stopping || current != player || !prepared || !playing || waitingForAudioFocus || seeking) { return; }
         try {
             if (audioManager.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) { fail(); return; }
             current.start(); playing = true; publish(); updateSession();
@@ -143,7 +196,7 @@ public final class OfflinePlaybackService extends Service {
         try {
             resumeAt = position(); playing = false;
             if (prepared && player != null && player.isPlaying()) { player.pause(); }
-            audioManager.abandonAudioFocusRequest(focus);
+            abandonFocus();
             publish(); updateSession(); keepNotification = true;
             stopForeground(STOP_FOREGROUND_DETACH);
             getSystemService(NotificationManager.class).notify(NOTIFICATION, notification(false));
@@ -154,10 +207,11 @@ public final class OfflinePlaybackService extends Service {
         try {
             if (!prepared || player == null) { return; }
             resumeAt = (int) Math.max(0, Math.min(position, Math.max(0, player.getDuration() - 1)));
+            seeking = true;
             player.seekTo(resumeAt, MediaPlayer.SEEK_CLOSEST); publish(); updateSession();
         } catch (RuntimeException e) { fail(); }
     }
-    private void publish() { STATE.setValue(new State(id, position(), playing, "", 0)); }
+    private void publish() { STATE.setValue(new State(id, position(), playing, waitingForAudioFocus, "", 0)); }
     private void updateSession() {
         session.setPlaybackState(new PlaybackState.Builder()
                 .setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_STOP | PlaybackState.ACTION_SEEK_TO)
@@ -167,17 +221,17 @@ public final class OfflinePlaybackService extends Service {
                 .setState(playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED, position(), playing ? 1f : 0f).build());
     }
     private void fail() {
-        STATE.setValue(new State(0, 0, false, getString(R.string.offline_play_failed), System.nanoTime()));
+        STATE.setValue(new State(0, 0, false, false, getString(R.string.offline_play_failed), System.nanoTime()));
         finish();
     }
-    private void stop() { STATE.setValue(new State(0, 0, false, "", 0)); finish(); }
+    private void stop() { STATE.setValue(new State(0, 0, false, false, "", 0)); finish(); }
     private void finish() {
         stopping = true; playing = false; keepNotification = false; release();
         stopForeground(STOP_FOREGROUND_REMOVE); stopSelf();
     }
     private void release() {
         if (player != null) { player.release(); player = null; }
-        prepared = false; audioManager.abandonAudioFocusRequest(focus);
+        prepared = false; seeking = false; abandonFocus();
     }
     private PendingIntent command(String action, int code, boolean foreground) {
         Intent intent = new Intent(this, OfflinePlaybackService.class).setAction(action).putExtra("id", id);
@@ -188,7 +242,7 @@ public final class OfflinePlaybackService extends Service {
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         return new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_meditation)
                 .setContentTitle(title.isEmpty() ? getString(R.string.offline_channel) : title)
-                .setContentText(getString(active ? R.string.notification_playing : R.string.notification_paused))
+                .setContentText(getString(waitingForAudioFocus ? R.string.message_waiting_for_audio_focus : active ? R.string.notification_playing : R.string.notification_paused))
                 .setContentIntent(open).setDeleteIntent(command(STOP, 54, false)).setOnlyAlertOnce(true).setOngoing(active)
                 .setVisibility(Notification.VISIBILITY_PUBLIC).setCategory(Notification.CATEGORY_TRANSPORT)
                 .addAction(new Notification.Action.Builder(R.drawable.ic_playback_previous, getString(R.string.offline_back), command(BACK, 51, false)).build())
@@ -202,7 +256,7 @@ public final class OfflinePlaybackService extends Service {
     @Override public void onDestroy() {
         destroyed = true; handler.removeCallbacksAndMessages(null); release(); session.release(); unregisterReceiver(noisy);
         if (!keepNotification) { getSystemService(NotificationManager.class).cancel(NOTIFICATION); }
-        if (STATE.getValue().id == id && STATE.getValue().playing) { STATE.setValue(new State(0, 0, false, "", 0)); }
+        if (STATE.getValue().id == id && (STATE.getValue().playing || STATE.getValue().waitingForAudioFocus)) { STATE.setValue(new State(0, 0, false, false, "", 0)); }
         super.onDestroy();
     }
 }

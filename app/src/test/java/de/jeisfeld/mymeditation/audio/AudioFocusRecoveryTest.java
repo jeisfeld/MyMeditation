@@ -6,6 +6,18 @@ import static de.jeisfeld.mymeditation.audio.AudioFocusRecovery.Action.*;
 import static de.jeisfeld.mymeditation.audio.AudioFocusRecovery.Change.*;
 
 public class AudioFocusRecoveryTest {
+    @Test public void offlinePlaybackRetainsItsMillisecondBookmarkAcrossRepeatedInterruptions() {
+        AudioFocusRecovery recovery = new AudioFocusRecovery();
+        recovery.start();
+        assertEquals(SUSPEND, recovery.change(TEMPORARY_LOSS, 125430));
+        assertEquals(NONE, recovery.change(TEMPORARY_LOSS, 125600));
+        assertEquals(RESUME, recovery.change(GAIN, 125600));
+        assertEquals(125430, recovery.position());
+        assertEquals(SUSPEND, recovery.change(TEMPORARY_LOSS, 152750));
+        assertEquals(152750, recovery.position());
+        recovery.cancel();
+        assertEquals(NONE, recovery.change(GAIN, 152750));
+    }
     @Test public void temporaryInterruptionReplaysTheInterruptedSentenceOnce() {
         AudioFocusRecovery recovery = new AudioFocusRecovery();
         recovery.start();
