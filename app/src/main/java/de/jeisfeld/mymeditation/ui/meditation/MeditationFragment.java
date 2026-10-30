@@ -143,7 +143,7 @@ public class MeditationFragment extends Fragment {
             stopAudio();
             String systemMessage = PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt);
             String queryTemplate = PreferenceUtil.getSharedPreferenceString(R.string.key_query_template);
-            String userMessage = (queryTemplate == null ? "@TEXT@" : queryTemplate).replace("@TEXT@", meditationContent);
+            String userMessage = MeditationPrompt.render(queryTemplate, meditationContent);
             String oldMeditation = meditationViewModel.getMeditationText().getValue();
             meditationViewModel.setMeditationText(getString(R.string.text_creating_meditation));
             binding.buttonCreateMeditation.setEnabled(false);
