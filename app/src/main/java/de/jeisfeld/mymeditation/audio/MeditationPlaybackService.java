@@ -323,7 +323,8 @@ public final class MeditationPlaybackService extends Service {
                 : PendingIntent.getService(this, code, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
     private Notification notification(boolean active) {
-        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent open = PendingIntent.getActivity(this, 0, MainActivity.notificationIntent(this, R.id.navigation_meditation), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        session.setSessionActivity(open);
         String description = status.isEmpty() ? getString(R.string.notification_sentence, getString(active ? R.string.notification_playing : R.string.notification_paused), position + 1, sentences.size()) : status;
         return new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_meditation).setContentTitle(getString(R.string.app_name))
                 .setContentText(description).setContentIntent(open).setDeleteIntent(command(STOP, 5, false))

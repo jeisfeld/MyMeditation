@@ -145,7 +145,7 @@ public final class MeditationExportService extends Service {
         stopForeground(STOP_FOREGROUND_REMOVE); stopSelf();
     }
     private Notification notification() {
-        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent open = PendingIntent.getActivity(this, 0, MainActivity.notificationIntent(this, R.id.navigation_meditation), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         PendingIntent cancel = PendingIntent.getService(this, 43, new Intent(this, MeditationExportService.class).setAction(CANCEL), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         return new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_saved_meditations)
                 .setContentTitle(getString(R.string.export_title)).setContentText(status).setContentIntent(open)

@@ -236,3 +236,9 @@ The JVM suite covers shared focus recovery with millisecond bookmarks and cancel
 Use the pencil icon beside a saved meditation to change its name. Save trims surrounding spaces and rejects empty names; Cancel leaves it unchanged. Renaming retains the saved ID, position, text, settings and associated MP3, and sharing subsequently uses the new name.
 
 The filter field at the top of Saved meditations matches part of the name without case sensitivity. The adjacent Audio only checkbox combines with that query and includes only entries whose completed MP3 file exists locally. Filters are retained while refreshing after saving/exporting and across screen recreation. Renaming immediately reapplies the current filters. Drag reordering is available when filters are cleared; filtered views never overwrite the full saved order.
+
+## Opening the app from audio notifications
+
+Playback notifications and media-session tap targets bring the existing app task to the foreground and deliver their destination to the current MainActivity. Live speech opens Meditation; saved MP3 playback opens Saved meditations. Export progress opens Meditation. MainActivity uses singleTop plus explicit NEW_TASK/CLEAR_TOP/SINGLE_TOP notification flags, and handles both cold launches and onNewIntent delivery. Distinct intent actions keep live and offline PendingIntents independent even when both notifications exist. Repeated taps on the current tab do not recreate its fragment, and rotation preserves any tab the user subsequently selects.
+
+`NotificationNavigationTest` compiles device checks for existing-activity reuse, independent live/offline PendingIntents, background return, cold launch and tab restoration after recreation. Running these requires an Android device/emulator; no provider credentials or audio generation is required.

@@ -239,7 +239,8 @@ public final class OfflinePlaybackService extends Service {
                 : PendingIntent.getService(this, code, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
     private Notification notification(boolean active) {
-        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent open = PendingIntent.getActivity(this, 0, MainActivity.notificationIntent(this, R.id.navigation_saved_meditations), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        session.setSessionActivity(open);
         return new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_meditation)
                 .setContentTitle(title.isEmpty() ? getString(R.string.offline_channel) : title)
                 .setContentText(getString(waitingForAudioFocus ? R.string.message_waiting_for_audio_focus : active ? R.string.notification_playing : R.string.notification_paused))
