@@ -5,7 +5,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import java.util.ArrayList;
 
 import androidx.annotation.NonNull;
 import androidx.core.graphics.Insets;
@@ -27,6 +26,8 @@ public class SavedMeditationsFragment extends Fragment {
 	private FragmentSavedMeditationsBinding binding;
 	private ItemTouchHelper touchHelper;
 	private int lastOfflinePlaybackId;
+    private String nameFilter = "";
+    private boolean audioOnly;
 
 	public View onCreateView(@NonNull LayoutInflater inflater,
 							 ViewGroup container, Bundle savedInstanceState) {
@@ -51,6 +52,25 @@ public class SavedMeditationsFragment extends Fragment {
 				);
 			}
 		});
+
+        if (savedInstanceState != null) {
+            nameFilter = savedInstanceState.getString("savedNameFilter", "");
+            audioOnly = savedInstanceState.getBoolean("savedAudioOnly", false);
+        }
+        binding.editTextMeditationFilter.setText(nameFilter);
+        binding.checkBoxAudioOnly.setChecked(audioOnly);
+        binding.editTextMeditationFilter.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                nameFilter = s.toString();
+                applyFilters();
+            }
+            @Override public void afterTextChanged(android.text.Editable s) { }
+        });
+        binding.checkBoxAudioOnly.setOnCheckedChangeListener((button, checked) -> {
+            audioOnly = checked;
+            applyFilters();
+        });
 
 		final RecyclerView recyclerView = binding.recyclerViewSavedMeditations;
 		populateRecyclerView(recyclerView);
@@ -98,6 +118,18 @@ public class SavedMeditationsFragment extends Fragment {
 		return root;
 	}
 
+    private void applyFilters() {
+        if (binding != null && binding.recyclerViewSavedMeditations.getAdapter() instanceof SavedMeditationsViewAdapter) {
+            ((SavedMeditationsViewAdapter) binding.recyclerViewSavedMeditations.getAdapter()).setFilter(nameFilter, audioOnly);
+        }
+    }
+
+    @Override public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString("savedNameFilter", nameFilter);
+        outState.putBoolean("savedAudioOnly", audioOnly);
+    }
+
 	@Override
 	public void onDestroyView() {
 		if (touchHelper != null) { touchHelper.attachToRecyclerView(null); touchHelper = null; }
@@ -106,7 +138,7 @@ public class SavedMeditationsFragment extends Fragment {
 	}
 
 	/**
-	 * Populate the recycler view for the stored colors.
+	 * Populate the recycler view, retaining the current filters.
 	 *
 	 * @param recyclerView The recycler view.
 	 */
@@ -119,5 +151,6 @@ public class SavedMeditationsFragment extends Fragment {
 		touchHelper.attachToRecyclerView(recyclerView);
 
 		recyclerView.setAdapter(adapter);
+        applyFilters();
 	}
 }

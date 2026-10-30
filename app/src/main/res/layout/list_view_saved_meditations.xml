@@ -51,6 +51,21 @@
         android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/buttonRenameMeditation" />
+
+    <ImageButton
+        android:id="@+id/buttonRenameMeditation"
+        android:layout_width="40dp"
+        android:layout_height="48dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="12dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_edit_meditation"
+        app:tint="?attr/colorControlNormal"
+        android:contentDescription="@string/rename_saved_meditation"
+        android:tooltipText="@string/rename_saved_meditation"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/imageViewDelete" />
 
     <ImageButton

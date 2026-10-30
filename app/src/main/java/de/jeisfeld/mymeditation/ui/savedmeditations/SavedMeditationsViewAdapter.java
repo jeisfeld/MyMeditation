@@ -24,14 +24,16 @@ import de.jeisfeld.mymeditation.util.DialogUtil;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
 
 /**
- * Adapter for the RecyclerView that allows to sort devices.
+ * Saved meditations, with filtered views over the full persisted ID list.
  */
 public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMeditationsViewAdapter.MyViewHolder>
 		implements SavedMeditationsItemMoveCallback.ItemTouchHelperContract {
 	/**
 	 * The list of meditation ids.
 	 */
-	private final List<Integer> mMeditationIds;
+	private final List<Integer> mMeditationIds = new ArrayList<>();
+	private String mNameFilter = "";
+	private boolean mAudioOnly;
 	/**
 	 * The listener identifying start of drag.
 	 */
@@ -48,9 +50,53 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 	 * @param recyclerView The recycler view.
 	 */
 	public SavedMeditationsViewAdapter(final Fragment fragment, final RecyclerView recyclerView) {
-		mMeditationIds = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids);
+		mMeditationIds.addAll(PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids));
 		mFragment = new WeakReference<>(fragment);
 	}
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void setFilter(String query, boolean audioOnly) {
+        mNameFilter = query;
+        mAudioOnly = audioOnly;
+        Fragment owner = mFragment.get();
+        if (owner == null || owner.getContext() == null) { return; }
+        List<Integer> all = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids);
+        mMeditationIds.clear();
+        mMeditationIds.addAll(SavedMeditationFilter.select(all, query, audioOnly,
+                id -> PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, id),
+                id -> de.jeisfeld.mymeditation.audio.OfflineMeditations.file(owner.requireContext(), id).isFile()));
+        notifyDataSetChanged();
+    }
+
+    @Override public boolean canReorder() { return mNameFilter.trim().isEmpty() && !mAudioOnly; }
+
+    private void rename(Fragment fragment, int id, String oldName) {
+        android.widget.EditText input = new android.widget.EditText(fragment.requireContext());
+        input.setSingleLine(true);
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        input.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        input.setHint(R.string.text_dialog_save_meditation);
+        input.setText(oldName);
+        input.selectAll();
+        android.widget.FrameLayout container = new android.widget.FrameLayout(fragment.requireContext());
+        int padding = fragment.getResources().getDimensionPixelSize(R.dimen.activity_horizontal_margin);
+        container.setPadding(padding, 0, padding, 0);
+        container.addView(input);
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(fragment.requireContext())
+                .setTitle(R.string.rename_saved_meditation).setView(container)
+                .setNegativeButton(R.string.button_cancel, null).setPositiveButton(R.string.button_save, null).create();
+        dialog.setOnShowListener(d -> dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String name = input.getText().toString().trim();
+            if (name.isEmpty()) { input.setError(fragment.getString(R.string.saved_meditation_name_required)); return; }
+            // Keep the stable ID: text, settings, order and the associated MP3 remain attached.
+            if (PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).contains(id)) {
+                PreferenceUtil.setIndexedSharedPreferenceString(R.string.key_saved_meditation_name, id, name);
+                setFilter(mNameFilter, mAudioOnly);
+            }
+            dialog.dismiss();
+        }));
+        dialog.show();
+    }
 
 	/**
 	 * Set the listener identifying start of drag.
@@ -75,6 +121,12 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 
 		String meditationName = PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, meditationId);
 		holder.mTitle.setText(meditationName);
+        holder.mTitle.setTooltipText(meditationName);
+        holder.mRenameButton.setOnClickListener(v -> {
+            Fragment fragment = mFragment.get();
+            if (fragment != null && fragment.getContext() != null) { rename(fragment, meditationId, meditationName); }
+        });
+        holder.mDragHandle.setVisibility(canReorder() ? View.VISIBLE : View.INVISIBLE);
 		Fragment owner = mFragment.get();
 		boolean offline = owner != null && owner.getContext() != null
 				&& de.jeisfeld.mymeditation.audio.OfflineMeditations.file(owner.requireContext(), meditationId).isFile();
@@ -113,7 +165,7 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 		});
 
 		holder.mDragHandle.setOnTouchListener((view, event) -> {
-			if (event.getAction() == MotionEvent.ACTION_DOWN) {
+			if (event.getAction() == MotionEvent.ACTION_DOWN && canReorder() && mStartDragListener != null) {
 				mStartDragListener.requestDrag(holder);
 			}
 			else if (event.getAction() == MotionEvent.ACTION_UP) {
@@ -177,6 +229,8 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 
 	@Override
 	public final void onRowMoved(final int fromPosition, final int toPosition) {
+        if (!canReorder() || fromPosition < 0 || toPosition < 0
+                || fromPosition >= mMeditationIds.size() || toPosition >= mMeditationIds.size()) { return; }
 		if (fromPosition < toPosition) {
 			for (int i = fromPosition; i < toPosition; i++) {
 				Collections.swap(mMeditationIds, i, i + 1);
@@ -223,7 +277,7 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 		 * The delete button.
 		 */
 		private final ImageView mDeleteButton;
-		private final android.widget.ImageButton mPlayButton, mShareButton;
+		private final android.widget.ImageButton mPlayButton, mShareButton, mRenameButton;
 
 		/**
 		 * Constructor.
@@ -238,6 +292,7 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 			mDeleteButton = itemView.findViewById(R.id.imageViewDelete);
 			mPlayButton = itemView.findViewById(R.id.buttonPlayOffline);
 			mShareButton = itemView.findViewById(R.id.buttonShareOffline);
+            mRenameButton = itemView.findViewById(R.id.buttonRenameMeditation);
 		}
 	}
 

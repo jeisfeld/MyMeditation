@@ -39,14 +39,16 @@ public class SavedMeditationsItemMoveCallback extends ItemTouchHelper.Callback {
 
 	@Override
 	public final int getMovementFlags(@NonNull final RecyclerView recyclerView, @NonNull final RecyclerView.ViewHolder viewHolder) {
-		int dragFlags = ItemTouchHelper.UP | ItemTouchHelper.DOWN;
+		int dragFlags = mAdapter.canReorder() ? ItemTouchHelper.UP | ItemTouchHelper.DOWN : 0;
 		return makeMovementFlags(dragFlags, 0);
 	}
 
 	@Override
 	public final boolean onMove(@NonNull final RecyclerView recyclerView, final RecyclerView.ViewHolder viewHolder,
 								final RecyclerView.ViewHolder target) {
-		mAdapter.onRowMoved(viewHolder.getAdapterPosition(), target.getAdapterPosition());
+		if (!mAdapter.canReorder() || viewHolder.getBindingAdapterPosition() == RecyclerView.NO_POSITION
+                || target.getBindingAdapterPosition() == RecyclerView.NO_POSITION) { return false; }
+        mAdapter.onRowMoved(viewHolder.getBindingAdapterPosition(), target.getBindingAdapterPosition());
 		return true;
 	}
 
@@ -74,6 +76,7 @@ public class SavedMeditationsItemMoveCallback extends ItemTouchHelper.Callback {
 	 * Callback for row actions.
 	 */
 	public interface ItemTouchHelperContract {
+        boolean canReorder();
 		/**
 		 * Callback called when row is moved.
 		 *

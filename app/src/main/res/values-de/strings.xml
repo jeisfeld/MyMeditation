@@ -96,4 +96,8 @@
         <item>Qwen</item>
         <item>ElevenLabs</item>
     </string-array>
+    <string name="saved_meditation_filter_hint">Nach Namen filtern</string>
+    <string name="saved_meditation_audio_only">Nur Audio</string>
+    <string name="rename_saved_meditation">Meditation umbenennen</string>
+    <string name="saved_meditation_name_required">Der Name darf nicht leer sein.</string>
 </resources>
