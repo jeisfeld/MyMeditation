@@ -34,7 +34,7 @@
     <string name="ai_model_invalid">Use a Claude, OpenAI, Gemini, Grok, DeepSeek, Kimi or Qwen model ID.</string>
     <!-- Keep the existing preference value so saved model selections survive this update. -->
     <string name="key_ai_model" translatable="false">claude_model</string>
-    <string name="default_ai_model" translatable="false">claude-sonnet-4-5</string>
+    <string name="default_ai_model" translatable="false">claude-sonnet-5-5</string>
     <string name="speech_output_label">Voice output</string>
     <string name="speech_model_label">Speech model</string>
     <string name="speech_voice_label">Voice</string>

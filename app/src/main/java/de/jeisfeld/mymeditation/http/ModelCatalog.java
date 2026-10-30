@@ -9,7 +9,7 @@ import java.util.List;
 public final class ModelCatalog {
     private ModelCatalog() { }
     private static final List<String> AI = Collections.unmodifiableList(Arrays.asList(
-            "claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-5-5",
+            "claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-5-5", "claude-sonnet-4-6",
             "gpt-6.1-sol", "gpt-6-luna", "gpt-6-astra", "gpt-5.4-mini",
             "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-pro-preview",
             "grok-4.7", "grok-4.6",
