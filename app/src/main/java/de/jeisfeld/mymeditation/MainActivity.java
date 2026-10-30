@@ -48,6 +48,12 @@ public class MainActivity extends AppCompatActivity {
 		NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
 		NavigationUI.setupWithNavController(binding.navView, navController);
 
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (view, insets) -> {
+            binding.navView.setVisibility(insets.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime())
+                    ? android.view.View.GONE : android.view.View.VISIBLE);
+            return insets;
+        });
+
         // Recreation restores the tab chosen by the user after the original notification tap.
         if (savedInstanceState == null) { openNotificationTab(getIntent()); }
 	}

@@ -37,6 +37,8 @@ The configuration page contains System instruction, Query template and AI settin
 
 First launch supplies missing prompts, a topic and the original 15-second pause default. Later starts preserve existing user values. The UI defaults to English and uses German on German-language devices. Prompt text is user data and is not automatically translated when the UI language changes.
 
+When the screen keyboard opens for a meditation topic/text or a system instruction/query template, that text section expands to fill the available page above the keyboard. The bottom tabs and unrelated controls are hidden. Dismiss the keyboard with Back to restore the normal page; your text and cursor remain in place. With a hardware keyboard, the normal layout stays visible.
+
 ## Save and restore text meditations
 
 Open **Saved meditations** and press **Save current meditation**. Enter a name and confirm Save; Cancel adds nothing. This stores a snapshot of:

@@ -82,3 +82,7 @@ Cloud creation and listening checks require a locally configured provider key an
 This workspace has SDK 36, AGP 8.13.0, Gradle 8.14.3 and JDK 21 available, rather than the repository's configured SDK 37/AGP 9.5.0/Gradle 9.6.0. Validation therefore uses an ignored copy under `work/speech-validation`, with compatibility toolchain/dependency versions. The checked-in build configuration is not downgraded. Robolectric tests execute locally in that copy; device tests are compiled only because no emulator/device is attached. Full verification with the configured toolchain and actual devices remains a separate check.
 
 Sentence recording regression tests also cover upgrade cleanup, restored-source attachment, same-named variant insertion and deduplication, and the offline heading reacting to exact text/settings while ignoring pauses.
+
+`KeyboardEditingLayoutTest` dispatches IME insets through the activity and real page layouts, checking expanded meditation/topic/prompt editors, hidden/restored navigation and controls, cursor preservation, and the existing focus-based prompt saving. Physical keyboard behavior, keyboard animations and real-device portrait/landscape rendering remain manual checks.
+
+`PageInsetsTest` covers system-bar insets consumed by AppCompat before page dispatch: the original window bars and tab space must remain reserved in normal mode and after keyboard dismissal. The top header allowance must also remain while editing; only the bottom tab space is released for the keyboard.

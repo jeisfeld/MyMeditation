@@ -7,9 +7,6 @@ import android.view.ViewGroup;
 
 
 import androidx.annotation.NonNull;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -25,6 +22,7 @@ public class SavedMeditationsFragment extends Fragment {
 
 	private FragmentSavedMeditationsBinding binding;
 	private ItemTouchHelper touchHelper;
+    private de.jeisfeld.mymeditation.ui.PageInsets pageInsets;
     private int lastSavedPlaybackId;
     private String nameFilter = "";
     private boolean audioOnly;
@@ -34,24 +32,7 @@ public class SavedMeditationsFragment extends Fragment {
 		binding = FragmentSavedMeditationsBinding.inflate(inflater, container, false);
 		View root = binding.getRoot();
 
-		root.post(() -> {
-			WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(requireActivity().getWindow().getDecorView());
-
-			if (insets != null) {
-				Insets systemInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-
-				View navView = requireActivity().findViewById(R.id.nav_view);
-				int bottomNavHeight = navView.getHeight();
-				int navOnlyHeight = Math.max(0, bottomNavHeight - systemInsets.bottom);
-
-				root.setPadding(
-						systemInsets.left,
-						systemInsets.top + navOnlyHeight,
-						systemInsets.right,
-						systemInsets.bottom + navOnlyHeight
-				);
-			}
-		});
+        pageInsets = new de.jeisfeld.mymeditation.ui.PageInsets(root, keyboard -> { });
 
         if (savedInstanceState != null) {
             nameFilter = savedInstanceState.getString("savedNameFilter", "");
@@ -130,6 +111,7 @@ public class SavedMeditationsFragment extends Fragment {
 
 	@Override
 	public void onDestroyView() {
+        if (pageInsets != null) { pageInsets.close(); pageInsets = null; }
 		if (touchHelper != null) { touchHelper.attachToRecyclerView(null); touchHelper = null; }
 		super.onDestroyView();
 		binding = null;

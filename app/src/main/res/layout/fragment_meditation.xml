@@ -6,29 +6,37 @@
     android:orientation="vertical"
     android:paddingBottom="?attr/actionBarSize">
 
-    <TextView
-        android:id="@+id/labelMeditationContent"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/activity_horizontal_margin"
-        android:layout_marginEnd="@dimen/activity_horizontal_margin"
-        android:layout_marginTop="@dimen/activity_heading_margin"
-        android:labelFor="@id/editTextMeditationContent"
-        android:text="@string/label_meditation_content"
-        android:textSize="@dimen/text_size_content_heading"
-        android:textStyle="bold" />
-
-    <EditText
-        android:id="@+id/editTextMeditationContent"
+    <LinearLayout
+        android:id="@+id/meditationContentSection"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginStart="@dimen/editText_horizontal_margin"
-        android:layout_marginEnd="@dimen/editText_horizontal_margin"
         android:layout_weight="0.8"
-        android:gravity="top"
-        android:importantForAutofill="no"
-        android:inputType="textMultiLine"
-        android:textSize="@dimen/text_size_content" />
+        android:orientation="vertical">
+        <TextView
+            android:id="@+id/labelMeditationContent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            android:layout_marginEnd="@dimen/activity_horizontal_margin"
+            android:layout_marginTop="@dimen/activity_heading_margin"
+            android:labelFor="@id/editTextMeditationContent"
+            android:text="@string/label_meditation_content"
+            android:textSize="@dimen/text_size_content_heading"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/editTextMeditationContent"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginStart="@dimen/editText_horizontal_margin"
+            android:layout_marginEnd="@dimen/editText_horizontal_margin"
+            android:layout_weight="1"
+            android:gravity="top"
+            android:importantForAutofill="no"
+            android:inputType="textMultiLine"
+            android:textSize="@dimen/text_size_content" />
+
+    </LinearLayout>
 
     <Button
         android:id="@+id/buttonCreateMeditation"
@@ -38,179 +46,201 @@
         android:layout_marginEnd="@dimen/single_button_horizontal_margin"
         android:text="@string/button_create_meditation" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/activity_horizontal_margin"
-        android:layout_marginEnd="@dimen/activity_horizontal_margin"
-        android:layout_marginTop="@dimen/activity_heading_margin"
-        android:labelFor="@id/seekBarPauseDuration"
-        android:text="@string/label_pause_duration" />
-
     <LinearLayout
+        android:id="@+id/speechSettingsSection"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/activity_horizontal_margin"
-        android:layout_marginEnd="@dimen/activity_horizontal_margin"
-        android:orientation="horizontal">
-
-        <SeekBar
-            android:id="@+id/seekBarPauseDuration"
-            android:layout_width="0px"
+        android:orientation="vertical">
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:indeterminate="false"
-            android:max="40"
-            android:min="0"
-            android:progress="1" />
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            android:layout_marginEnd="@dimen/activity_horizontal_margin"
+            android:layout_marginTop="@dimen/activity_heading_margin"
+            android:labelFor="@id/seekBarPauseDuration"
+            android:text="@string/label_pause_duration" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            android:layout_marginEnd="@dimen/activity_horizontal_margin"
+            android:orientation="horizontal">
+
+            <SeekBar
+                android:id="@+id/seekBarPauseDuration"
+                android:layout_width="0px"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:indeterminate="false"
+                android:max="40"
+                android:min="0"
+                android:progress="1" />
+
+            <TextView
+                android:id="@+id/textPauseDuration"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_width="64dp"
+                android:layout_height="wrap_content"
+                android:textAlignment="viewEnd" />
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/textPauseDuration"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_width="64dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAlignment="viewEnd" />
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            android:text="@string/label_voice_speed" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            android:layout_marginEnd="@dimen/activity_horizontal_margin"
+            android:orientation="horizontal">
+            <SeekBar
+                android:id="@+id/seekBarVoiceSpeed"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="1000" />
+            <TextView
+                android:id="@+id/textVoiceSpeed"
+                android:layout_width="64dp"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:focusable="true"
+                android:textAlignment="viewEnd" />
+        </LinearLayout>
+
     </LinearLayout>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/activity_horizontal_margin"
-        android:text="@string/label_voice_speed" />
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/activity_horizontal_margin"
-        android:layout_marginEnd="@dimen/activity_horizontal_margin"
-        android:orientation="horizontal">
-        <SeekBar
-            android:id="@+id/seekBarVoiceSpeed"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:max="1000" />
-        <TextView
-            android:id="@+id/textVoiceSpeed"
-            android:layout_width="64dp"
-            android:layout_height="wrap_content"
-            android:clickable="true"
-            android:focusable="true"
-            android:textAlignment="viewEnd" />
-    </LinearLayout>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/activity_horizontal_margin"
-        android:layout_marginEnd="@dimen/activity_horizontal_margin"
-        android:layout_marginTop="@dimen/activity_heading_margin"
-        android:id="@+id/labelMeditationText"
-        android:labelFor="@id/editTextMeditationText"
-        android:text="@string/label_meditation_text"
-        android:textSize="@dimen/text_size_content_heading"
-        android:textStyle="bold" />
-
-    <EditText
-        android:id="@+id/editTextMeditationText"
+        android:id="@+id/meditationTextSection"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginStart="@dimen/editText_horizontal_margin"
-        android:layout_marginEnd="@dimen/editText_horizontal_margin"
         android:layout_weight="1"
-        android:gravity="top"
-        android:importantForAutofill="no"
-        android:inputType="textMultiLine"
-        android:textSize="@dimen/text_size_content" />
-
-    <TextView
-        android:id="@+id/textSpeechStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="0dp"
-        android:padding="0dp"
-        android:minHeight="0dp"
-        android:includeFontPadding="false"
-        android:textSize="12sp"
-        android:accessibilityLiveRegion="polite"
-        android:maxLines="1"
-        android:ellipsize="end"
-        android:visibility="gone" />
-
-    <LinearLayout
-        android:id="@+id/idlePlaybackActions"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/single_button_horizontal_margin"
-        android:layout_marginEnd="@dimen/single_button_horizontal_margin"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/buttonSpeakMeditation"
-            android:layout_width="0dp"
+        android:orientation="vertical">
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            android:layout_marginEnd="@dimen/activity_horizontal_margin"
+            android:layout_marginTop="@dimen/activity_heading_margin"
+            android:id="@+id/labelMeditationText"
+            android:labelFor="@id/editTextMeditationText"
+            android:text="@string/label_meditation_text"
+            android:textSize="@dimen/text_size_content_heading"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/editTextMeditationText"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginStart="@dimen/editText_horizontal_margin"
+            android:layout_marginEnd="@dimen/editText_horizontal_margin"
             android:layout_weight="1"
-            android:text="@string/button_speak_meditation" />
+            android:gravity="top"
+            android:importantForAutofill="no"
+            android:inputType="textMultiLine"
+            android:textSize="@dimen/text_size_content" />
 
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/playbackControls"
-        android:visibility="gone"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:gravity="center"
-        android:orientation="horizontal">
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonPreviousMeditation"
-            style="@style/PlaybackControl"
-            app:icon="@drawable/ic_playback_previous"
-            android:contentDescription="@string/notification_previous"
-            android:tooltipText="@string/notification_previous"
-            android:enabled="false" />
-        <FrameLayout
-            android:layout_width="56dp"
-            android:layout_height="48dp">
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonResumeMeditation"
-            style="@style/PlaybackControl"
-            app:icon="@drawable/ic_playback_play"
-            android:contentDescription="@string/button_speak_meditation"
-            android:tooltipText="@string/button_speak_meditation" />
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonPauseMeditation"
-            style="@style/PlaybackControl"
-            app:icon="@drawable/ic_playback_pause"
-            android:contentDescription="@string/button_pause_meditation"
-            android:tooltipText="@string/button_pause_meditation"
-            android:visibility="gone" />
-        </FrameLayout>
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonEndMeditation"
-            style="@style/PlaybackControl"
-            app:icon="@drawable/ic_playback_stop"
-            android:contentDescription="@string/button_end_meditation"
-            android:tooltipText="@string/button_end_meditation"
-            android:enabled="false" />
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonNextMeditation"
-            style="@style/PlaybackControl"
-            app:icon="@drawable/ic_playback_next"
-            android:contentDescription="@string/notification_next"
-            android:tooltipText="@string/notification_next"
-            android:enabled="false" />
-    </LinearLayout>
-
-    <SeekBar
-        android:id="@+id/seekBarAudio"
+        android:id="@+id/meditationPlaybackSection"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/editText_horizontal_margin"
-        android:layout_marginEnd="@dimen/editText_horizontal_margin"
-        android:indeterminate="false"
-        android:max="100"
-        android:min="0"
-        android:progress="0" />
+        android:orientation="vertical">
+        <TextView
+            android:id="@+id/textSpeechStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="0dp"
+            android:padding="0dp"
+            android:minHeight="0dp"
+            android:includeFontPadding="false"
+            android:textSize="12sp"
+            android:accessibilityLiveRegion="polite"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/idlePlaybackActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/single_button_horizontal_margin"
+            android:layout_marginEnd="@dimen/single_button_horizontal_margin"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/buttonSpeakMeditation"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/button_speak_meditation" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/playbackControls"
+            android:visibility="gone"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonPreviousMeditation"
+                style="@style/PlaybackControl"
+                app:icon="@drawable/ic_playback_previous"
+                android:contentDescription="@string/notification_previous"
+                android:tooltipText="@string/notification_previous"
+                android:enabled="false" />
+            <FrameLayout
+                android:layout_width="56dp"
+                android:layout_height="48dp">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonResumeMeditation"
+                style="@style/PlaybackControl"
+                app:icon="@drawable/ic_playback_play"
+                android:contentDescription="@string/button_speak_meditation"
+                android:tooltipText="@string/button_speak_meditation" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonPauseMeditation"
+                style="@style/PlaybackControl"
+                app:icon="@drawable/ic_playback_pause"
+                android:contentDescription="@string/button_pause_meditation"
+                android:tooltipText="@string/button_pause_meditation"
+                android:visibility="gone" />
+            </FrameLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonEndMeditation"
+                style="@style/PlaybackControl"
+                app:icon="@drawable/ic_playback_stop"
+                android:contentDescription="@string/button_end_meditation"
+                android:tooltipText="@string/button_end_meditation"
+                android:enabled="false" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonNextMeditation"
+                style="@style/PlaybackControl"
+                app:icon="@drawable/ic_playback_next"
+                android:contentDescription="@string/notification_next"
+                android:tooltipText="@string/notification_next"
+                android:enabled="false" />
+        </LinearLayout>
+
+        <SeekBar
+            android:id="@+id/seekBarAudio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/editText_horizontal_margin"
+            android:layout_marginEnd="@dimen/editText_horizontal_margin"
+            android:indeterminate="false"
+            android:max="100"
+            android:min="0"
+            android:progress="0" />
+
+    </LinearLayout>
 
 </LinearLayout>

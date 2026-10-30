@@ -16,9 +16,6 @@ import android.widget.SeekBar.OnSeekBarChangeListener;
 import java.util.List;
 
 import androidx.annotation.NonNull;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import de.jeisfeld.mymeditation.R;
@@ -28,6 +25,7 @@ import de.jeisfeld.mymeditation.util.PreferenceUtil;
 
 public class MeditationFragment extends Fragment {
 
+    private de.jeisfeld.mymeditation.ui.PageInsets pageInsets;
     private FragmentMeditationBinding binding;
     private List<String> sentences;
     private boolean reading;
@@ -103,24 +101,7 @@ public class MeditationFragment extends Fragment {
         editorInputType = binding.editTextMeditationText.getInputType();
         spokenBackground = new android.text.style.BackgroundColorSpan(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.spoken_text_highlight));
 
-        root.post(() -> {
-            WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(requireActivity().getWindow().getDecorView());
-
-            if (insets != null) {
-                Insets systemInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-
-                View navView = requireActivity().findViewById(R.id.nav_view);
-                int bottomNavHeight = navView.getHeight();
-                int navOnlyHeight = Math.max(0, bottomNavHeight - systemInsets.bottom);
-
-                root.setPadding(
-                        systemInsets.left,
-                        systemInsets.top + navOnlyHeight,
-                        systemInsets.right,
-                        systemInsets.bottom + navOnlyHeight
-                );
-            }
-        });
+        pageInsets = new de.jeisfeld.mymeditation.ui.PageInsets(root, keyboard -> renderEditingLayout(keyboard));
 
         meditationViewModel.getMeditationContent().observe(getViewLifecycleOwner(), binding.editTextMeditationContent::setText);
         meditationViewModel.getMeditationText().observe(getViewLifecycleOwner(), text -> {
@@ -367,14 +348,23 @@ public class MeditationFragment extends Fragment {
         return SpeechBackend.fromId(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend, R.string.default_speech_backend));
     }
 
+    private void renderEditingLayout(boolean keyboard) {
+        if (binding == null) { return; }
+        boolean text = keyboard && !reading && binding.editTextMeditationText.hasFocus();
+        boolean topic = keyboard && !reading && binding.editTextMeditationContent.hasFocus();
+        boolean editing = text || topic;
+        binding.meditationContentSection.setVisibility(!reading && !text ? View.VISIBLE : View.GONE);
+        binding.buttonCreateMeditation.setVisibility(!reading && !editing ? View.VISIBLE : View.GONE);
+        binding.speechSettingsSection.setVisibility(editing ? View.GONE : View.VISIBLE);
+        binding.meditationTextSection.setVisibility(topic ? View.GONE : View.VISIBLE);
+        binding.meditationPlaybackSection.setVisibility(editing ? View.GONE : View.VISIBLE);
+    }
+
     private void renderReadingMode(MeditationPlaybackService.State state) {
         android.widget.EditText editor = binding.editTextMeditationText;
         if (reading != state.active) {
             reading = state.active;
-            int creation = reading ? View.GONE : View.VISIBLE;
-            binding.labelMeditationContent.setVisibility(creation);
-            binding.editTextMeditationContent.setVisibility(creation);
-            binding.buttonCreateMeditation.setVisibility(creation);
+
             editor.setKeyListener(reading ? null : editorKeyListener);
             editor.setRawInputType(reading ? android.text.InputType.TYPE_NULL : editorInputType);
             editor.setCursorVisible(!reading);
@@ -392,6 +382,7 @@ public class MeditationFragment extends Fragment {
             editor.setText(state.text);
             highlightedPosition = -2;
         }
+        if (pageInsets != null) { pageInsets.refresh(); }
         int target = reading ? state.spokenPosition : -1;
         String text = editor.getText().toString();
         if (target == highlightedPosition && text.equals(highlightedText)) { return; }
@@ -437,6 +428,7 @@ public class MeditationFragment extends Fragment {
     @Override public void onDestroy() { offlineChecker.shutdownNow(); super.onDestroy(); }
 
     @Override public void onDestroyView() {
+        if (pageInsets != null) { pageInsets.close(); pageInsets = null; }
         androidx.preference.PreferenceManager.getDefaultSharedPreferences(requireContext()).unregisterOnSharedPreferenceChangeListener(offlinePreferences);
         offlineCheck++;
         offlineIdentity = "";
