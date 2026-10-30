@@ -41,6 +41,8 @@ HTML test results are in `app/build/reports/tests/testDebugUnitTest/index.html`;
 | Device TTS sentence order, pause timing, starting at a selected position, stop during a pause, late callbacks, initialization errors, empty text | `DeviceSpeechBaselineTest` |
 | Punctuation/Unicode splitting, trailing text, bounded segments | Existing `SpeechProtocolTest`, `NativeSpeechTest`, `SpokenTextRangesTest` |
 | Current pause/speed mappings and playback-position conversion | Existing `PlaybackScalesTest`, `PlaybackRequestTest` |
+| Sentence storage/identity/completion, reuse, restoration, automatic retention, mixed-setting protection and deletion | `SentenceAudioStoreTest`, `SavedAudioLibraryTest`, `SentenceReplayTest`, `SentencePlaybackServiceTest` |
+| Share assembly, pauses, cancellation and UI routing/filtering | `SentenceAudioAssemblerTest`, `SentenceAudioUiTest` |
 | Provider requests/responses, retries, voice lists/profiles, localization, MP3 encoding, focus recovery, filters | Existing HTTP/audio/i18n/filter suites |
 
 The tests assert visible behavior or persistence contracts rather than pinning the original default prompt wording or recreating a retired web endpoint. They do not prove voice quality, device audio routing or live provider availability. There is no claimed line-coverage percentage.
@@ -53,7 +55,7 @@ With a disposable emulator/test device connected:
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-Current device suites are `OfflineAudioRendererTest`, `OfflinePlaybackInterruptionTest` and `NotificationNavigationTest`. They exercise real platform decoding, audio-focus requests, foreground playback and PendingIntent/activity lifecycle. They require no provider keys. Instrumentation installs/runs the app and the audio tests create and remove temporary private files; use a test installation rather than your personal meditation library.
+Current device suites are `OfflineAudioRendererTest`, `SentenceAudioDeviceTest`, `OfflinePlaybackInterruptionTest` and `NotificationNavigationTest`. They exercise real platform decoding, audio-focus requests, foreground playback and PendingIntent/activity lifecycle. They require no provider keys. Instrumentation installs/runs the app and the audio tests create and remove temporary private files; use a test installation rather than your personal meditation library.
 
 Compiling `assembleDebugAndroidTest` does **not** run these tests. Robolectric TTS callbacks also do not replace a listening check on an actual device.
 

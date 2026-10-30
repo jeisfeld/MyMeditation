@@ -26,6 +26,7 @@ public class SavedMeditationsFragment extends Fragment {
 	private FragmentSavedMeditationsBinding binding;
 	private ItemTouchHelper touchHelper;
 	private int lastOfflinePlaybackId;
+    private int lastSavedPlaybackId;
     private String nameFilter = "";
     private boolean audioOnly;
 
@@ -78,11 +79,12 @@ public class SavedMeditationsFragment extends Fragment {
 		binding.buttonSaveCurrentMeditation.setOnClickListener(v -> DialogUtil.displayInputDialog(requireActivity(), new RequestInputDialogListener() {
 			@Override
 			public void onDialogPositiveClick(DialogFragment dialog, String text) {
-				de.jeisfeld.mymeditation.audio.OfflineMeditations.save(text,
+				int savedId = de.jeisfeld.mymeditation.audio.OfflineMeditations.save(text,
 						PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt),
 						PreferenceUtil.getSharedPreferenceString(R.string.key_query_template),
 						PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content),
 						PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text));
+                de.jeisfeld.mymeditation.audio.SavedAudioLibrary.attachAvailable(requireContext(), savedId);
 				populateRecyclerView(recyclerView);
 			}
 
@@ -99,8 +101,10 @@ public class SavedMeditationsFragment extends Fragment {
 				if (!state.error.isEmpty()) {
 					new androidx.appcompat.app.AlertDialog.Builder(requireContext()).setTitle(R.string.export_title)
 							.setMessage(state.error).setPositiveButton(R.string.button_ok, null).show();
-				} else {
-					android.widget.Toast.makeText(requireContext(), getString(R.string.export_saved, state.name), android.widget.Toast.LENGTH_LONG).show();
+                } else if (state.sharedFile != null) {
+                    de.jeisfeld.mymeditation.audio.AudioSharing.open(this, state.sharedFile, state.name);
+                } else {
+                    android.widget.Toast.makeText(requireContext(), getString(R.string.export_saved, state.name), android.widget.Toast.LENGTH_LONG).show();
 				}
 			}
 		});
@@ -114,6 +118,14 @@ public class SavedMeditationsFragment extends Fragment {
 						.setPositiveButton(R.string.button_ok, null).show();
 			}
 		});
+
+        de.jeisfeld.mymeditation.audio.SavedAudioLibrary.changes().observe(getViewLifecycleOwner(), version -> populateRecyclerView(recyclerView));
+        de.jeisfeld.mymeditation.audio.MeditationPlaybackService.state().observe(getViewLifecycleOwner(), state -> {
+            if (recyclerView.getAdapter() instanceof SavedMeditationsViewAdapter) {
+                ((SavedMeditationsViewAdapter) recyclerView.getAdapter()).playbackChanged(lastSavedPlaybackId, state.savedId);
+            }
+            lastSavedPlaybackId = state.savedId;
+        });
 
 		return root;
 	}

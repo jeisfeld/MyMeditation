@@ -33,7 +33,7 @@ public final class MeditationPlaybackService extends Service {
     private static final String CHANNEL = "meditation_playback";
     private static final int NOTIFICATION = 42;
     private static final String START = "meditation.START", RESUME = "meditation.RESUME", PAUSE = "meditation.PAUSE",
-            APPLY_SETTINGS = "meditation.APPLY_SETTINGS", STOP = "meditation.STOP", SEEK = "meditation.SEEK", NEXT = "meditation.NEXT", PREVIOUS = "meditation.PREVIOUS", SET_PAUSE = "meditation.SET_PAUSE";
+            START_SAVED = "meditation.START_SAVED", APPLY_SETTINGS = "meditation.APPLY_SETTINGS", STOP = "meditation.STOP", SEEK = "meditation.SEEK", NEXT = "meditation.NEXT", PREVIOUS = "meditation.PREVIOUS", SET_PAUSE = "meditation.SET_PAUSE";
     private static final String SAVED = "playback_session", POSITION = "playback_position";
 
     public static final class State {
@@ -41,24 +41,34 @@ public final class MeditationPlaybackService extends Service {
         public final boolean waitingForAudioFocus;
         public final boolean active;
         public final String text;
-        public final int spokenPosition;
+        public final int spokenPosition, savedId;
         public final int position;
         public final List<String> sentences;
         public final String status, error;
         public final long errorId;
         State(boolean running, int position, List<String> sentences, String status, String error, long errorId,
-                boolean active, String text, int spokenPosition, boolean waitingForAudioFocus) {
+                boolean active, String text, int spokenPosition, boolean waitingForAudioFocus, int savedId) {
             this.waitingForAudioFocus = waitingForAudioFocus;
+            this.savedId = savedId;
             this.active = active; this.text = text; this.spokenPosition = spokenPosition;
             this.running = running; this.position = position;
             this.sentences = Collections.unmodifiableList(new java.util.ArrayList<>(sentences));
             this.status = status; this.error = error; this.errorId = errorId;
         }
     }
-    private static final MutableLiveData<State> STATE = new MutableLiveData<>(new State(false, 0, Collections.emptyList(), "", "", 0, false, "", -1, false));
+    private static final MutableLiveData<State> STATE = new MutableLiveData<>(new State(false, 0, Collections.emptyList(), "", "", 0, false, "", -1, false, 0));
     public static LiveData<State> state() { return STATE; }
     public static void play(Context context, int position) {
         context.startForegroundService(new Intent(context, MeditationPlaybackService.class).setAction(START).putExtra("position", position));
+    }
+    public static void playSaved(Context context, int id) {
+        State state = STATE.getValue();
+        if (state.active && state.savedId == id) {
+            if (state.running || state.waitingForAudioFocus) { pause(context); }
+            else { context.startForegroundService(new Intent(context, MeditationPlaybackService.class).setAction(RESUME)); }
+        } else {
+            context.startForegroundService(new Intent(context, MeditationPlaybackService.class).setAction(START_SAVED).putExtra("savedId", id));
+        }
     }
     public static void seek(Context context, int position) {
         context.startForegroundService(new Intent(context, MeditationPlaybackService.class).setAction(SEEK).putExtra("position", position));
@@ -87,7 +97,8 @@ public final class MeditationPlaybackService extends Service {
     }
 
     private boolean running, transition, destroying, keepNotification, stopping, active, waitingForAudioFocus;
-    private int spokenPosition = -1;
+    private int spokenPosition = -1, playbackGeneration;
+    private boolean finalizingRecording;
     private final android.os.Handler idleHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable stopIdle = () -> { if (!running && !waitingForAudioFocus) { stopSelf(); } };
     private final Runnable renewWakeLock = new Runnable() {
@@ -103,7 +114,9 @@ public final class MeditationPlaybackService extends Service {
     private PowerManager.WakeLock wakeLock;
     private PlaybackRequest request;
     private List<String> sentences = Collections.emptyList();
-    private int position;
+    private int position, savedId;
+    private SavedAudioLibrary.Snapshot snapshot;
+    private final java.util.concurrent.ExecutorService recordingWriter = java.util.concurrent.Executors.newSingleThreadExecutor();
     private String status = "", error = "";
     private long errorId;
     private final BroadcastReceiver noisy = new BroadcastReceiver() {
@@ -150,7 +163,7 @@ public final class MeditationPlaybackService extends Service {
             @Override public void onRunning(boolean active) {
                 if (destroying || (transition && !active)) { return; }
                 running = active;
-                if (!active) {
+                if (!active && !finalizingRecording) {
                     releaseWakeLock();
                     if (!transition) {
                         if (waitingForAudioFocus) { updateNotification(); }
@@ -163,7 +176,34 @@ public final class MeditationPlaybackService extends Service {
             @Override public void onError(String message) {
                 running = false; error = message; errorId = System.nanoTime(); status = ""; publish(); finishService(false);
             }
-            @Override public void onFinished() { active = false; spokenPosition = -1; position = 0; PreferenceUtil.setSharedPreferenceString(POSITION, "0"); publish(); finishService(false); }
+            @Override public void onCompletedSentence(int index) {
+                if (request == null || request.backend == SpeechBackend.DEVICE) { return; }
+                if (index == sentences.size() - 1) { finalizingRecording = true; }
+                PlaybackRequest recording = request;
+                SavedAudioLibrary.Snapshot captured = snapshot;
+                Context context = getApplicationContext();
+                recordingWriter.execute(() -> {
+                    try {
+                        if (SentenceAudio.store(context).open(recording).played(index)) {
+                            new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
+                                    SavedAudioLibrary.keepComplete(context, recording, captured, false));
+                        }
+                    } catch (Exception ignored) {
+                        // Audio remains cached; a later playback/save can complete the library recording.
+                    }
+                });
+            }
+            @Override public void onFinished() {
+                active = false; spokenPosition = -1; position = 0; PreferenceUtil.setSharedPreferenceString(POSITION, "0"); publish();
+                if (finalizingRecording) {
+                    int generation = playbackGeneration;
+                    recordingWriter.execute(() -> new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                        if (!destroying && finalizingRecording && playbackGeneration == generation) {
+                            finalizingRecording = false; finishService(false);
+                        }
+                    }));
+                } else { finishService(false); }
+            }
         });
         if (Build.VERSION.SDK_INT >= 33) { registerReceiver(noisy, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY), RECEIVER_NOT_EXPORTED); }
         else { registerReceiver(noisy, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)); }
@@ -185,7 +225,22 @@ public final class MeditationPlaybackService extends Service {
             // Promotion precedes audio focus and any synthesis work (Android 15+ requirement).
             try {
                 startForeground(NOTIFICATION, notification(true));
-                if (START.equals(action)) { request = configuredRequest(); startAt(intent.getIntExtra("position", 0)); }
+                if (START.equals(action)) {
+                    savedId = 0;
+                    snapshot = SavedAudioLibrary.Snapshot.current(this);
+                    request = configuredRequest();
+                    SavedAudioLibrary.begin(request);
+                    startAt(intent.getIntExtra("position", 0));
+                } else if (START_SAVED.equals(action)) {
+                    savedId = intent.getIntExtra("savedId", 0);
+                    SentenceAudioStore.Book book = SavedAudioLibrary.book(this, savedId);
+                    if (book == null || !book.isComplete()) { throw new IllegalArgumentException(getString(R.string.recorded_audio_unavailable)); }
+                    SavedAudioLibrary.restore(this, savedId);
+                    snapshot = SavedAudioLibrary.Snapshot.current(this);
+                    request = book.request.withPause(PreferenceUtil.getPauseSeconds());
+                    SavedAudioLibrary.begin(request);
+                    startAt(0);
+                }
                 else {
                     restoreRequest();
                     if (SEEK.equals(action)) { startAt(intent.getIntExtra("position", position)); }
@@ -223,7 +278,8 @@ public final class MeditationPlaybackService extends Service {
         PlaybackRequest previous = request;
         PlaybackRequest updated = configuredRequest(previous.text, previous.pauseSeconds);
         int mapped = previous.positionFor(updated, position);
-        if (previous.sameSynthesis(updated)) {
+        if (previous.sameSynthesis(updated) && (previous.backend == SpeechBackend.DEVICE
+                || SentenceAudioStore.key(previous).equals(SentenceAudioStore.key(updated)))) {
             if (Double.compare(previous.speed, updated.speed) == 0 || player.setPlaybackSpeed(updated.speed)) {
                 request = updated;
                 saveRequest();
@@ -237,11 +293,18 @@ public final class MeditationPlaybackService extends Service {
         if (request != null) { return; }
         String saved = PreferenceUtil.getSharedPreferenceString(SAVED, "");
         request = saved.isEmpty() ? configuredRequest() : PlaybackRequest.parse(saved);
+        snapshot = SavedAudioLibrary.Snapshot.current(this);
+        savedId = PreferenceUtil.getSharedPreferenceInt(R.string.key_saved_playback_source, 0);
         try { position = Integer.parseInt(PreferenceUtil.getSharedPreferenceString(POSITION, "0")); }
         catch (NumberFormatException e) { position = 0; }
     }
-    private void saveRequest() { PreferenceUtil.setSharedPreferenceString(SAVED, request.json()); }
+    private void saveRequest() {
+        PreferenceUtil.setSharedPreferenceString(SAVED, request.json());
+        PreferenceUtil.setSharedPreferenceInt(R.string.key_saved_playback_source, savedId);
+    }
     private void startAt(int index) {
+        playbackGeneration++; finalizingRecording = false;
+        SavedAudioLibrary.begin(request);
         active = true; spokenPosition = -1;
         sentences = SpeechSegments.split(request.text, request.backend.segmentLimit);
         position = Math.max(0, Math.min(index, sentences.size() - 1));
@@ -254,7 +317,7 @@ public final class MeditationPlaybackService extends Service {
         idleHandler.removeCallbacks(renewWakeLock);
         idleHandler.postDelayed(renewWakeLock, 5 * 60 * 1000L);
         transition = true;
-        try { player.start(sentences, position, request.pauseSeconds, request.backend, request.model, request.voice, request.speed, request.style); }
+        try { player.start(request, position); }
         finally { transition = false; }
         if (!stopping) { publish(); updateSession(); updateNotification(); }
     }
@@ -284,7 +347,7 @@ public final class MeditationPlaybackService extends Service {
         try { player.stop(); running = false; status = ""; releaseWakeLock(); publish(); updateSession(); pausedNotification(); }
         finally { transition = false; }
     }
-    private void stopPlayback() { pausePlayback(); active = false; spokenPosition = -1; position = 0; PreferenceUtil.setSharedPreferenceString(POSITION, "0"); publish(); finishService(false); }
+    private void stopPlayback() { playbackGeneration++; finalizingRecording = false; pausePlayback(); active = false; spokenPosition = -1; position = 0; PreferenceUtil.setSharedPreferenceString(POSITION, "0"); publish(); finishService(false); }
     private void pausedNotification() {
         keepNotification = true; stopping = true;
         stopForeground(STOP_FOREGROUND_DETACH);
@@ -309,7 +372,7 @@ public final class MeditationPlaybackService extends Service {
         idleHandler.removeCallbacks(renewWakeLock);
         if (wakeLock != null && wakeLock.isHeld()) { wakeLock.release(); }
     }
-    private void publish() { STATE.setValue(new State(running, position, sentences, status, error, errorId, active, request == null ? "" : request.text, spokenPosition, waitingForAudioFocus)); }
+    private void publish() { STATE.setValue(new State(running, position, sentences, status, error, errorId, active, request == null ? "" : request.text, spokenPosition, waitingForAudioFocus, savedId)); }
     private void updateSession() {
         session.setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE
                 | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_STOP | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS)
@@ -323,7 +386,7 @@ public final class MeditationPlaybackService extends Service {
                 : PendingIntent.getService(this, code, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
     private Notification notification(boolean active) {
-        PendingIntent open = PendingIntent.getActivity(this, 0, MainActivity.notificationIntent(this, R.id.navigation_meditation), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent open = PendingIntent.getActivity(this, 0, MainActivity.notificationIntent(this, savedId > 0 ? R.id.navigation_saved_meditations : R.id.navigation_meditation), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         session.setSessionActivity(open);
         String description = status.isEmpty() ? getString(R.string.notification_sentence, getString(active ? R.string.notification_playing : R.string.notification_paused), position + 1, sentences.size()) : status;
         return new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_meditation).setContentTitle(getString(R.string.app_name))
@@ -343,6 +406,7 @@ public final class MeditationPlaybackService extends Service {
         destroying = true;
         idleHandler.removeCallbacksAndMessages(null);
         if (player != null) { player.close(); }
+        recordingWriter.shutdown();
         releaseWakeLock();
         running = false; waitingForAudioFocus = false; status = "";
         if (!keepNotification) { active = false; spokenPosition = -1; }
@@ -350,6 +414,7 @@ public final class MeditationPlaybackService extends Service {
         if (!keepNotification) { getSystemService(NotificationManager.class).cancel(NOTIFICATION); }
         if (session != null) { session.release(); }
         unregisterReceiver(noisy);
+        SavedAudioLibrary.cleanupDeleted(getApplicationContext());
         super.onDestroy();
     }
 }

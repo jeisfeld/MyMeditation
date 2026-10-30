@@ -128,6 +128,8 @@ public class MeditationFragment extends Fragment {
                 if (!state.error.isEmpty()) {
                     new AlertDialog.Builder(requireContext()).setTitle(R.string.export_title).setMessage(state.error)
                             .setPositiveButton(R.string.button_ok, null).show();
+                } else if (state.sharedFile != null) {
+                    de.jeisfeld.mymeditation.audio.AudioSharing.open(this, state.sharedFile, state.name);
                 } else {
                     android.widget.Toast.makeText(requireContext(), getString(R.string.export_saved, state.name), android.widget.Toast.LENGTH_LONG).show();
                 }

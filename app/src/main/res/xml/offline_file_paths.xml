@@ -1,3 +1,4 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <files-path name="offline_meditations" path="offline-meditations/" />
+    <cache-path name="shared_meditations" path="shared-meditations/" />
 </paths>

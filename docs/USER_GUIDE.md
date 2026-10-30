@@ -29,7 +29,7 @@ The old coachat.de web relay is no longer used. Cloud text generation needs a ne
 
 The pause slider sets the gap between spoken segments. The current range is 0–30 seconds: half-second choices through 10 seconds, then whole seconds. The voice-speed slider is most precise around normal speed. Tap either displayed value to enter an exact value; decimal commas and decimal points are accepted.
 
-Both settings apply to live playback, including device TTS. Live speed settings are remembered per cloud voice. Settings captured in an already rendered single MP3 are part of that file and cannot be changed during its playback.
+Both settings apply to live playback, including device TTS. Live speed settings are remembered per cloud voice. Recorded sentence audio uses the same player and adjustable pauses. Changing voice settings or speed selects a new recording identity; matching sentence audio is reused. Legacy whole-file MP3s still have fixed recorded pauses and speed.
 
 ## Configuration and defaults
 
@@ -45,9 +45,9 @@ Open **Saved meditations** and press **Save current meditation**. Enter a name a
 - the system instruction and query template;
 - the topic and meditation text.
 
-This original text-save operation does not generate audio or capture the playback speed, pause duration or selected AI model/voice. You can save several snapshots with the same name; choose descriptive names to distinguish them.
+This original text-save operation does not generate audio. If a complete sentence recording already exists with the current text and speech settings, the snapshot is linked to it; otherwise it stays text-only. You can save several snapshots with the same name; choose descriptive names to distinguish them.
 
-Tap a saved entry's **name** to restore its prompts, topic and text into the current draft. This changes the current configuration as well as the meditation text. It does not automatically start speaking. Go to Meditation to read, edit or play the restored text.
+Tap a saved entry's **name** to restore its prompts, topic and text into the current draft. This changes the current configuration as well as the meditation text. For audio entries it also restores recorded provider, model, voice, instructions and speed. The current pause duration stays unchanged. Loading stops the previous playback session and does not automatically start speaking. Go to Meditation to read, edit or play the restored text.
 
 Drag the handle at the far right to change saved order. Use the pencil immediately before Trash to rename an entry. Use Trash to delete, then confirm; Cancel keeps it. Deleting one entry does not remove the others or reset their order. Renaming preserves the associated text and audio.
 
@@ -55,10 +55,16 @@ The name filter matches part of a name without case sensitivity. **Audio only** 
 
 ## Recorded audio and background playback
 
-The save icon beside Speak creates an offline MP3 with the current cloud speech settings. It is separate from saving a text snapshot. Supported providers and export progress/cancellation are described in [AI integration](../AI-INTEGRATION.md).
+Cloud playback automatically retains an MP3 for each spoken sentence/segment. Once every segment has been played with consistent text and voice settings, the app keeps a complete audio meditation in Saved meditations. It attaches to a matching text-only snapshot or reuses a matching audio entry before creating a new one. Seeking past unplayed sentences or mixing voice settings does not create a complete mixed recording. Partial work can be reused later.
 
-Entries with audio show Play and Share before Edit and Trash. Play uses the local file; Share opens Android's share sheet. Restoring a saved name still restores text/prompts; use its Play icon to listen to the recording. The current single-MP3 player does not highlight individual sentences or change the recorded pauses.
+The save icon beside Speak asks for a name and **saves all sentence audio**, without having to listen to the whole meditation. Playback and saving use the same audio cache/store. Device TTS can still speak pasted or generated text, but cannot create these saved audio recordings.
 
-Playback continues with the screen locked. Temporary navigation interruptions pause and then resume audio when focus returns; live speech repeats the interrupted segment, while MP3 playback continues at the paused audio position. Manual pause/stop or headphone disconnection cancels automatic resume. Notification taps reuse the app and open the relevant playback tab.
+Entries with audio show Play and Share before Edit and Trash. Play opens Meditation and uses the existing sentence controls, highlighting and scrolling. Pauses can be changed during replay. Loading a saved name restores its text, prompts and recorded voice settings/speed. Exact matches play from local sentence files without provider credentials or a network request. Changing text, voice settings or speed selects new audio; the previous saved recording remains intact.
 
-Saved data and recordings are private app data. Uninstalling the app removes them. Share an MP3 to retain a copy outside the app; large recordings are excluded from cloud backup. There is no text-library import/export screen.
+Share asks for the pause between sentences (default **2 seconds**) and assembles a single MP3 locally. This pause is independent of the playback pause preference. Wait for assembly, then use Android's share sheet. Sharing does not synthesize audio again or use provider credit. It can be cancelled through the save/share notification.
+
+Older whole-file MP3s remain playable and shareable through the legacy player. Their speed and pauses are baked into the file, and they have no sentence highlighting. Regenerate their audio to obtain the sentence-based features.
+
+Playback continues with the screen locked. Temporary navigation interruptions pause and then resume audio when focus returns. Sentence playback repeats the interrupted segment; legacy MP3 playback continues at the paused audio position. Manual pause/stop or headphone disconnection cancels automatic resume. Notification taps reuse the app and open the playback source tab.
+
+Recordings are private app data. Deleting an entry removes its link; audio shared by another entry is retained. Unreferenced recordings are cleaned once active work has ended. Uninstalling removes private recordings. Share a completed MP3 to retain a copy outside the app. Large audio files are excluded from cloud backup. There is no text-library import/export screen. More storage/provider details are in [AI integration](../AI-INTEGRATION.md).

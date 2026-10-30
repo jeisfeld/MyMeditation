@@ -69,7 +69,7 @@
     <string name="button_end_meditation">Meditation beenden</string>
     <string name="ai_model_presets_label">KI-Modellvorlagen</string>
     <string name="ai_model_presets_hint">Vorlage auswählen…</string>
-    <string name="button_export_meditation">Offline-MP3 speichern</string>
+    <string name="button_export_meditation">Audio speichern</string>
     <string name="button_cancel_export">MP3-Erstellung abbrechen</string>
     <string name="button_play_offline">Offline-Aufnahme abspielen</string>
     <string name="button_share_offline">MP3 teilen</string>
@@ -78,14 +78,14 @@
     <string name="offline_channel">Offline-Meditation</string>
     <string name="offline_back">15 Sekunden zurück</string>
     <string name="offline_forward">15 Sekunden vor</string>
-    <string name="export_title">Offline-MP3 speichern</string>
-    <string name="export_channel">MP3-Erstellung</string>
-    <string name="export_preparing">MP3 wird vorbereitet…</string>
+    <string name="export_title">Audiomeditation speichern</string>
+    <string name="export_channel">Audio speichern und teilen</string>
+    <string name="export_preparing">Audio wird vorbereitet…</string>
     <string name="export_progress">Abschnitt %1$d von %2$d wird erstellt…</string>
     <string name="export_retry">Sprachdienst nicht verfügbar. Neuer Versuch in %1$d s (Wiederholung %2$d).</string>
-    <string name="export_cloud_required">Wähle eine KI-Stimme in den KI-Einstellungen, um eine Offline-MP3 zu speichern. Die Geräte-Sprachausgabe wird für die MP3-Erstellung nicht unterstützt.</string>
-    <string name="export_failed">Die MP3 konnte nicht erstellt werden. Es wurde keine unvollständige Aufnahme gespeichert. Prüfe die Verbindung und den verfügbaren Speicher und versuche es erneut.</string>
-    <string name="export_saved">„%1$s“ ist unter Gespeicherte Meditationen verfügbar. Mit Abspielen kannst du offline hören und mit Teilen die MP3 kopieren.</string>
+    <string name="export_cloud_required">Wähle in den KI-Einstellungen eine KI-Stimme, um Audio pro Satz zu speichern. Die Sprachausgabe des Geräts kann nicht gespeichert werden.</string>
+    <string name="export_failed">Das Audio konnte nicht gespeichert oder zusammengesetzt werden. Es wurde keine unvollständige Aufnahme hinzugefügt. Bitte versuche es erneut.</string>
+    <string name="export_saved">„%1$s“ ist unter Gespeichert verfügbar. Spiele die Sätze offline ab oder teile eine MP3-Datei.</string>
     <string name="default_offline_name">Offline-Meditation</string>
     <string name="button_more">Mehr</string>
     <string name="device_speech_default">Gerätestandard</string>
@@ -100,4 +100,8 @@
     <string name="saved_meditation_audio_only">Nur Audio</string>
     <string name="rename_saved_meditation">Meditation umbenennen</string>
     <string name="saved_meditation_name_required">Der Name darf nicht leer sein.</string>
+    <string name="recorded_audio_unavailable">Die Satzaufnahme ist unvollständig oder nicht verfügbar. Lade den Text und speichere das Audio erneut.</string>
+    <string name="share_audio_progress">Satz %1$d von %2$d wird zusammengesetzt…</string>
+    <string name="share_pause_prompt">Pause zwischen den Sätzen der geteilten MP3, in Sekunden (Standard: 2).</string>
+    <string name="audio_operation_active">Audio wird bereits gespeichert oder zum Teilen vorbereitet.</string>
 </resources>

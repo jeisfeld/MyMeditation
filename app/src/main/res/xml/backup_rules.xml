@@ -2,4 +2,5 @@
 <full-backup-content>
     <!-- Large, shareable recordings should not exhaust Android cloud backup's settings quota. -->
     <exclude domain="file" path="offline-meditations/" />
+        <exclude domain="file" path="sentence-audio/" />
 </full-backup-content>

@@ -2,6 +2,7 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="file" path="offline-meditations/" />
+        <exclude domain="file" path="sentence-audio/" />
     </cloud-backup>
     <!-- Device-to-device transfers retain completed recordings along with the saved text. -->
     <device-transfer />

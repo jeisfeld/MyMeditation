@@ -38,9 +38,9 @@ Preferences use `PreferenceManager`'s application-default SharedPreferences. Exi
 | Saved prompts | `saved_system_prompt[id]`, `saved_query_template[id]` |
 | Saved topic/text | `meditation_content[id]`, `meditation_text[id]` |
 
-A plain-text save captures four text fields and a name. It does not capture live pause/model/voice/speed choices. The restore action copies those four fields back into current preferences, refreshes both ViewModels, and leaves playback stopped. Editing/deleting/reordering uses saved IDs, not a displayed row's name. Duplicate names therefore remain independent entries.
+A plain-text save captures four text fields and a name. It does not generate audio, but can attach an already complete sentence recording with matching current settings. The restore action copies those four fields back into current preferences, refreshes both ViewModels, and stops previous playback. Recorded entries additionally restore their synthesis settings and speed while retaining the independently selected pause duration. Editing/deleting/reordering uses saved IDs, not a displayed row's name. Duplicate names therefore remain independent entries.
 
-The same saved IDs now also identify `files/offline-meditations/<id>.mp3` and optional `offline_settings_<id>` recording metadata. Those are later extensions; text-only legacy entries remain valid without either. See [AI integration](../AI-INTEGRATION.md) for recording format, cache, foreground-service and credential details.
+Saved IDs may link through `sentence_audio_<id>` to an immutable sentence recording under `files/sentence-audio/<identity>/`; several names may share a recording. `SentenceAudioStore` owns manifests and MP3 publication, `SentenceAudio` owns generation/rendering, `SavedAudioLibrary` owns links/settings restoration, and `SentenceAudioAssembler` creates whole MP3s only for sharing. Legacy `files/offline-meditations/<id>.mp3` and `offline_settings_<id>` metadata remain supported; text-only entries remain valid without audio. See [AI integration](../AI-INTEGRATION.md) for recording format, cache, foreground-service and credential details.
 
 ## Boundaries of this baseline
 
