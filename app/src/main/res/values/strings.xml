@@ -114,4 +114,18 @@
     <string name="share_pause_prompt">Pause between sentences in the shared MP3, in seconds (default: 2).</string>
     <string name="audio_operation_active">An audio save or share is already running.</string>
     <string name="label_meditation_text_offline">Meditation text (offline)</string>
+    <string name="system_prompt_templates">System prompt templates</string>
+    <string name="query_prompt_templates">Query templates</string>
+    <string name="prompt_templates_hint">Templates…</string>
+    <string name="prompt_template_save_current">Save current text</string>
+    <string name="prompt_template_rename">Rename</string>
+    <string name="prompt_template_update">Update selected template</string>
+    <string name="prompt_template_name">Template name</string>
+    <string name="prompt_template_duplicate_name">A template with this name already exists.</string>
+    <string name="prompt_template_text_required">Enter some text before saving a template.</string>
+    <string name="prompt_template_placeholder_required">The query template must include @TEXT@.</string>
+    <string name="prompt_template_missing">This template is no longer available.</string>
+    <string name="prompt_template_delete_confirmation">Delete the template “%1$s”? The current text stays unchanged.</string>
+    <string name="prompt_template_update_confirmation">Replace the text of “%1$s” with the current text?</string>
+    <string name="button_close">Close</string>
 </resources>

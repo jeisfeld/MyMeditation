@@ -39,6 +39,10 @@ First launch supplies missing prompts, a topic and the original 15-second pause 
 
 When the screen keyboard opens for a meditation topic/text or a system instruction/query template, that text section expands to fill the available page above the keyboard. The bottom tabs and unrelated controls are hidden. Dismiss the keyboard with Back to restore the normal page; your text and cursor remain in place. With a hardware keyboard, the normal layout stays visible.
 
+Each prompt heading in Settings has a **Templates…** dropdown and a pencil button. The two fields have independent template libraries, listed alphabetically. Choosing a template fills that field and saves it as the active prompt; you can edit it normally afterward. The dropdown returns to Templates… when the field no longer matches a saved template.
+
+Open the pencil button to manage that library. **Save current text** asks for a name and captures the visible field, including edits you have just typed. Select a saved template in the management dialog to **Rename**, **Delete**, or **Update selected template** with the current field text. Updating and deleting ask for confirmation. Names must be nonempty and unique within that library. Query templates must contain the literal `@TEXT@`. Renaming/deleting a template leaves the current field and saved meditations unchanged; ordinary edits do not overwrite a stored template. Libraries persist locally across restarts.
+
 ## Save and restore text meditations
 
 Open **Saved meditations** and press **Save current meditation**. Enter a name and confirm Save; Cancel adds nothing. This stores a snapshot of:

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp">
+    <Button
+        android:id="@+id/buttonSavePromptTemplate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/prompt_template_save_current" />
+    <Spinner
+        android:id="@+id/spinnerManagedPromptTemplate"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:contentDescription="@string/prompt_templates_hint"
+        android:saveEnabled="false" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/buttonRenamePromptTemplate"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:text="@string/prompt_template_rename" />
+        <Button
+            android:id="@+id/buttonDeletePromptTemplate"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:maxLines="1"
+            android:text="@string/button_delete" />
+    </LinearLayout>
+    <Button
+        android:id="@+id/buttonUpdatePromptTemplate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/prompt_template_update" />
+</LinearLayout>

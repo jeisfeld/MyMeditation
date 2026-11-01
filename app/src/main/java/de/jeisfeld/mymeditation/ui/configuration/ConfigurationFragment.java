@@ -27,6 +27,7 @@ public class ConfigurationFragment extends Fragment {
     private de.jeisfeld.mymeditation.ui.PageInsets pageInsets;
     private FragmentConfigurationBinding binding;
     private InlineAiSettings inlineAiSettings;
+    private InlinePromptTemplates systemTemplates, queryTemplates;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -52,6 +53,17 @@ public class ConfigurationFragment extends Fragment {
             }
         });
 
+
+        systemTemplates = new InlinePromptTemplates(PromptTemplates.Kind.SYSTEM, binding.editTextSystemPrompt,
+                binding.spinnerSystemPromptTemplate, binding.buttonSystemPromptTemplates, text -> {
+                    binding.editTextSystemPrompt.setText(text);
+                    configurationViewModel.setSystemPrompt(text);
+                });
+        queryTemplates = new InlinePromptTemplates(PromptTemplates.Kind.QUERY, binding.editTextQueryTemplate,
+                binding.spinnerQueryPromptTemplate, binding.buttonQueryPromptTemplates, text -> {
+                    binding.editTextQueryTemplate.setText(text);
+                    configurationViewModel.setQueryTemplate(text);
+                });
 
         inlineAiSettings = new InlineAiSettings(binding);
         inlineAiSettings.refresh();
@@ -299,6 +311,8 @@ public class ConfigurationFragment extends Fragment {
     public void onDestroyView() {
         if (pageInsets != null) { pageInsets.close(); pageInsets = null; }
         super.onDestroyView();
+        systemTemplates.dispose(); queryTemplates.dispose();
+        systemTemplates = null; queryTemplates = null;
         inlineAiSettings.dispose();
         inlineAiSettings = null;
         binding = null;

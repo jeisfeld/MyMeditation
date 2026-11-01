@@ -98,4 +98,18 @@
     <string name="share_pause_prompt">Pause zwischen den Sätzen der geteilten MP3, in Sekunden (Standard: 2).</string>
     <string name="audio_operation_active">Audio wird bereits gespeichert oder zum Teilen vorbereitet.</string>
     <string name="label_meditation_text_offline">Meditationstext (offline)</string>
+    <string name="system_prompt_templates">Vorlagen für Systemanweisungen</string>
+    <string name="query_prompt_templates">Anfragevorlagen</string>
+    <string name="prompt_templates_hint">Vorlagen…</string>
+    <string name="prompt_template_save_current">Aktuellen Text speichern</string>
+    <string name="prompt_template_rename">Umbenennen</string>
+    <string name="prompt_template_update">Gewählte Vorlage aktualisieren</string>
+    <string name="prompt_template_name">Vorlagenname</string>
+    <string name="prompt_template_duplicate_name">Eine Vorlage mit diesem Namen ist bereits vorhanden.</string>
+    <string name="prompt_template_text_required">Gib einen Text ein, bevor du eine Vorlage speicherst.</string>
+    <string name="prompt_template_placeholder_required">Die Anfragevorlage muss @TEXT@ enthalten.</string>
+    <string name="prompt_template_missing">Diese Vorlage ist nicht mehr vorhanden.</string>
+    <string name="prompt_template_delete_confirmation">Vorlage „%1$s“ löschen? Der aktuelle Text bleibt erhalten.</string>
+    <string name="prompt_template_update_confirmation">Den Text von „%1$s“ durch den aktuellen Text ersetzen?</string>
+    <string name="button_close">Schließen</string>
 </resources>

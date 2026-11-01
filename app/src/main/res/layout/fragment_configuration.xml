@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -11,16 +12,42 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="vertical">
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:labelFor="@id/editTextSystemPrompt"
-            android:layout_marginStart="@dimen/activity_horizontal_margin"
-            android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginHorizontal="@dimen/activity_horizontal_margin"
             android:layout_marginTop="@dimen/activity_heading_margin"
-            android:text="@string/label_system_prompt"
-            android:textSize="@dimen/text_size_content_heading"
-            android:textStyle="bold" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxWidth="160dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:labelFor="@id/editTextSystemPrompt"
+                android:text="@string/label_system_prompt"
+                android:textSize="@dimen/text_size_content_heading"
+                android:textStyle="bold" />
+            <Spinner
+                android:id="@+id/spinnerSystemPromptTemplate"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:saveEnabled="false"
+                android:contentDescription="@string/system_prompt_templates" />
+            <ImageButton
+                android:id="@+id/buttonSystemPromptTemplates"
+                android:layout_width="40dp"
+                android:layout_height="48dp"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="12dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_edit_meditation"
+                app:tint="?attr/colorControlNormal"
+                android:contentDescription="@string/system_prompt_templates"
+                android:tooltipText="@string/system_prompt_templates" />
+        </LinearLayout>
 
         <EditText
             android:id="@+id/editTextSystemPrompt"
@@ -43,16 +70,42 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="vertical">
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/activity_horizontal_margin"
-            android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginHorizontal="@dimen/activity_horizontal_margin"
             android:layout_marginTop="@dimen/activity_heading_margin"
-            android:labelFor="@id/editTextQueryTemplate"
-            android:text="@string/label_query_template"
-            android:textSize="@dimen/text_size_content_heading"
-            android:textStyle="bold" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxWidth="160dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:labelFor="@id/editTextQueryTemplate"
+                android:text="@string/label_query_template"
+                android:textSize="@dimen/text_size_content_heading"
+                android:textStyle="bold" />
+            <Spinner
+                android:id="@+id/spinnerQueryPromptTemplate"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:saveEnabled="false"
+                android:contentDescription="@string/query_prompt_templates" />
+            <ImageButton
+                android:id="@+id/buttonQueryPromptTemplates"
+                android:layout_width="40dp"
+                android:layout_height="48dp"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="12dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_edit_meditation"
+                app:tint="?attr/colorControlNormal"
+                android:contentDescription="@string/query_prompt_templates"
+                android:tooltipText="@string/query_prompt_templates" />
+        </LinearLayout>
 
         <EditText
             android:id="@+id/editTextQueryTemplate"

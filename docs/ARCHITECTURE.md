@@ -8,7 +8,7 @@ The historical baseline is `cbd677d`, the final SDK-only commit before the direc
 | --- | --- |
 | First-run values, application context, message localization | `Application` |
 | Tab navigation, notification destination delivery | `MainActivity`, Navigation component, `mobile_navigation.xml` |
-| Prompts and template validation | `ConfigurationFragment`, `ConfigurationViewModel` |
+| Prompts, template libraries and validation | `ConfigurationFragment`, `ConfigurationViewModel`, `InlinePromptTemplates`, `PromptTemplates` |
 | Editable topic/text, request action, pause/position controls | `MeditationFragment`, `MeditationViewModel` |
 | Literal `@TEXT@` substitution | `MeditationPrompt` |
 | Generated text request/response | `AiClient`, `AiProvider`, `AiProtocol`; replaces the former web relay |
@@ -45,3 +45,5 @@ Saved IDs may link through `sentence_audio_<id>` to an immutable sentence record
 ## Boundaries of this baseline
 
 Tests characterize retained behavior, not every public helper inherited from the original utility library. In particular, there is no UI for PreferenceUtil's byte-array export/import helpers, so this baseline does not advertise a library backup feature. Device speech tests simulate Android TTS callbacks: they validate sequencing, pauses, cancellation and errors, not voice quality or a vendor engine's implementation. Actual provider HTTP behavior remains an integration concern even where request/response parsing has local tests.
+
+Prompt template libraries are separate from named meditation snapshots. `system_prompt_templates` and `query_prompt_templates` store version-1 JSON containing stable IDs, names and verbatim text. Each library validates its own names; query entries additionally require `@TEXT@`. The compact picker follows exact draft text, and manager edits never implicitly replace the active draft. The libraries use ordinary private app preferences and the existing preference backup policy; deleting a saved meditation does not remove a prompt template.
