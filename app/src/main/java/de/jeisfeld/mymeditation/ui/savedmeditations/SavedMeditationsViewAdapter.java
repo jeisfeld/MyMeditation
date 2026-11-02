@@ -10,7 +10,6 @@ import android.widget.TextView;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import androidx.annotation.NonNull;
@@ -68,7 +67,7 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
         notifyDataSetChanged();
     }
 
-    @Override public boolean canReorder() { return mNameFilter.trim().isEmpty() && !mAudioOnly; }
+    @Override public boolean canReorder() { return mMeditationIds.size() > 1; }
 
     private void rename(Fragment fragment, int id, String oldName) {
         android.widget.EditText input = new android.widget.EditText(fragment.requireContext());
@@ -231,19 +230,19 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 
 	@Override
 	public final void onRowMoved(final int fromPosition, final int toPosition) {
-        if (!canReorder() || fromPosition < 0 || toPosition < 0
+        if (!canReorder() || fromPosition < 0 || toPosition < 0 || fromPosition == toPosition
                 || fromPosition >= mMeditationIds.size() || toPosition >= mMeditationIds.size()) { return; }
-		if (fromPosition < toPosition) {
-			for (int i = fromPosition; i < toPosition; i++) {
-				Collections.swap(mMeditationIds, i, i + 1);
-			}
-		}
-		else {
-			for (int i = fromPosition; i > toPosition; i--) {
-				Collections.swap(mMeditationIds, i, i - 1);
-			}
-		}
-		PreferenceUtil.setSharedPreferenceIntList(R.string.key_saved_meditation_ids, mMeditationIds);
+        Integer moving = mMeditationIds.get(fromPosition);
+        Integer target = mMeditationIds.get(toPosition);
+        ArrayList<Integer> all = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids);
+        if (!all.contains(moving) || !all.contains(target)) { return; }
+        // Move just this ID in the full list, preserving every hidden entry and its relative order.
+        all.remove(moving);
+        int anchor = all.indexOf(target);
+        all.add(anchor + (fromPosition < toPosition ? 1 : 0), moving);
+        PreferenceUtil.setSharedPreferenceIntList(R.string.key_saved_meditation_ids, all);
+        mMeditationIds.remove(fromPosition);
+        mMeditationIds.add(toPosition, moving);
 		notifyItemMoved(fromPosition, toPosition);
 	}
 

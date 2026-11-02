@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:minHeight="48dp">
+    android:minHeight="40dp">
 
     <TextView
         android:id="@+id/textViewMeditationName"
@@ -25,9 +25,9 @@
     <ImageButton
         android:id="@+id/buttonPlayOffline"
         android:layout_width="40dp"
-        android:layout_height="48dp"
+        android:layout_height="40dp"
         android:paddingHorizontal="8dp"
-        android:paddingVertical="12dp"
+        android:paddingVertical="8dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_playback_play"
         app:tint="?attr/colorControlNormal"
@@ -40,9 +40,9 @@
     <ImageButton
         android:id="@+id/buttonShareOffline"
         android:layout_width="40dp"
-        android:layout_height="48dp"
+        android:layout_height="40dp"
         android:paddingHorizontal="8dp"
-        android:paddingVertical="12dp"
+        android:paddingVertical="8dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_share_audio"
         app:tint="?attr/colorControlNormal"
@@ -56,9 +56,9 @@
     <ImageButton
         android:id="@+id/buttonRenameMeditation"
         android:layout_width="40dp"
-        android:layout_height="48dp"
+        android:layout_height="40dp"
         android:paddingHorizontal="8dp"
-        android:paddingVertical="12dp"
+        android:paddingVertical="8dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_edit_meditation"
         app:tint="?attr/colorControlNormal"
@@ -71,9 +71,9 @@
     <ImageButton
         android:id="@+id/imageViewDelete"
         android:layout_width="40dp"
-        android:layout_height="48dp"
+        android:layout_height="40dp"
         android:paddingHorizontal="8dp"
-        android:paddingVertical="12dp"
+        android:paddingVertical="8dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         app:tint="?attr/colorControlNormal"
         android:src="@drawable/ic_button_delete"

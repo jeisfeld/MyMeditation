@@ -75,7 +75,7 @@ Tap a saved entry's **name** to restore its prompts, topic and text into the cur
 
 Drag the handle at the far right to change saved order. Use the pencil immediately before Trash to rename an entry. Use Trash to delete, then confirm; Cancel keeps it. Deleting one entry does not remove the others or reset their order. Renaming preserves the associated text and audio.
 
-The name filter matches part of a name without case sensitivity. **Audio only** limits the list to entries with a completed local recording. Clear both filters to enable drag reordering. Filters do not delete hidden entries.
+The name filter matches part of a name without case sensitivity. **Audio only** limits the list to entries with a completed local recording. Drag reordering remains available with either or both filters active. Dragging upward puts the meditation immediately before the visible entry you cross; dragging downward puts it immediately after that entry in the full saved list. Hidden entries keep their order relative to each other. Clear the filters to see the resulting full order. Filters do not delete hidden entries.
 
 ## Recorded audio and background playback
 
