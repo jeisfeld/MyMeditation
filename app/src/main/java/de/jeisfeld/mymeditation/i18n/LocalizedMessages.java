@@ -12,6 +12,7 @@ public final class LocalizedMessages {
     }
     static int resource(UiText message) {
         switch (message) {
+            case INVALID_WAIT_COMMAND: return R.string.message_invalid_wait_command;
             case WAITING_FOR_AUDIO_FOCUS: return R.string.message_waiting_for_audio_focus;
             case AUDIO_UNAVAILABLE: return R.string.message_audio_unavailable;
             case DEVICE_START_FAILED: return R.string.message_device_start_failed;

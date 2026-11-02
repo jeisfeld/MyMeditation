@@ -41,6 +41,7 @@ HTML test results are in `app/build/reports/tests/testDebugUnitTest/index.html`;
 | Device TTS sentence order, pause timing, starting at a selected position, stop during a pause, late callbacks, initialization errors, empty text | `DeviceSpeechBaselineTest` |
 | Punctuation/Unicode splitting, trailing text, bounded segments | Existing `SpeechProtocolTest`, `NativeSpeechTest`, `SpokenTextRangesTest` |
 | Current pause/speed mappings and playback-position conversion | Existing `PlaybackScalesTest`, `PlaybackRequestTest` |
+| Timed activity pauses, Unicode/decimal parsing, validation, offsets, cancellation/seeking, saved replay and MP3 silence | `MeditationPausesTest`, `DeviceTimedPauseTest`, `SentenceTimedPauseTest`, `SentenceAudioStoreTest`, `SentenceAudioAssemblerTest`; prompt enrichment in `AiProtocolTest` and invalid-draft UI in `OriginalWorkflowBaselineTest` |
 | Sentence storage/identity/completion, reuse, restoration, automatic retention, mixed-setting protection and deletion | `SentenceAudioStoreTest`, `SavedAudioLibraryTest`, `SentenceReplayTest`, `SentencePlaybackServiceTest` |
 | Share assembly, pauses, cancellation and UI routing/filtering | `SentenceAudioAssemblerTest`, `SentenceAudioUiTest` |
 | Provider requests/responses, retries, voice lists/profiles, localization, MP3 encoding, focus recovery, filters | Existing HTTP/audio/i18n/filter suites |
@@ -69,6 +70,9 @@ Run the basic workflow in English and German. Include a portrait phone, landscap
 | Paste several sentences, a final unpunctuated line and an empty text; use device speech | Spoken text matches the draft, nonempty trailing text is retained, empty input starts no audio |
 | Start at a nonzero position; pause/resume; seek; stop | Position follows the intended segment, pause stops speech, Stop restores creation controls and position zero |
 | Change pause duration; set zero, fractional and long pauses | Gaps match the chosen value without losing subsequent text |
+| Play `Take three more breaths. [wait 18s] Continue.` in device/cloud speech, then saved replay and Share | A silent 18-second activity pause occurs regardless of speech speed or ordinary gap; the command is never spoken |
+| Pause, seek or interrupt audio during `[wait 300s]`; try leading/trailing/consecutive commands and invalid `[wait 1,5s]` | Controls cancel old timers; interrupted pauses restart; invalid drafts show an error; Bluetooth remains connected through long pauses |
+| Generate English and German meditations with empty/custom system instructions | Activity commands use the same `[wait Ns]` syntax; stored prompts stay unchanged; review realistic timing and placement |
 | Device TTS unavailable or engine initialization fails | Playback stops with an error; meditation text is retained |
 | Create successfully with one configured provider, then deliberately cause a request failure | Success replaces the draft; failure restores the previous draft and re-enables Create |
 | Edit topic without changing focus, then press Create | Request considers the newly visible topic |
@@ -77,9 +81,9 @@ Run the basic workflow in English and German. Include a portrait phone, landscap
 
 Cloud creation and listening checks require a locally configured provider key and may incur API charges. Never add real keys to test fixtures, logs or Git.
 
-## Validation environment for this change
+## Validation environment
 
-This workspace has SDK 36, AGP 8.13.0, Gradle 8.14.3 and JDK 21 available, rather than the repository's configured SDK 37/AGP 9.5.0/Gradle 9.6.0. Validation therefore uses an ignored copy under `work/speech-validation`, with compatibility toolchain/dependency versions. The checked-in build configuration is not downgraded. Robolectric tests execute locally in that copy; device tests are compiled only because no emulator/device is attached. Full verification with the configured toolchain and actual devices remains a separate check.
+Timed-pause validation uses the configured SDK 37, AGP 9.5.0, Gradle 9.6.0 and JDK 21 directly, without downgrading build settings or dependencies. In this sandbox, an ignored Gradle init script under `work/pause-validation.gradle` redirects the JVM test `user.home` to `work/test-user` so Robolectric can write its runtime-download lock and cache, and configures the session proxy for its Maven downloads. The app build, lint and complete local JVM suite run with this setup. Device tests are compiled; real-device listening, Bluetooth behavior and live AI generation remain manual checks.
 
 Sentence recording regression tests also cover upgrade cleanup, restored-source attachment, same-named variant insertion and deduplication, and the offline heading reacting to exact text/settings while ignoring pauses.
 
@@ -88,3 +92,9 @@ Sentence recording regression tests also cover upgrade cleanup, restored-source 
 `PageInsetsTest` covers system-bar insets consumed by AppCompat before page dispatch: the original window bars and tab space must remain reserved in normal mode and after keyboard dismissal. The top header allowance must also remain while editing; only the bottom tab space is released for the keyboard.
 
 `PromptTemplatesTest` covers independent query validation, exact Unicode/whitespace persistence, stable IDs, name conflicts, non-destructive failed updates, sorting, removal and malformed entries. `PromptTemplatesUiTest` covers saving a visible draft, selecting/persisting it, recreation, separate libraries, rename/delete/update confirmations, invalid query feedback and compact German headers on a narrow screen. Existing keyboard-layout checks also run against the new prompt headings.
+
+`PauseGuidanceUiTest` checks the default Few pauses selection, stable preference values across navigation/recreation, preservation of prompt/draft text, and German heading/dropdown placement on a 320 dp phone. `AiProtocolTest` verifies all three pacing instructions across every provider, including no-activity wording for No pauses. Live model adherence and the perceived amount of silence remain listening checks.
+
+Saved pacing regression tests cover independent named entries, legacy fallback, automatic audio snapshot capture, shared audio with different saved pacing selections and restoring the visible dropdown. Dropdown layout checks use native font measurements and verify no ellipsis for the German pacing/provider labels on a 320 dp phone. Shared compact spinner backgrounds reserve 16 dp for a 10 dp arrow inset 2 dp from the end, while selected text rows explicitly clear themed start/end padding; popup rows keep their normal touch spacing. Real-device font scaling, dark mode and RTL rendering remain visual checks.
+
+Saved pacing restoration also exercises the actual Saved meditations title-click and tab-return workflow. The pacing spinner disables Android view-state saving: its selection comes from preferences, so stale navigation state cannot override a freshly restored entry or write the old selection back to preferences.

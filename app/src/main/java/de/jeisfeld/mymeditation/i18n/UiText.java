@@ -2,6 +2,7 @@ package de.jeisfeld.mymeditation.i18n;
 
 /** Resource-backed production messages with an English fallback for platform-independent tests. */
 public enum UiText {
+    INVALID_WAIT_COMMAND("Invalid pause command. Use [wait 10s] with a duration greater than 0 and at most 300 seconds; use a decimal point and at most three decimal places."),
     WAITING_FOR_AUDIO_FOCUS("Paused for other audio. This passage will repeat when it ends."),
     AUDIO_UNAVAILABLE("Audio output is currently unavailable. Please try again."),
     DEVICE_START_FAILED("Device text-to-speech could not start."),

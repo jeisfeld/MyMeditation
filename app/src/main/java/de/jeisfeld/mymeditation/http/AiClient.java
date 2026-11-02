@@ -1,6 +1,7 @@
 package de.jeisfeld.mymeditation.http;
 
 import de.jeisfeld.mymeditation.i18n.UiText;
+import de.jeisfeld.mymeditation.audio.MeditationPauses;
 import android.os.Handler;
 import android.os.Looper;
 import org.json.JSONObject;
@@ -16,6 +17,11 @@ public final class AiClient {
     private AiClient() { }
 
     public static void create(String model, String system, String prompt, Callback callback) {
+        // Capture the selection before starting the request; later UI edits affect the next request.
+        final MeditationPauses.Guidance guidance =
+                MeditationPauses.Guidance.fromId(
+                        de.jeisfeld.mymeditation.util.PreferenceUtil.getSharedPreferenceString(
+                                MeditationPauses.PREFERENCE, "few"));
         new Thread(() -> {
             HttpsURLConnection connection = null;
             String text = null;
@@ -27,7 +33,7 @@ public final class AiClient {
                 if (apiKey.isEmpty()) {
                     throw new IllegalStateException(UiText.LOCAL_KEY.text(provider.keyField));
                 }
-                JSONObject body = AiProtocol.request(provider, modelId, system, prompt);
+                JSONObject body = AiProtocol.request(provider, modelId, system, prompt, guidance);
                 connection = (HttpsURLConnection) new URL(provider.url(modelId)).openConnection();
                 connection.setInstanceFollowRedirects(false);
                 connection.setConnectTimeout(15000);

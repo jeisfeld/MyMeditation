@@ -131,7 +131,7 @@ public class ConfigurationFragment extends Fragment {
             if (backend == SpeechBackend.ELEVENLABS) {
                 for (VoiceProfiles.Voice saved : profiles.voices()) { labels.add(saved.name); voiceIds.add(saved.id); }
             } else { labels.addAll(backend.voices(models.get(backend))); voiceIds.addAll(labels); }
-            ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, labels);
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), R.layout.spinner_settings_item, labels);
             adapter.setDropDownViewResource(R.layout.dropdown_voice_item);
             settings.spinnerSpeechVoice.setAdapter(adapter);
             String voice = voices.containsKey(backend) ? voices.get(backend)
@@ -270,7 +270,7 @@ public class ConfigurationFragment extends Fragment {
     }
 
     private ArrayAdapter<String> modelAdapter(java.util.List<String> models) {
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, models);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), R.layout.spinner_settings_item, models);
         adapter.setDropDownViewResource(R.layout.dropdown_voice_item);
         return adapter;
     }

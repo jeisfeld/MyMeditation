@@ -29,10 +29,13 @@ public final class SavedAudioLibrary {
     public static final class Snapshot {
         public final String name, system, query, content;
         public final int sourceId;
+        public final MeditationPauses.Guidance guidance;
         public Snapshot(String name, String system, String query, String content) {
-            this(name, system, query, content, 0);
+            this(name, system, query, content, 0, MeditationPauses.Guidance.fromId(
+                    PreferenceUtil.getSharedPreferenceString(MeditationPauses.PREFERENCE, "few")));
         }
-        private Snapshot(String name, String system, String query, String content, int sourceId) {
+        private Snapshot(String name, String system, String query, String content, int sourceId, MeditationPauses.Guidance guidance) {
+            this.guidance = guidance;
             this.sourceId = sourceId;
             this.name = clean(name); this.system = clean(system); this.query = clean(query); this.content = clean(content);
         }
@@ -49,12 +52,13 @@ public final class SavedAudioLibrary {
             if (PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).contains(source)
                     && draft.matches(source, PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text))) {
                 return new Snapshot(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, source),
-                        draft.system, draft.query, draft.content, source);
+                        draft.system, draft.query, draft.content, source, draft.guidance);
             }
             return draft;
         }
         boolean matches(int id, String text) {
-            return Objects.equals(system, clean(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_system_prompt, id)))
+            return guidance == SavedMeditations.guidance(id)
+                    && Objects.equals(system, clean(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_system_prompt, id)))
                     && Objects.equals(query, clean(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_query_template, id)))
                     && Objects.equals(content, clean(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_content, id)))
                     && Objects.equals(text, PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id));
@@ -101,13 +105,14 @@ public final class SavedAudioLibrary {
         } else {
             for (int id : ids) {
                 if (book.identity.equals(PreferenceUtil.getSharedPreferenceString(link(id), ""))
-                        && request.text.equals(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id))) { return id; }
+                        && request.text.equals(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id))
+                        && snapshot.guidance == SavedMeditations.guidance(id)) { return id; }
                 if (target == 0 && snapshot.matches(id, request.text) && !hasAudio(context, id)) { target = id; }
             }
         }
         if (target == 0) {
             String name = source > 0 ? PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, source) : snapshot.name;
-            target = SavedMeditations.save(name, snapshot.system, snapshot.query, snapshot.content, request.text);
+            target = SavedMeditations.save(name, snapshot.system, snapshot.query, snapshot.content, request.text, snapshot.guidance);
             if (source > 0) {
                 java.util.ArrayList<Integer> order = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids);
                 order.remove(Integer.valueOf(target));
@@ -154,6 +159,7 @@ public final class SavedAudioLibrary {
         for (int[] field : fields) {
             PreferenceUtil.setSharedPreferenceString(field[0], PreferenceUtil.getIndexedSharedPreferenceString(field[1], id));
         }
+        PreferenceUtil.setSharedPreferenceString(MeditationPauses.PREFERENCE, SavedMeditations.guidance(id).id);
         SentenceAudioStore.Book recording = book(context, id);
         if (recording != null) { restoreVoice(recording.request); return; }
 

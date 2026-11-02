@@ -1,0 +1,9 @@
+<resources>
+    <style name="Widget.MyMeditation.CompactSpinner" parent="Widget.AppCompat.Spinner">
+        <item name="android:background">@drawable/compact_spinner_background</item>
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:paddingTop">0dp</item>
+        <item name="android:paddingBottom">0dp</item>
+    </style>
+</resources>

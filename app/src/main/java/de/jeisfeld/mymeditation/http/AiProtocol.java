@@ -1,6 +1,7 @@
 package de.jeisfeld.mymeditation.http;
 
 import de.jeisfeld.mymeditation.i18n.UiText;
+import de.jeisfeld.mymeditation.audio.MeditationPauses;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -10,33 +11,35 @@ final class AiProtocol {
     private AiProtocol() { }
 
     static JSONObject request(AiProvider provider, String model, String system, String prompt) throws JSONException {
+        return request(provider, model, system, prompt, MeditationPauses.Guidance.FEW);
+    }
+
+    static JSONObject request(AiProvider provider, String model, String system, String prompt,
+                              MeditationPauses.Guidance guidance) throws JSONException {
+        String instructions = MeditationPauses.systemInstruction(system, guidance);
         JSONObject body = new JSONObject();
-        boolean hasSystem = system != null && !system.isEmpty();
         switch (provider) {
             case CLAUDE:
                 body.put("model", model).put("max_tokens", 8192)
                         .put("messages", new JSONArray().put(message("user", prompt)));
-                if (hasSystem) { body.put("system", system); }
+                body.put("system", instructions);
                 break;
             case OPENAI:
                 body.put("model", model).put("max_output_tokens", 16384).put("input", prompt);
-                if (hasSystem) { body.put("instructions", system); }
+                body.put("instructions", instructions);
                 break;
             case GEMINI:
                 body.put("contents", new JSONArray().put(new JSONObject().put("role", "user")
                         .put("parts", new JSONArray().put(new JSONObject().put("text", prompt)))))
                         .put("generationConfig", new JSONObject().put("maxOutputTokens", 16384));
-                if (hasSystem) {
-                    body.put("systemInstruction", new JSONObject().put("parts",
-                            new JSONArray().put(new JSONObject().put("text", system))));
-                }
+                body.put("systemInstruction", new JSONObject().put("parts",
+                        new JSONArray().put(new JSONObject().put("text", instructions))));
                 break;
             case GROK:
             case DEEPSEEK:
             case KIMI:
             case QWEN:
-                JSONArray messages = new JSONArray();
-                if (hasSystem) { messages.put(message("system", system)); }
+                JSONArray messages = new JSONArray().put(message("system", instructions));
                 body.put("model", model).put("max_tokens", provider == AiProvider.GROK ? 16384 : 8192)
                         .put("messages", messages.put(message("user", prompt)));
                 // Qwen thinking mode may require streaming; request a non-thinking answer.
@@ -102,6 +105,7 @@ final class AiProtocol {
         if (result.isEmpty()) {
             throw new IllegalStateException(UiText.NO_TEXT.text(provider.displayName));
         }
+        MeditationPauses.validate(result);
         return result;
     }
 

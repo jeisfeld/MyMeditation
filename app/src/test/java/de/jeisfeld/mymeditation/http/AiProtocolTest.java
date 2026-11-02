@@ -1,6 +1,7 @@
 package de.jeisfeld.mymeditation.http;
 
 import org.json.JSONObject;
+import de.jeisfeld.mymeditation.audio.MeditationPauses;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -24,25 +25,80 @@ public class AiProtocolTest {
 
     @Test public void buildsProviderSpecificPrompts() throws Exception {
         JSONObject claude = AiProtocol.request(AiProvider.CLAUDE, "claude-test", "system", "prompt");
-        assertEquals("system", claude.getString("system"));
+        assertEquals(MeditationPauses.systemInstruction("system"), claude.getString("system"));
         assertEquals("prompt", claude.getJSONArray("messages").getJSONObject(0).getString("content"));
         JSONObject openai = AiProtocol.request(AiProvider.OPENAI, "o3", "system", "prompt");
-        assertEquals("system", openai.getString("instructions"));
+        assertEquals(MeditationPauses.systemInstruction("system"), openai.getString("instructions"));
         assertEquals("prompt", openai.getString("input"));
         assertFalse(openai.has("max_tokens"));
         JSONObject gemini = AiProtocol.request(AiProvider.GEMINI, "gemini-test", "system", "prompt");
-        assertEquals("system", gemini.getJSONObject("systemInstruction").getJSONArray("parts").getJSONObject(0).getString("text"));
+        assertEquals(MeditationPauses.systemInstruction("system"), gemini.getJSONObject("systemInstruction").getJSONArray("parts").getJSONObject(0).getString("text"));
         assertEquals("prompt", gemini.getJSONArray("contents").getJSONObject(0).getJSONArray("parts").getJSONObject(0).getString("text"));
         JSONObject grok = AiProtocol.request(AiProvider.GROK, "grok-test", "system", "prompt");
         assertEquals("system", grok.getJSONArray("messages").getJSONObject(0).getString("role"));
         assertEquals("prompt", grok.getJSONArray("messages").getJSONObject(1).getString("content"));
     }
 
-    @Test public void omitsEmptySystemPrompts() throws Exception {
-        assertFalse(AiProtocol.request(AiProvider.CLAUDE, "claude-test", "", "prompt").has("system"));
-        assertFalse(AiProtocol.request(AiProvider.OPENAI, "gpt-test", null, "prompt").has("instructions"));
-        assertFalse(AiProtocol.request(AiProvider.GEMINI, "gemini-test", "", "prompt").has("systemInstruction"));
-        assertEquals(1, AiProtocol.request(AiProvider.GROK, "grok-test", "", "prompt").getJSONArray("messages").length());
+    @Test public void playbackInstructionsApplyToEveryProviderRegardlessOfEditablePrompt() throws Exception {
+        for (AiProvider provider : AiProvider.values()) {
+            for (String editable : new String[] {null, "", "Antworte auf Deutsch. Nur Fließtext, keine Befehle."}) {
+                JSONObject body = AiProtocol.request(provider, "test-model", editable, "My topic");
+                String system;
+                switch (provider) {
+                    case CLAUDE: system = body.getString("system"); break;
+                    case OPENAI: system = body.getString("instructions"); break;
+                    case GEMINI: system = body.getJSONObject("systemInstruction").getJSONArray("parts").getJSONObject(0).getString("text"); break;
+                    default: system = body.getJSONArray("messages").getJSONObject(0).getString("content"); break;
+                }
+                if (editable != null && !editable.isEmpty()) { assertTrue(system.startsWith(editable + "\n\n")); }
+                assertTrue(system.contains("[wait Ns]"));
+                assertTrue(system.contains("Never translate wait or s"));
+                assertTrue(system.contains("at most 300"));
+            }
+        }
+    }
+
+    @Test public void everyProviderReceivesTheSelectedPacingPolicyWithoutChangingTheEditablePrompt() throws Exception {
+        String editable = "Mein eigener Systemtext. Viele Atemübungen.";
+        for (AiProvider provider : AiProvider.values()) {
+            for (MeditationPauses.Guidance guidance : MeditationPauses.Guidance.values()) {
+                JSONObject body = AiProtocol.request(provider, "test-model", editable, "Topic", guidance);
+                String system;
+                switch (provider) {
+                    case CLAUDE: system = body.getString("system"); break;
+                    case OPENAI: system = body.getString("instructions"); break;
+                    case GEMINI: system = body.getJSONObject("systemInstruction").getJSONArray("parts").getJSONObject(0).getString("text"); break;
+                    default: system = body.getJSONArray("messages").getJSONObject(0).getString("content"); break;
+                }
+                assertTrue(system.startsWith(editable + "\n\n"));
+                switch (guidance) {
+                    case NONE:
+                        assertTrue(system.contains("Do not insert wait commands"));
+                        assertTrue(system.contains("Do not ask the listener to perform activities between sentences"));
+                        assertFalse(system.contains("[wait Ns]"));
+                        break;
+                    case FEW:
+                        assertTrue(system.contains("only rarely"));
+                        assertTrue(system.contains("5 to 10"));
+                        break;
+                    case MANY:
+                        assertTrue(system.contains("regular spacious pauses"));
+                        assertTrue(system.contains("[wait 18s]"));
+                        break;
+                }
+            }
+        }
+        assertEquals(MeditationPauses.Guidance.FEW, MeditationPauses.Guidance.fromId("unknown"));
+        assertEquals(MeditationPauses.Guidance.FEW, MeditationPauses.Guidance.fromId(null));
+    }
+
+    @Test public void generatedPauseCommandsArePreservedAndMalformedCommandsRejectTheResponse() throws Exception {
+        JSONObject message = new JSONObject().put("content", "Atme dreimal. [wait 18s] Ruh dich aus.");
+        JSONObject response = new JSONObject().put("choices", new org.json.JSONArray().put(
+                new JSONObject().put("finish_reason", "stop").put("message", message)));
+        assertEquals("Atme dreimal. [wait 18s] Ruh dich aus.", AiProtocol.response(AiProvider.QWEN, response));
+        message.put("content", "Breathe. [wait 100000s] Relax.");
+        assertThrows(IllegalArgumentException.class, () -> AiProtocol.response(AiProvider.QWEN, response));
     }
 
     @Test public void readsClaudeTextWithoutThinking() throws Exception {
@@ -111,10 +167,10 @@ public class AiProtocolTest {
             JSONObject body = AiProtocol.request(provider, "test-model", "system", "prompt");
             assertEquals("test-model", body.getString("model"));
             assertEquals(8192, body.getInt("max_tokens"));
-            assertEquals("system", body.getJSONArray("messages").getJSONObject(0).getString("content"));
+            assertEquals(MeditationPauses.systemInstruction("system"), body.getJSONArray("messages").getJSONObject(0).getString("content"));
             assertEquals("user", body.getJSONArray("messages").getJSONObject(1).getString("role"));
             assertEquals("prompt", body.getJSONArray("messages").getJSONObject(1).getString("content"));
-            assertEquals(1, AiProtocol.request(provider, "test-model", "", "prompt").getJSONArray("messages").length());
+            assertEquals(2, AiProtocol.request(provider, "test-model", "", "prompt").getJSONArray("messages").length());
             if (provider == AiProvider.QWEN) {
                 assertFalse(body.getBoolean("enable_thinking"));
             } else {

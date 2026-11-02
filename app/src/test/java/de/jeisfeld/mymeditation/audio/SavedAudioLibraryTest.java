@@ -28,6 +28,36 @@ public class SavedAudioLibraryTest extends BaselineTest {
         if (complete) { book.finish(); }
         return book;
     }
+    @Test public void namedTextSavesRestoreTheirOwnPauseGuidanceAndLegacyEntriesUseFew() {
+        for (MeditationPauses.Guidance guidance : MeditationPauses.Guidance.values()) {
+            PreferenceUtil.setSharedPreferenceString(MeditationPauses.PREFERENCE, guidance.id);
+            int id = SavedMeditations.save("Pacing", "s", "@TEXT@", "c", "Text.");
+            PreferenceUtil.setSharedPreferenceString(MeditationPauses.PREFERENCE, "other");
+            SavedAudioLibrary.restore(Application.getAppContext(), id);
+            assertEquals(guidance.id, PreferenceUtil.getSharedPreferenceString(MeditationPauses.PREFERENCE, ""));
+        }
+        int legacy = SavedMeditations.save("Legacy", "s", "@TEXT@", "c", "Text.");
+        PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_pause_guidance, legacy);
+        PreferenceUtil.setSharedPreferenceString(MeditationPauses.PREFERENCE, "many");
+        SavedAudioLibrary.restore(Application.getAppContext(), legacy);
+        assertEquals("few", PreferenceUtil.getSharedPreferenceString(MeditationPauses.PREFERENCE, ""));
+    }
+
+    @Test public void automaticAudioSaveUsesCapturedGuidanceAndPreservesEntriesWithDifferentPacing() throws Exception {
+        audio(true);
+        PreferenceUtil.setSharedPreferenceString(MeditationPauses.PREFERENCE, "none");
+        SavedAudioLibrary.Snapshot snapshot = SavedAudioLibrary.Snapshot.current(Application.getAppContext());
+        PreferenceUtil.setSharedPreferenceString(MeditationPauses.PREFERENCE, "many");
+        int first = SavedAudioLibrary.keepComplete(Application.getAppContext(), request(), snapshot);
+        assertEquals(MeditationPauses.Guidance.NONE, SavedMeditations.guidance(first));
+        int second = SavedAudioLibrary.keepComplete(Application.getAppContext(), request(),
+                SavedAudioLibrary.Snapshot.current(Application.getAppContext()));
+        assertNotEquals(first, second);
+        assertEquals(MeditationPauses.Guidance.MANY, SavedMeditations.guidance(second));
+        SavedAudioLibrary.restore(Application.getAppContext(), first);
+        assertEquals("none", PreferenceUtil.getSharedPreferenceString(MeditationPauses.PREFERENCE, ""));
+    }
+
     @Test public void automaticRetentionAttachesToExistingTextSnapshotAndDoesNotCreateDuplicates() throws Exception {
         audio(true);
         SavedAudioLibrary.Snapshot snapshot = SavedAudioLibrary.Snapshot.current(Application.getAppContext());

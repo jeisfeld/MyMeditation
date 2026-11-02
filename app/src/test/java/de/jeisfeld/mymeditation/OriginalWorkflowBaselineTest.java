@@ -70,6 +70,17 @@ public class OriginalWorkflowBaselineTest extends BaselineTest {
         assertEquals("Fresh text.\nKeep my changes.", ((EditText) activity.findViewById(R.id.editTextMeditationText)).getText().toString());
     }
 
+    @Test public void malformedPauseInTheVisibleDraftShowsAnErrorWithoutStartingSpeech() {
+        open();
+        EditText text = activity.findViewById(R.id.editTextMeditationText);
+        text.setText("Breathe. [wait 1,5s] Relax.");
+        activity.findViewById(R.id.buttonSpeakMeditation).performClick(); idle();
+        assertNotNull(text.getError());
+        assertTrue(text.getError().toString().contains("[wait 10s]"));
+        assertEquals("Breathe. [wait 1,5s] Relax.", text.getText().toString());
+        assertFalse(de.jeisfeld.mymeditation.audio.MeditationPlaybackService.state().getValue().running);
+    }
+
     @Test public void saveDialogCancellationAndConfirmationHaveDifferentEffects() {
         open(); tab(R.id.navigation_saved_meditations);
         activity.findViewById(R.id.button_save_current_meditation).performClick();

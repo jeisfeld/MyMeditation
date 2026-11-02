@@ -10,6 +10,7 @@
         android:layout_height="wrap_content"
         android:text="@string/prompt_template_save_current" />
     <Spinner
+                style="@style/Widget.MyMeditation.CompactSpinner"
         android:id="@+id/spinnerManagedPromptTemplate"
         android:layout_width="match_parent"
         android:layout_height="48dp"

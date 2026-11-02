@@ -15,12 +15,14 @@ public final class SentenceAudioAssembler {
         try (Mp3Writer writer = new Mp3Writer(output)) {
             for (int i = 0; i < book.sentences.size(); i++) {
                 check.run(); progress.accept(i + 1);
+                double explicitPause = MeditationPauses.seconds(book.sentences.get(i));
+                if (explicitPause >= 0) { writer.silence(explicitPause, check); continue; }
+                writer.silence(MeditationPauses.gapBefore(book.sentences, i, pause), check);
                 File audio = book.available(i);
                 if (audio == null) { throw new java.io.IOException("Missing sentence audio"); }
                 long before = writer.frames();
                 decoder.append(audio, writer, check);
                 if (writer.frames() == before) { throw new java.io.IOException("Empty sentence audio"); }
-                if (i + 1 < book.sentences.size()) { writer.silence(pause, check); }
             }
             check.run(); return writer.frames();
         }

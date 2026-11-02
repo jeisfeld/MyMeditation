@@ -13,6 +13,7 @@ The historical baseline is `cbd677d`, the final SDK-only commit before the direc
 | Literal `@TEXT@` substitution | `MeditationPrompt` |
 | Generated text request/response | `AiClient`, `AiProvider`, `AiProtocol`; replaces the former web relay |
 | Sentence/segment boundaries | `SpeechSegments`; punctuation-based and bounded for provider requests |
+| Activity pause syntax, request instructions and timing rules | `MeditationPauses`; language-independent `[wait Ns]` commands |
 | Device TTS and cloud audio, segment progress, cancellation | `MeditationSpeechPlayer` |
 | Live audio lifecycle and media controls | `MeditationPlaybackService`; playback outlives the fragment |
 | Named text snapshots and saved ordering | `SavedMeditationsFragment`, `SavedMeditationsViewAdapter`, `SavedMeditations.save` |
@@ -36,9 +37,10 @@ Preferences use `PreferenceManager`'s application-default SharedPreferences. Exi
 | Highest allocated ID | `max_saved_meditation_id`: monotonic integer, not reused after deletion |
 | Saved name | `saved_meditation_name[id]` |
 | Saved prompts | `saved_system_prompt[id]`, `saved_query_template[id]` |
+| Saved generation pacing | `saved_pause_guidance[id]`: `none`, `few`, `many`; absent/invalid means `few` |
 | Saved topic/text | `meditation_content[id]`, `meditation_text[id]` |
 
-A plain-text save captures four text fields and a name. It does not generate audio, but can attach an already complete sentence recording with matching current settings. The restore action copies those four fields back into current preferences, refreshes both ViewModels, and stops previous playback. Recorded entries additionally restore their synthesis settings and speed while retaining the independently selected pause duration. Editing/deleting/reordering uses saved IDs, not a displayed row's name. Duplicate names therefore remain independent entries.
+A plain-text save captures four text fields, a name and the selected generation pacing. It does not generate audio, but can attach an already complete sentence recording with matching current settings. The restore action copies those four fields back into current preferences, refreshes both ViewModels, and stops previous playback. Recorded entries additionally restore their synthesis settings and speed while retaining the independently selected pause duration. Editing/deleting/reordering uses saved IDs, not a displayed row's name. Duplicate names therefore remain independent entries.
 
 Saved IDs may link through `sentence_audio_<id>` to an immutable sentence recording under `files/sentence-audio/<identity>/`; several names may share a recording. `SentenceAudioStore` owns manifests and MP3 publication, `SentenceAudio` owns generation/rendering, `SavedAudioLibrary` owns links/settings restoration, and `SentenceAudioAssembler` creates whole MP3s only for sharing. `LegacyAudioCleanup` deletes retired full-length MP3 files and their settings metadata at launch while preserving text entries and sentence recordings. Restored entry provenance guides attachment or insertion of same-named recording variants directly below their source. See [AI integration](../AI-INTEGRATION.md) for recording format, cache, foreground-service and credential details.
 

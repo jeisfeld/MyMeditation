@@ -1,6 +1,7 @@
 package de.jeisfeld.mymeditation.ui.meditation;
 
 import de.jeisfeld.mymeditation.i18n.UiText;
+import de.jeisfeld.mymeditation.audio.MeditationPauses;
 import android.os.Bundle;
 import de.jeisfeld.mymeditation.http.SpeechBackend;
 import de.jeisfeld.mymeditation.audio.MeditationPlaybackService;
@@ -50,7 +51,13 @@ public class MeditationFragment extends Fragment {
     private String offlineIdentity = "";
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable refreshOfflineLabel = this::checkOfflineLabel;
-    private final android.content.SharedPreferences.OnSharedPreferenceChangeListener offlinePreferences = (preferences, key) -> scheduleOfflineLabel();
+    private final android.content.SharedPreferences.OnSharedPreferenceChangeListener offlinePreferences = (preferences, key) -> {
+        scheduleOfflineLabel();
+        if (binding != null && MeditationPauses.PREFERENCE.equals(key)) {
+            int selected = MeditationPauses.Guidance.fromId(preferences.getString(key, "few")).ordinal();
+            if (binding.spinnerPauseGuidance.getSelectedItemPosition() != selected) { binding.spinnerPauseGuidance.setSelection(selected); }
+        }
+    };
 
     private void scheduleOfflineLabel() {
         if (binding == null) { return; }
@@ -97,6 +104,21 @@ public class MeditationFragment extends Fragment {
 
         binding = FragmentMeditationBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
+        android.widget.ArrayAdapter<CharSequence> pauseChoices = android.widget.ArrayAdapter.createFromResource(
+                requireContext(), R.array.pause_guidance_options, R.layout.spinner_settings_item);
+        pauseChoices.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        binding.spinnerPauseGuidance.setAdapter(pauseChoices);
+        MeditationPauses.Guidance selectedGuidance =
+                MeditationPauses.Guidance.fromId(PreferenceUtil.getSharedPreferenceString(
+                        MeditationPauses.PREFERENCE, "few"));
+        binding.spinnerPauseGuidance.setSelection(selectedGuidance.ordinal());
+        binding.spinnerPauseGuidance.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                PreferenceUtil.setSharedPreferenceString(MeditationPauses.PREFERENCE,
+                        MeditationPauses.Guidance.values()[position].id);
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
+        });
         editorKeyListener = binding.editTextMeditationText.getKeyListener();
         editorInputType = binding.editTextMeditationText.getInputType();
         spokenBackground = new android.text.style.BackgroundColorSpan(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.spoken_text_highlight));
@@ -187,7 +209,12 @@ public class MeditationFragment extends Fragment {
             meditationViewModel.setMeditationText(binding.editTextMeditationText.getText().toString());
 
             String meditationText = binding.editTextMeditationText.getText().toString();
-            List<String> newSentences = SpeechSegments.split(meditationText, speechBackend().segmentLimit);
+            final List<String> newSentences;
+            try { newSentences = SpeechSegments.split(meditationText, speechBackend().segmentLimit); }
+            catch (IllegalArgumentException e) {
+                binding.editTextMeditationText.setError(e.getMessage());
+                return;
+            }
             if (!newSentences.equals(sentences)) {
                 meditationViewModel.setSeekBarProgress(0);
                 binding.seekBarAudio.setProgress(0);

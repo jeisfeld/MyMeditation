@@ -53,7 +53,7 @@ final class InlinePromptTemplates {
     private ArrayAdapter<String> adapter(List<PromptTemplates.Entry> items) {
         List<String> names = new ArrayList<>(); names.add(context.getString(R.string.prompt_templates_hint));
         for (PromptTemplates.Entry entry : items) { names.add(entry.name); }
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, names);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(context, R.layout.spinner_settings_item, names);
         adapter.setDropDownViewResource(R.layout.dropdown_voice_item); return adapter;
     }
     private void refresh(String preferred) {

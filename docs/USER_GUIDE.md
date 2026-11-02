@@ -31,6 +31,23 @@ The pause slider sets the gap between spoken segments. The current range is 0–
 
 Both settings apply to live playback, including device TTS. Live speed settings are remembered per cloud voice. Recorded sentence audio uses the same player and adjustable pauses. Changing voice settings or speed selects a new recording identity; matching sentence audio is reused.
 
+For an activity that needs more time, put a timed pause directly in the meditation text:
+
+```text
+Take three more comfortable breaths. [wait 18s]
+Now notice how you feel.
+```
+
+The app stays silent for 18 seconds before continuing. Commands always use `wait` and `s`, including in German or other languages. Durations must be greater than zero and at most 300 seconds; decimal points with up to three decimal places are supported, for example `[wait 2.5s]`. Voice speed and the pause slider do not change these durations. An explicit pause replaces the ordinary gap at that location. Leading, trailing and consecutive commands are supported; consecutive durations add together. Previous/Next and the position slider can select or skip a pause. Pausing or an audio interruption restarts the current pause on resume.
+
+The dropdown to the right of **Meditation content** selects the pacing of newly generated meditations and saves immediately:
+
+- **No pauses / Keine Pausen:** continuous guidance, with no wait commands or activities that require the listener to do something between sentences.
+- **Few pauses / Wenige Pausen** (default): wait commands only rarely, preferring brief pauses of 3–8 seconds and avoiding repeated-breath exercises or extended silence.
+- **Many pauses / Viele Pausen:** regular pauses for breathing repetitions, reflection and silent activities, with realistic time to complete them.
+
+The choice persists across navigation and restarts. It affects the hidden instructions added to every AI request, including requests with a custom or empty System instruction. Changing it does not rewrite an existing meditation, change its wait commands, or change the ordinary playback pause slider. Saving a meditation stores the selected pacing with it; restoring the entry restores that selection. Older entries without a stored selection use Few pauses. Your editable system instruction, templates and saved prompts remain as entered. Models still choose where to pause and for how long; review those choices when editing. Invalid `wait` commands in an AI response reject the response and preserve the previous meditation. In pasted or edited text they show an error when you press Speak. Commands are never sent to speech synthesis. Saved recordings retain them, and shared MP3s include the requested silence independently of the Share dialog’s ordinary gap setting.
+
 ## Configuration and defaults
 
 The configuration page contains System instruction, Query template and AI settings. The model/provider/voice dropdowns save immediately. **More** opens the full dialog for manual model IDs, delivery instructions and ElevenLabs voice management; that dialog uses Save/Cancel.
@@ -49,7 +66,8 @@ Open **Saved meditations** and press **Save current meditation**. Enter a name a
 
 - the name;
 - the system instruction and query template;
-- the topic and meditation text.
+- the topic and meditation text;
+- the No/Few/Many pauses selection.
 
 This original text-save operation does not generate audio. If a complete sentence recording already exists with the current text and speech settings, the snapshot is linked to it; otherwise it stays text-only. You can save several snapshots with the same name; choose descriptive names to distinguish them.
 

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="message_invalid_wait_command">Invalid pause command. Use [wait 10s] with a duration greater than 0 and at most 300 seconds; use a decimal point and at most three decimal places.</string>
     <string name="message_audio_unavailable">Audio output is currently unavailable. Please try again.</string>
     <string name="message_device_start_failed">Device text-to-speech could not start.</string>
     <string name="message_device_speech_failed">Device speech failed.</string>

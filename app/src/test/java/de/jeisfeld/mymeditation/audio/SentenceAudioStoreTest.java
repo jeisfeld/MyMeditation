@@ -21,6 +21,19 @@ public class SentenceAudioStoreTest {
             writer.silence(0.1, () -> { });
         }
     }
+    @Test public void timedPausesNeedNoAudioButMustElapseBeforeAutomaticRetention() throws Exception {
+        SentenceAudioStore store = new SentenceAudioStore(temporary.getRoot());
+        SentenceAudioStore.Book book = store.open(request("[wait 1s]Breathe.[wait 18s]Rest.[wait 2s]", 1, "Kore", "", 2));
+        assertFalse(book.played(0)); // A leading silence can finish before any audio is generated.
+        book.obtain(1, this::mp3, () -> { }); book.obtain(3, this::mp3, () -> { });
+        assertFalse(book.played(1)); assertFalse(book.played(3));
+        assertFalse(book.isComplete()); assertFalse(book.played(2)); assertTrue(book.played(4));
+        assertTrue(book.isComplete());
+        assertFalse(book.audio(0).exists()); assertFalse(book.audio(2).exists()); assertFalse(book.audio(4).exists());
+        assertTrue(store.find(book.identity).isComplete());
+        assertEquals(book.identity, SentenceAudioStore.key(book.request.withPause(30)));
+        book.invalidate(1); assertFalse(book.isComplete());
+    }
     @Test public void pauseDoesNotInvalidateAudioButEverySynthesisSettingDoes() {
         PlaybackRequest original = request(); String key = SentenceAudioStore.key(original);
         assertEquals(key, SentenceAudioStore.key(original.withPause(30)));

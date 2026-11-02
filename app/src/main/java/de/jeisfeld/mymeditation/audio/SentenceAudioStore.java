@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import org.json.JSONObject;
 
-/** Durable, versioned, pause-free MP3s. Identity includes exact text and all voice settings. */
+/** Durable speech-only MP3s; timed pauses stay in the text/manifest and need no audio file. */
 public final class SentenceAudioStore {
     private static final ConcurrentHashMap<String, Object> LOCKS = new ConcurrentHashMap<>();
     private final File root;
@@ -21,7 +21,9 @@ public final class SentenceAudioStore {
 
     public static String key(PlaybackRequest request) {
         try {
-            JSONObject value = new JSONObject().put("version", 1).put("text", request.text)
+            // Preserve existing recordings without commands. Older audio that spoke commands
+            // must not collide with the new segment indices or be replayed as timed silence.
+            JSONObject value = new JSONObject().put("version", MeditationPauses.hasCommands(request.text) ? 2 : 1).put("text", request.text)
                     .put("backend", request.backend.id).put("model", request.model).put("voice", request.voice)
                     .put("style", request.style == null ? "" : request.style).put("speed", request.speed);
             byte[] hash = MessageDigest.getInstance("SHA-256").digest(value.toString().getBytes(StandardCharsets.UTF_8));
@@ -90,6 +92,7 @@ public final class SentenceAudioStore {
         }
         public File audio(int index) { index(index); return new File(directory, index + ".mp3"); }
         public File available(int index) { File file = audio(index); return mp3(file) ? file : null; }
+        private boolean ready(int index) { return MeditationPauses.seconds(sentences.get(index)) >= 0 || available(index) != null; }
 
         /** One producer per sentence, including concurrent playback requests. */
         public File obtain(int index, Producer producer, Runnable check) throws Exception {
@@ -128,7 +131,7 @@ public final class SentenceAudioStore {
         public boolean isComplete() {
             if (!isPublished()) { return false; }
             for (int i = 0; i < sentences.size(); i++) {
-                if (available(i) == null) { new File(directory, "complete").delete(); return false; }
+                if (!ready(i)) { new File(directory, "complete").delete(); return false; }
             }
             return true;
         }
@@ -141,17 +144,18 @@ public final class SentenceAudioStore {
         public void finish() throws Exception {
             initialize();
             for (int i = 0; i < sentences.size(); i++) {
-                if (available(i) == null) { throw new IOException("Incomplete sentence recording"); }
+                if (!ready(i)) { throw new IOException("Incomplete sentence recording"); }
             }
             Files.write(new File(directory, "complete").toPath(), new byte[] {1});
         }
         /** Automatic retention requires completed playback of every sentence, not speculative downloads. */
         public boolean played(int index) throws Exception {
             index(index);
-            if (available(index) == null) { return false; }
+            if (!ready(index)) { return false; }
+            initialize();
             Files.write(new File(directory, "played-" + index).toPath(), new byte[] {1});
             for (int i = 0; i < sentences.size(); i++) {
-                if (!new File(directory, "played-" + i).isFile() || available(i) == null) { return false; }
+                if (!new File(directory, "played-" + i).isFile() || !ready(i)) { return false; }
             }
             finish();
             return true;

@@ -14,6 +14,7 @@ public final class SentenceAudio {
     }
     public static File obtain(Context context, PlaybackRequest request, int index, CloudSpeech speech, Runnable check) throws Exception {
         SentenceAudioStore.Book book = store(context).open(request);
+        if (MeditationPauses.seconds(book.sentences.get(index)) >= 0) { throw new IllegalArgumentException("Pause commands have no speech audio"); }
         return book.obtain(index, destination -> {
             File source = speech.audioWithPersistentCache(context.getCacheDir(), context.getNoBackupFilesDir(), request.backend,
                     request.model, request.voice, book.sentences.get(index), request.speed, request.style);

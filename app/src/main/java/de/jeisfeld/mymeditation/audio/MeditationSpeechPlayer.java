@@ -122,7 +122,11 @@ public final class MeditationSpeechPlayer {
                         int spoken = Integer.parseInt(id.substring(id.lastIndexOf('-') + 1));
                         handler.post(() -> { if (valid(token) && index == spoken) { listener.onSpeaking(spoken); } });
                     }
-                    @Override public void onDone(String id) { handler.post(() -> complete(token)); }
+                    @Override public void onDone(String id) {
+                        handler.post(() -> {
+                            if (valid(token) && ("sentence-" + token + "-" + index).equals(id)) { complete(token); }
+                        });
+                    }
                     @Override public void onError(String id) { handler.post(() -> { if (valid(token)) { fail(UiText.DEVICE_SPEECH_FAILED.text()); } }); }
                 });
                 next(token, true);
@@ -160,6 +164,7 @@ public final class MeditationSpeechPlayer {
     private boolean valid(int token) { return running && token == session; }
 
     private Download download(int position) {
+        if (MeditationPauses.seconds(sentences.get(position)) >= 0) { throw new IllegalArgumentException("Pause commands have no speech audio"); }
         Download job = downloads.get(position);
         if (job == null) {
             job = new Download();
@@ -196,11 +201,20 @@ public final class MeditationSpeechPlayer {
     private void next(int token, boolean first) {
         if (!valid(token)) { return; }
         listener.onSentence(index);
+        double pause = MeditationPauses.seconds(sentences.get(index));
+        if (pause >= 0) {
+            listener.onStatus("");
+            listener.onSpeaking(index);
+            if (backend != SpeechBackend.DEVICE) { prefetch(index + 1, backend == SpeechBackend.ELEVENLABS ? 3 : 1); }
+            waitSilently((int) Math.round(pause * 1000), token, () -> complete(token));
+            return;
+        }
+        int gap = first ? 500 : (int) MeditationPauses.gapBefore(sentences, index, pauseMs);
         if (backend != SpeechBackend.DEVICE) {
             final int position = index;
             Download job = download(position);
             listener.onStatus(job.waiting.isEmpty() && backend == SpeechBackend.ELEVENLABS ? UiText.PREPARING_ELEVEN.text() : job.waiting);
-            if (backend != SpeechBackend.ELEVENLABS && position + 1 < sentences.size()) { download(position + 1); }
+            if (backend != SpeechBackend.ELEVENLABS) { prefetch(position + 1, 1); }
             job.result.whenComplete((file, error) -> handler.post(() -> {
                 if (!valid(token) || index != position) { return; }
                 if (error != null) {
@@ -215,17 +229,23 @@ public final class MeditationSpeechPlayer {
                 // Queue speculative synthesis only after the current recording is available.
                 // This prevents a later sentence from acquiring a provider slot before startup.
                 if (backend == SpeechBackend.ELEVENLABS) {
-                    for (int next = position + 1; next < Math.min(sentences.size(), position + 4); next++) { download(next); }
+                    prefetch(position + 1, 3);
                 }
                 listener.onStatus("");
-                waitSilently(first ? 500 : pauseMs, token, () -> play(file, token));
+                waitSilently(gap, token, () -> play(file, token));
             }));
         } else {
-            waitSilently(first ? 500 : pauseMs, token, () -> {
+            waitSilently(gap, token, () -> {
                 if (tts.speak(sentences.get(index), TextToSpeech.QUEUE_FLUSH, null, "sentence-" + token + "-" + index) == TextToSpeech.ERROR) {
                     fail(UiText.DEVICE_SPEECH_FAILED.text());
                 }
             });
+        }
+    }
+
+    private void prefetch(int start, int count) {
+        for (int next = start; next < sentences.size() && count > 0; next++) {
+            if (MeditationPauses.seconds(sentences.get(next)) < 0) { download(next); count--; }
         }
     }
 
@@ -280,12 +300,14 @@ public final class MeditationSpeechPlayer {
         // Keep Bluetooth output awake across meditation pauses.
         if (duration > 0) {
             try {
-                int samples = 16000 * duration / 1000;
+                // Loop at most one second of PCM, even for several-minute activity pauses.
+                int samples = 16000 * Math.min(duration, 1000) / 1000;
                 silence = new AudioTrack.Builder().setAudioAttributes(attributes())
                         .setAudioFormat(new AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                                 .setSampleRate(16000).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
                         .setBufferSizeInBytes(samples * 2).setTransferMode(AudioTrack.MODE_STATIC).build();
                 silence.write(new short[samples], 0, samples);
+                if (duration > 1000) { silence.setLoopPoints(0, samples, -1); }
                 silence.play();
             } catch (RuntimeException e) { releaseSilence(); }
         }

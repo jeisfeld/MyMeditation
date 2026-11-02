@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pause_guidance_label">Pausen in neuen Meditationen</string>
+    <string-array name="pause_guidance_options">
+        <item>Keine Pausen</item>
+        <item>Wenige Pausen</item>
+        <item>Viele Pausen</item>
+    </string-array>
+</resources>

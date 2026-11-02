@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="key_saved_pause_guidance" translatable="false">saved_pause_guidance</string>
 
     <string name="key_system_prompt" translatable="false">system_prompt</string>
     <string name="key_query_template" translatable="false">query_template</string>

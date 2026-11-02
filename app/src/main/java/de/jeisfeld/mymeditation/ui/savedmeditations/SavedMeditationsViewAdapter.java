@@ -185,6 +185,7 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 					PreferenceUtil.setSharedPreferenceString("offline_settings_" + meditationId, "");
 					PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_meditation_name, meditationId);
 					PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_system_prompt, meditationId);
+                    PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_pause_guidance, meditationId);
 					PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_query_template, meditationId);
 					PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_meditation_content, meditationId);
 					PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_meditation_text, meditationId);
