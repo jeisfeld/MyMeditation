@@ -106,6 +106,12 @@ public class PromptTemplatesUiTest extends BaselineTest {
         Spinner picker = activity.findViewById(R.id.spinnerSystemPromptTemplate);
         View manage = activity.findViewById(R.id.buttonSystemPromptTemplates);
         assertTrue(picker.getWidth() >= 70); assertTrue(picker.getRight() <= manage.getLeft());
+        for (int id : new int[] {R.id.spinnerSystemPromptTemplate, R.id.spinnerQueryPromptTemplate}) {
+            Spinner template = activity.findViewById(id);
+            android.widget.TextView heading = (android.widget.TextView) ((ViewGroup) template.getParent()).getChildAt(0);
+            assertTrue(template.getLeft() > heading.getRight());
+            assertEquals(heading.getTop() + heading.getBaseline(), template.getTop() + template.getBaseline());
+        }
         assertTrue(activity.findViewById(R.id.editTextSystemPrompt).getHeight() > 0);
         assertTrue(activity.findViewById(R.id.editTextQueryTemplate).getHeight() > 0);
     }
