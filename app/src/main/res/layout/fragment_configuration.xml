@@ -134,39 +134,12 @@
         android:layout_marginTop="@dimen/activity_heading_margin"
         android:orientation="vertical">
 
-        <LinearLayout
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:accessibilityHeading="true"
-                    android:text="@string/ai_settings"
-                    android:textSize="@dimen/text_size_content_heading"
-                    android:textStyle="bold" />
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:includeFontPadding="false"
-                    android:labelFor="@id/spinnerAiModelPreset"
-                    android:text="@string/ai_model_presets_label" />
-            </LinearLayout>
-            <Button
-                android:id="@+id/buttonAiSettings"
-                android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:layout_marginStart="8dp"
-                android:text="@string/button_more"
-                android:contentDescription="@string/ai_settings"
-                android:textAllCaps="false" />
-        </LinearLayout>
+            android:includeFontPadding="false"
+            android:labelFor="@id/spinnerAiModelPreset"
+            android:text="@string/ai_model_presets_label" />
 
         <Spinner
                 style="@style/Widget.MyMeditation.CompactSpinner"
@@ -215,4 +188,11 @@
             android:layout_height="40dp"
             android:saveEnabled="false" />
     </LinearLayout>
+    <Button
+        android:id="@+id/buttonAiSettings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/activity_horizontal_margin"
+        android:text="@string/additional_settings"
+        android:textAllCaps="false" />
 </LinearLayout>

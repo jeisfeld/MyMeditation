@@ -2,7 +2,6 @@ package de.jeisfeld.mymeditation.ui.configuration;
 
 import android.os.Bundle;
 import de.jeisfeld.mymeditation.http.VoiceProfiles;
-import de.jeisfeld.mymeditation.http.ModelCatalog;
 import de.jeisfeld.mymeditation.http.SpeechBackend;
 import de.jeisfeld.mymeditation.databinding.DialogAiSettingsBinding;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
@@ -26,7 +25,20 @@ public class ConfigurationFragment extends Fragment {
 
     private de.jeisfeld.mymeditation.ui.PageInsets pageInsets;
     private FragmentConfigurationBinding binding;
+    private final SettingsFiles settingsFiles = new SettingsFiles(this, this::settingsRestored);
     private InlineAiSettings inlineAiSettings;
+
+    @Override public void onCreate(Bundle state) {
+        super.onCreate(state); settingsFiles.restoreState(state);
+    }
+    @Override public void onSaveInstanceState(@NonNull Bundle state) {
+        super.onSaveInstanceState(state); settingsFiles.saveState(state);
+    }
+    private void settingsRestored() {
+        new ViewModelProvider(requireActivity()).get(ConfigurationViewModel.class).getStoredData();
+        if (binding != null) { systemTemplates.refresh(); queryTemplates.refresh(); inlineAiSettings.refresh(); }
+        de.jeisfeld.mymeditation.audio.MeditationPlaybackService.applySavedSettings(requireContext());
+    }
     private InlinePromptTemplates systemTemplates, queryTemplates;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -79,21 +91,27 @@ public class ConfigurationFragment extends Fragment {
         binding.systemPromptSection.setVisibility(query ? View.GONE : View.VISIBLE);
         binding.queryTemplateSection.setVisibility(system ? View.GONE : View.VISIBLE);
         binding.inlineAiSettingsSection.setVisibility(system || query ? View.GONE : View.VISIBLE);
+        binding.buttonAiSettings.setVisibility(system || query ? View.GONE : View.VISIBLE);
     }
 
     private void showAiSettings() {
+        String query = binding.editTextQueryTemplate.getText().toString();
+        if (!query.contains("@TEXT@")) { binding.editTextQueryTemplate.setError(getString(R.string.prompt_template_placeholder_required)); }
+        ConfigurationViewModel prompts = new ViewModelProvider(requireActivity()).get(ConfigurationViewModel.class);
+        prompts.setSystemPrompt(binding.editTextSystemPrompt.getText().toString());
+        prompts.setQueryTemplate(query);
         DialogAiSettingsBinding settings =
                 DialogAiSettingsBinding.inflate(getLayoutInflater());
         settings.editTextAiModel.setText(PreferenceUtil.getSharedPreferenceString(
                 R.string.key_ai_model, R.string.default_ai_model));
         java.util.List<String> presets = new java.util.ArrayList<>();
         presets.add(getString(R.string.ai_model_presets_hint));
-        presets.addAll(ModelCatalog.aiModels());
+        presets.addAll(SettingsCollections.aiModels());
         settings.spinnerAiModelPreset.setAdapter(modelAdapter(presets));
         settings.spinnerAiModelPreset.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 if (position <= 0) { return; }
-                String model = ModelCatalog.aiModels().get(position - 1);
+                String model = SettingsCollections.aiModels().get(position - 1);
                 settings.editTextAiModel.setText(model);
                 settings.editTextAiModel.setSelection(model.length());
                 settings.spinnerAiModelPreset.setSelection(0);
@@ -152,7 +170,7 @@ public class ConfigurationFragment extends Fragment {
                     : PreferenceUtil.getSharedPreferenceString(backend.modelKey(), backend.defaultModel);
             if (model == null || model.isEmpty()) { model = backend.defaultModel; }
             models.put(backend, model);
-            java.util.List<String> choices = ModelCatalog.speechModels(backend, model);
+            java.util.List<String> choices = SettingsCollections.speechModels(backend, model);
             settings.spinnerSpeechModel.setAdapter(modelAdapter(choices));
             settings.spinnerSpeechModel.setSelection(choices.indexOf(model));
             loadVoices.run();
@@ -210,12 +228,11 @@ public class ConfigurationFragment extends Fragment {
             @Override public void onNothingSelected(AdapterView<?> parent) { }
         });
         AlertDialog dialog = new AlertDialog.Builder(requireContext())
-                .setTitle(R.string.ai_settings)
+                .setTitle(R.string.additional_settings)
                 .setView(settings.getRoot())
                 .setNegativeButton(R.string.button_cancel, null)
                 .setPositiveButton(R.string.ai_settings_save, null).create();
-        dialog.setOnShowListener(d -> {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button -> {
+        java.util.function.Consumer<Boolean> save = exporting -> {
                 String model = settings.editTextAiModel.getText().toString().trim();
                 if (model.isEmpty()) { model = getString(R.string.default_ai_model); }
                 try {
@@ -244,18 +261,30 @@ public class ConfigurationFragment extends Fragment {
                 if (backend != SpeechBackend.DEVICE && !profiles.hasSpeed(backend, activeVoice[0])) {
                     profiles.setSpeed(backend, activeVoice[0], 1.0);
                 }
-                PreferenceUtil.setSharedPreferenceString(VoiceProfiles.PREFERENCE, profiles.json());
-                PreferenceUtil.setSharedPreferenceString(R.string.key_speech_style, settings.editTextSpeechStyle.getText().toString().trim());
-                PreferenceUtil.setSharedPreferenceString(R.string.key_speech_backend, backend.id);
+                java.util.Map<String, String> values = SettingsBackup.capture(requireContext());
+                values.put(VoiceProfiles.PREFERENCE, profiles.json());
+                values.put("speech_style", settings.editTextSpeechStyle.getText().toString().trim());
+                values.put("speech_backend", backend.id);
                 for (SpeechBackend provider : models.keySet()) {
                     String value = models.get(provider);
-                    PreferenceUtil.setSharedPreferenceString(provider.modelKey(), value.isEmpty() ? provider.defaultModel : value);
-                    PreferenceUtil.setSharedPreferenceString(provider.voiceKey(), voices.get(provider));
+                    values.put(provider.modelKey(), value.isEmpty() ? provider.defaultModel : value);
+                    values.put(provider.voiceKey(), voices.get(provider));
                 }
-                PreferenceUtil.setSharedPreferenceString(R.string.key_ai_model, model);
-                de.jeisfeld.mymeditation.audio.MeditationPlaybackService.applySavedSettings(requireContext());
+                values.put("claude_model", model);
+                if (exporting) { if (!settingsFiles.export(values)) { return; } }
+                else {
+                    // Save changes only on Save; exporting a draft does not commit dialog edits.
+                    for (java.util.Map.Entry<String, String> entry : values.entrySet()) {
+                        PreferenceUtil.setSharedPreferenceString(entry.getKey(), entry.getValue());
+                    }
+                    de.jeisfeld.mymeditation.audio.MeditationPlaybackService.applySavedSettings(requireContext());
+                }
                 dialog.dismiss();
-            });
+        };
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button -> save.accept(false));
+            settings.buttonExportSettings.setOnClickListener(button -> save.accept(true));
+            settings.buttonImportSettings.setOnClickListener(button -> { dialog.dismiss(); settingsFiles.restore(); });
         });
         dialog.setOnDismissListener(d -> {
             if (inlineAiSettings != null) { inlineAiSettings.refresh(); }

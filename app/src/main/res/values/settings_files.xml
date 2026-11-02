@@ -1,0 +1,12 @@
+<resources>
+    <string name="additional_settings">Additional settings</string>
+    <string name="export_settings">Save settings to file</string>
+    <string name="import_settings">Restore settings from file</string>
+    <string name="settings_file_description">Export includes the current settings, prompts, prompt templates and saved voices. It does not include saved meditations, audio or API keys.</string>
+    <string name="settings_replace_confirmation">Restore active settings from this file? New prompt templates, voices and custom models will be added; existing entries will be kept and duplicates skipped. Saved meditations and recordings will remain unchanged.</string>
+    <string name="settings_file_error">Could not save the settings file. Please choose a writable location and try again.</string>
+    <string name="settings_import_error">Could not restore settings. Choose a valid MyMeditation settings file (up to 2 MB). No settings were changed.</string>
+    <string name="settings_exported">Settings file saved.</string>
+    <string name="settings_imported">Settings restored.</string>
+    <string name="settings_restore_error">Could not apply settings. Please try again.</string>
+</resources>

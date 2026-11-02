@@ -56,6 +56,7 @@ final class InlinePromptTemplates {
         ArrayAdapter<String> adapter = new ArrayAdapter<>(context, R.layout.spinner_settings_item, names);
         adapter.setDropDownViewResource(R.layout.dropdown_voice_item); return adapter;
     }
+    void refresh() { refresh(null); }
     private void refresh(String preferred) {
         if (disposed) { return; }
         entries = read().list(); picker.setAdapter(adapter(entries)); picker.setEnabled(!entries.isEmpty()); selectMatching(preferred);

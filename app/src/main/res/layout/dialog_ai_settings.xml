@@ -134,5 +134,22 @@
             android:layout_height="wrap_content"
             android:text="@string/speech_style_note" />
     </LinearLayout>
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/settings_file_description" />
+    <Button
+        android:id="@+id/buttonExportSettings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/export_settings"
+        android:textAllCaps="false" />
+    <Button
+        android:id="@+id/buttonImportSettings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/import_settings"
+        android:textAllCaps="false" />
 </LinearLayout>
 </ScrollView>

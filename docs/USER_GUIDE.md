@@ -50,7 +50,7 @@ The choice persists across navigation and restarts. It affects the hidden instru
 
 ## Configuration and defaults
 
-The configuration page contains System instruction, Query template and AI settings. The model/provider/voice dropdowns save immediately. **More** opens the full dialog for manual model IDs, delivery instructions and ElevenLabs voice management; that dialog uses Save/Cancel.
+The configuration page contains System instruction, Query template and AI settings. The model/provider/voice dropdowns save immediately. **Additional settings / Weitere Einstellungen** at the bottom opens the full dialog for manual model IDs, delivery instructions, ElevenLabs voice management and settings files; that dialog uses Save/Cancel.
 
 First launch supplies missing prompts, a topic and the original 15-second pause default. Later starts preserve existing user values. The UI defaults to English and uses German on German-language devices. Prompt text is user data and is not automatically translated when the UI language changes.
 
@@ -92,3 +92,11 @@ On upgrade, old full-length MP3 recordings are deleted from private app storage.
 Playback continues with the screen locked. Temporary navigation interruptions pause and then resume audio when focus returns. Sentence playback repeats the interrupted segment. Manual pause/stop or headphone disconnection cancels automatic resume. Notification taps reuse the app and open the playback source tab.
 
 Recordings are private app data. Deleting an entry removes its link; audio shared by another entry is retained. Unreferenced recordings are cleaned once active work has ended. Uninstalling removes private recordings. Share a completed MP3 to retain a copy outside the app. Large audio files are excluded from cloud backup. There is no text-library import/export screen. More storage/provider details are in [AI integration](../AI-INTEGRATION.md).
+
+## Save and restore settings files
+
+Open **Configuration → Additional settings / Weitere Einstellungen**. **Save settings to file / Einstellungen in Datei speichern** opens Android’s file picker to choose a location for a JSON backup. It includes the current system instruction and query template, both named prompt-template libraries, AI model, every speech provider’s remembered model/voice, delivery instructions, ElevenLabs voice IDs/names, per-voice speeds, and global pause preferences. Current valid edits in the dialog are included in the file; export does not commit those dialog edits to the app. Prompt edits on the main page are saved when opening Additional settings.
+
+**Restore settings from file / Einstellungen aus Datei wiederherstellen** opens the file picker. Choose a MyMeditation settings JSON file, then confirm restoring active settings and adding new dropdown entries. Cancel keeps current settings. Files are validated before any settings change; invalid, unsupported or oversized files (over 2 MiB) are rejected. Restoring refreshes the visible prompt editors, template pickers and inline controls. Existing prompt templates and voices are kept. Identical prompt text and existing voice IDs are not added again. If a new template or voice needs a name that is already taken, it receives a numbered suffix such as `(2)`. Existing voice names and explicitly saved per-voice speeds win on conflicts. Both existing and imported custom model IDs remain available without duplicates. Repeating the same import does not add more copies. Other active settings are restored from the file; optional scalar values absent from a backup return to defaults. Version 1 files remain supported; new exports use version 2.
+
+These files contain settings only. Saved meditation entries, current meditation topic/text, audio recordings and playback position are preserved. API keys embedded in the app are not included. This is separate from Android’s app-data backup.

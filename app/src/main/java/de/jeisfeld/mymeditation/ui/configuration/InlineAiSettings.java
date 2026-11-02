@@ -9,7 +9,6 @@ import android.widget.Toast;
 import de.jeisfeld.mymeditation.R;
 import de.jeisfeld.mymeditation.audio.MeditationPlaybackService;
 import de.jeisfeld.mymeditation.databinding.FragmentConfigurationBinding;
-import de.jeisfeld.mymeditation.http.ModelCatalog;
 import de.jeisfeld.mymeditation.http.SpeechBackend;
 import de.jeisfeld.mymeditation.http.VoiceProfiles;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
@@ -35,7 +34,7 @@ final class InlineAiSettings {
         if (disposed) { return; }
         generation++;
         String aiModel = PreferenceUtil.getSharedPreferenceString(R.string.key_ai_model, R.string.default_ai_model);
-        List<String> aiModels = new ArrayList<>(ModelCatalog.aiModels());
+        List<String> aiModels = new ArrayList<>(SettingsCollections.aiModels());
         if (!aiModels.contains(aiModel)) { aiModels.add(0, aiModel); }
         bind(binding.spinnerAiModelPreset, aiModels, aiModels.indexOf(aiModel), index -> {
             PreferenceUtil.setSharedPreferenceString(R.string.key_ai_model, aiModels.get(index));
@@ -58,7 +57,7 @@ final class InlineAiSettings {
         }
 
         String model = savedModel(backend);
-        List<String> models = ModelCatalog.speechModels(backend, model);
+        List<String> models = SettingsCollections.speechModels(backend, model);
         bind(binding.spinnerSpeechModel, models, models.indexOf(model),
                 index -> selectSpeech(backend, models.get(index), null));
         List<String> ids = new ArrayList<>();

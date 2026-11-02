@@ -1,0 +1,12 @@
+<resources>
+    <string name="additional_settings">Weitere Einstellungen</string>
+    <string name="export_settings">Einstellungen in Datei speichern</string>
+    <string name="import_settings">Einstellungen aus Datei wiederherstellen</string>
+    <string name="settings_file_description">Die Datei enthält die aktuellen Einstellungen, Prompts, Promptvorlagen und gespeicherten Stimmen. Gespeicherte Meditationen, Audiodateien und API-Schlüssel sind nicht enthalten.</string>
+    <string name="settings_replace_confirmation">Aktive Einstellungen aus dieser Datei wiederherstellen? Neue Promptvorlagen, Stimmen und eigene Modelle werden hinzugefügt; vorhandene Einträge bleiben erhalten und Duplikate werden übersprungen. Gespeicherte Meditationen und Aufnahmen bleiben unverändert.</string>
+    <string name="settings_file_error">Die Einstellungsdatei konnte nicht gespeichert werden. Bitte wähle einen beschreibbaren Speicherort und versuche es erneut.</string>
+    <string name="settings_import_error">Die Einstellungen konnten nicht wiederhergestellt werden. Bitte wähle eine gültige MyMeditation-Einstellungsdatei (bis 2 MB). Es wurden keine Einstellungen geändert.</string>
+    <string name="settings_exported">Einstellungsdatei gespeichert.</string>
+    <string name="settings_imported">Einstellungen wiederhergestellt.</string>
+    <string name="settings_restore_error">Die Einstellungen konnten nicht übernommen werden. Bitte versuche es erneut.</string>
+</resources>
