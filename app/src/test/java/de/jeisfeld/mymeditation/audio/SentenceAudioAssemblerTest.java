@@ -36,7 +36,7 @@ public class SentenceAudioAssemblerTest {
         PlaybackRequest request = new PlaybackRequest("First. Second. Third.", SpeechBackend.GEMINI,
                 "gemini-3.8-flash-tts", "Kore", 1.5, "", 0);
         SentenceAudioStore.Book book = new SentenceAudioStore(directory.getRoot()).open(request);
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < (complete ? 3 : 2); i++) {
             book.obtain(i, file -> {
                 try (FileOutputStream output = new FileOutputStream(file); Mp3Writer writer = new Mp3Writer(output)) { writer.silence(0.1, () -> { }); }
             }, () -> { });
@@ -65,7 +65,7 @@ public class SentenceAudioAssemblerTest {
         SentenceAudioStore.Book incomplete = book(false);
         assertThrows(java.io.IOException.class, () -> SentenceAudioAssembler.write(incomplete, 2, new ByteArrayOutputStream(),
                 (file, writer, check) -> fail("Must not decode incomplete recordings"), count -> { }, () -> { }));
-        incomplete.finish();
+        book(true); incomplete.finish();
         for (double pause : new double[] {Double.NaN, Double.POSITIVE_INFINITY, -1, 31}) {
             assertThrows(IllegalArgumentException.class, () -> SentenceAudioAssembler.write(incomplete, pause,
                     new ByteArrayOutputStream(), (file, writer, check) -> fail("Invalid pause"), count -> { }, () -> { }));

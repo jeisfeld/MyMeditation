@@ -176,6 +176,18 @@ public final class MeditationPlaybackService extends Service {
             @Override public void onError(String message) {
                 running = false; error = message; errorId = System.nanoTime(); status = ""; publish(); finishService(false);
             }
+            @Override public void onAudioAvailable() {
+                if (request == null || request.backend == SpeechBackend.DEVICE) { return; }
+                PlaybackRequest recording = request;
+                SavedAudioLibrary.Snapshot captured = snapshot;
+                Context context = getApplicationContext();
+                recordingWriter.execute(() -> {
+                    if (SentenceAudio.store(context).open(recording).isComplete()) {
+                        new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
+                                SavedAudioLibrary.keepComplete(context, recording, captured));
+                    }
+                });
+            }
             @Override public void onCompletedSentence(int index) {
                 if (request == null || request.backend == SpeechBackend.DEVICE) { return; }
                 if (index == sentences.size() - 1) { finalizingRecording = true; }

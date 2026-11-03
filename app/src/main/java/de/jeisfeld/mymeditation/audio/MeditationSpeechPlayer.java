@@ -29,6 +29,7 @@ public final class MeditationSpeechPlayer {
         void onError(String error);
         default void onStatus(String status) { }
         default void onFinished() { }
+        default void onAudioAvailable() { }
         default void onCompletedSentence(int index) { }
         default void onSpeaking(int index) { }
         default void onWaitingForAudioFocus(boolean waiting) { }
@@ -39,6 +40,13 @@ public final class MeditationSpeechPlayer {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
     private final ExecutorService elevenExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService planner = Executors.newSingleThreadExecutor();
+    private final RecordingSource recordingSource;
+    private boolean planning, finishing, awaitingCompletion;
+    static final int COMPLETION_LIMIT = 3;
+    interface RecordingSource {
+        File obtain(PlaybackRequest request, int index, CloudSpeech speech, Runnable check) throws Exception;
+    }
     private final Map<Integer, Download> downloads = new HashMap<>();
     private android.media.AudioFocusRequest focus;
     private final AudioFocusRecovery focusRecovery = new AudioFocusRecovery();
@@ -66,8 +74,12 @@ public final class MeditationSpeechPlayer {
     }
 
     public MeditationSpeechPlayer(Context context, Listener listener) {
+        this(context, listener, (request, index, speech, check) -> SentenceAudio.obtain(context.getApplicationContext(), request, index, speech, check));
+    }
+    MeditationSpeechPlayer(Context context, Listener listener, RecordingSource source) {
         this.context = context.getApplicationContext();
         this.listener = listener;
+        recordingSource = source;
     }
 
     public void start(PlaybackRequest request, int position) {
@@ -111,6 +123,7 @@ public final class MeditationSpeechPlayer {
         }
         if (backend != SpeechBackend.DEVICE) {
             next(token, true);
+            planCompletion(token);
         } else {
             tts = new TextToSpeech(context, status -> handler.post(() -> {
                 if (!valid(token)) { return; }
@@ -163,12 +176,15 @@ public final class MeditationSpeechPlayer {
 
     private boolean valid(int token) { return running && token == session; }
 
-    private Download download(int position) {
+    private Download download(int position) { return download(position, false); }
+
+    private Download download(int position, boolean background) {
         if (MeditationPauses.seconds(sentences.get(position)) >= 0) { throw new IllegalArgumentException("Pause commands have no speech audio"); }
         Download job = downloads.get(position);
         if (job == null) {
             job = new Download();
             final Download current = job;
+            current.request.setBoundedRetries(background);
             final int token = session;
             current.request.setRetryListener((attempt, delay) -> handler.post(() -> {
                 if (!valid(token)) { return; }
@@ -185,7 +201,7 @@ public final class MeditationSpeechPlayer {
             job.result = CompletableFuture.supplyAsync(() -> {
                 try {
                     if (recording != null) {
-                        return SentenceAudio.obtain(context, recording, position, current.request, () -> {
+                        return recordingSource.obtain(recording, position, current.request, () -> {
                             if (current.cancelled || Thread.currentThread().isInterrupted()) { throw new java.util.concurrent.CancellationException(); }
                         });
                     }
@@ -194,6 +210,11 @@ public final class MeditationSpeechPlayer {
                 catch (Exception e) { throw new java.util.concurrent.CompletionException(e); }
             }, speechBackend == SpeechBackend.ELEVENLABS ? elevenExecutor : executor);
             downloads.put(position, job);
+            job.result.whenComplete((file, error) -> handler.post(() -> {
+                if (!valid(token) || error != null) { return; }
+                if (recording != null) { listener.onAudioAvailable(); }
+                if (!finishing) { planCompletion(token); }
+            }));
         }
         return job;
     }
@@ -292,8 +313,39 @@ public final class MeditationSpeechPlayer {
         if (!valid(token)) { return; }
         listener.onCompletedSentence(index);
         downloads.remove(index);
-        if (++index >= sentences.size()) { stop(); listener.onFinished(); }
-        else { next(token, false); }
+        if (++index >= sentences.size()) {
+            index = sentences.size() - 1;
+            finishing = true;
+            if (recordingRequest != null && backend != SpeechBackend.DEVICE) { releaseFocus(); planCompletion(token); }
+            else { finishNow(token); }
+        } else { next(token, false); }
+    }
+
+    private void planCompletion(int token) {
+        if (!valid(token) || planning || recordingRequest == null || backend == SpeechBackend.DEVICE) { return; }
+        planning = true;
+        PlaybackRequest captured = recordingRequest;
+        CompletableFuture.supplyAsync(() -> SentenceAudio.store(context).open(captured).missingSpeech(), planner)
+                .whenComplete((missing, error) -> handler.post(() -> {
+                    if (!valid(token)) { return; }
+                    planning = false;
+                    if (error == null && missing.size() <= COMPLETION_LIMIT) {
+                        for (int position : missing) { download(position, true); }
+                    }
+                    if (finishing) { awaitCompletion(token); }
+                }));
+    }
+    private void awaitCompletion(int token) {
+        if (awaitingCompletion) { return; }
+        awaitingCompletion = true;
+        CompletableFuture<?>[] pending = downloads.values().stream().map(job -> job.result).toArray(CompletableFuture<?>[]::new);
+        if (java.util.Arrays.stream(pending).anyMatch(job -> !job.isDone())) { listener.onStatus(UiText.COMPLETING_OFFLINE.text()); }
+        CompletableFuture.allOf(pending).whenComplete((ignored, error) -> handler.post(() -> finishNow(token)));
+    }
+    private void finishNow(int token) {
+        if (!valid(token)) { return; }
+        if (recordingRequest != null && backend != SpeechBackend.DEVICE) { listener.onAudioAvailable(); }
+        stop(); listener.onFinished();
     }
 
     private void waitSilently(int duration, int token, Runnable action) {
@@ -341,6 +393,7 @@ public final class MeditationSpeechPlayer {
     private void stopPlaybackResources() {
         session++;
         running = false;
+        planning = false; finishing = false; awaitingCompletion = false;
         // Do not remove handler messages here: a focus GAIN may already be queued.
         for (Download job : downloads.values()) { job.cancelled = true; job.request.cancel(); job.result.cancel(true); }
         downloads.clear();
@@ -348,18 +401,22 @@ public final class MeditationSpeechPlayer {
         releaseMedia(); releaseSilence();
     }
 
-    public void stop() {
+    private void releaseFocus() {
         focusRecovery.cancel(); focusSession++;
-        stopPlaybackResources();
-        handler.removeCallbacksAndMessages(null);
         if (focus != null) {
             ((android.media.AudioManager) context.getSystemService(Context.AUDIO_SERVICE)).abandonAudioFocusRequest(focus);
             focus = null;
         }
+    }
+
+    public void stop() {
+        releaseFocus();
+        stopPlaybackResources();
+        handler.removeCallbacksAndMessages(null);
         listener.onWaitingForAudioFocus(false);
         listener.onStatus("");
         listener.onRunning(false);
     }
 
-    public void close() { stop(); executor.shutdownNow(); elevenExecutor.shutdownNow(); }
+    public void close() { stop(); executor.shutdownNow(); elevenExecutor.shutdownNow(); planner.shutdownNow(); }
 }

@@ -128,16 +128,19 @@ public final class SentenceAudioStore {
             }
         }
         public boolean isPublished() { return new File(directory, "complete").isFile(); }
+        /** Completeness is about valid generated clips, independent of listening progress. */
         public boolean isComplete() {
-            if (!isPublished()) {
-                // Recover older caches whose speech finished but skipped wait markers blocked publication.
-                if (!new File(directory, "manifest.json").isFile() || !allSpeechPlayed()) { return false; }
-                try { finish(); } catch (Exception e) { return false; }
-            }
+            if (!new File(directory, "manifest.json").isFile()) { return false; }
             for (int i = 0; i < sentences.size(); i++) {
                 if (!ready(i)) { new File(directory, "complete").delete(); return false; }
             }
+            if (!isPublished()) { try { finish(); } catch (Exception e) { return false; } }
             return true;
+        }
+        public List<Integer> missingSpeech() {
+            List<Integer> missing = new java.util.ArrayList<>();
+            for (int i = 0; i < sentences.size(); i++) { if (!ready(i)) { missing.add(i); } }
+            return missing;
         }
         public void invalidate(int index) {
             audio(index).delete();
@@ -152,22 +155,13 @@ public final class SentenceAudioStore {
             }
             Files.write(new File(directory, "complete").toPath(), new byte[] {1});
         }
-        private boolean allSpeechPlayed() {
-            for (int i = 0; i < sentences.size(); i++) {
-                if (MeditationPauses.seconds(sentences.get(i)) < 0
-                        && (!new File(directory, "played-" + i).isFile() || available(i) == null)) { return false; }
-            }
-            return true;
-        }
-        /** Automatic retention requires every spoken sentence; waits need neither audio nor playback. */
+        /** Listening markers are retained separately and never gate offline availability. */
         public boolean played(int index) throws Exception {
             index(index);
             if (!ready(index)) { return false; }
             initialize();
             Files.write(new File(directory, "played-" + index).toPath(), new byte[] {1});
-            if (!allSpeechPlayed()) { return false; }
-            finish();
-            return true;
+            return isComplete();
         }
     }
 }

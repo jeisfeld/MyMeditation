@@ -67,14 +67,14 @@ public class SentencePlaybackServiceTest extends BaselineTest {
         SentenceAudioStore.Book book = prefetched(scripted);
         PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_text, text);
         start();
-        assertFalse(book.isComplete());
+        assertTrue(book.isComplete());
         service.onStartCommand(new Intent().setAction("meditation.NEXT"), 0, 2);
         await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 1);
         complete(0);
         await(() -> MeditationPlaybackService.state().getValue().position == 2);
         service.onStartCommand(new Intent().setAction("meditation.NEXT"), 0, 3);
         await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 3);
-        assertFalse(book.isComplete());
+        assertTrue(book.isComplete());
         complete(1);
         await(() -> !PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).isEmpty());
         assertTrue(book.isComplete());
@@ -84,12 +84,13 @@ public class SentencePlaybackServiceTest extends BaselineTest {
         service.onStartCommand(new Intent().setAction("meditation.STOP"), 0, 4);
     }
 
-    @Test public void listeningToAllSentencesAutomaticallyKeepsACompleteAudioMeditation() throws Exception {
-        SentenceAudioStore.Book book = prefetched(1); assertFalse(book.isComplete());
+    @Test public void creatingAllSentencesKeepsOfflineAudioBeforeListeningFinishes() throws Exception {
+        SentenceAudioStore.Book book = prefetched(1); assertTrue(book.isComplete());
         start(); await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 0);
+        await(() -> !PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).isEmpty());
+        assertFalse(new File(book.audio(1).getParentFile(), "played-1").exists());
         complete(0);
         await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 1);
-        assertTrue(PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).isEmpty());
         complete(1);
         await(() -> !PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).isEmpty());
         assertTrue(book.isComplete());
@@ -97,7 +98,7 @@ public class SentencePlaybackServiceTest extends BaselineTest {
         assertTrue(SavedAudioLibrary.hasAudio(Application.getAppContext(), id));
         assertEquals(request(1).text, PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id));
     }
-    @Test public void changingVoiceSpeedMidMeditationDoesNotPublishAMixedRecording() throws Exception {
+    @Test public void changingVoiceSpeedKeepsSeparateGeneratedRecordings() throws Exception {
         SentenceAudioStore.Book original = prefetched(1), changed = prefetched(1.25);
         start(); await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 0);
         complete(0); await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 1);
@@ -107,7 +108,14 @@ public class SentencePlaybackServiceTest extends BaselineTest {
         complete(2);
         await(() -> new File(changed.audio(1).getParentFile(), "played-1").exists());
         idle();
-        assertFalse(original.isComplete()); assertFalse(changed.isComplete());
-        assertTrue(PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).isEmpty());
+        assertTrue(original.isComplete()); assertTrue(changed.isComplete());
+        await(() -> PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).stream().anyMatch(id -> {
+            SentenceAudioStore.Book saved = SavedAudioLibrary.book(Application.getAppContext(), id);
+            return saved != null && saved.identity.equals(changed.identity);
+        }));
+        for (int id : PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids)) {
+            String identity = SavedAudioLibrary.book(Application.getAppContext(), id).identity;
+            assertTrue(identity.equals(original.identity) || identity.equals(changed.identity));
+        }
     }
 }

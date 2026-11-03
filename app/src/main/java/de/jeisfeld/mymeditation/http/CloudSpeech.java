@@ -15,6 +15,8 @@ import org.json.JSONObject;
 public final class CloudSpeech {
     private static final java.util.concurrent.Semaphore GEMINI_GATE = new java.util.concurrent.Semaphore(1, true);
     private static final java.util.concurrent.Semaphore ELEVEN_GATE = new java.util.concurrent.Semaphore(1, true);
+    private boolean boundedRetries;
+    public void setBoundedRetries(boolean bounded) { boundedRetries = bounded; }
     private java.util.function.BiConsumer<Integer, Long> retryListener = (attempt, delay) -> { };
     public void setRetryListener(java.util.function.BiConsumer<Integer, Long> listener) { retryListener = listener; }
 
@@ -68,7 +70,7 @@ public final class CloudSpeech {
                 throw e;
             } finally { if (acquired) { gate.release(); } }
         };
-        return backend == SpeechBackend.ELEVENLABS
+        return backend == SpeechBackend.ELEVENLABS && !boundedRetries
                 ? SpeechRetry.untilCancelled(operation, this::check, Thread::sleep, retryListener)
                 : SpeechRetry.run(operation, this::check, Thread::sleep);
     }

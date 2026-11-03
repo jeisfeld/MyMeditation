@@ -26,28 +26,24 @@ public class SentenceAudioStoreTest {
         SentenceAudioStore.Book book = store.open(request("[wait 1s]Breathe.[wait 18s]Rest.[wait 2s]", 1, "Kore", "", 2));
         assertFalse(book.played(0)); // A leading silence can finish before any audio is generated.
         book.obtain(1, this::mp3, () -> { }); book.obtain(3, this::mp3, () -> { });
-        assertFalse(book.played(1)); assertTrue(book.played(3));
+        assertTrue(book.played(1)); assertTrue(book.played(3));
         assertTrue(book.isComplete());
         assertFalse(book.audio(0).exists()); assertFalse(book.audio(2).exists()); assertFalse(book.audio(4).exists());
         assertTrue(store.find(book.identity).isComplete());
         assertEquals(book.identity, SentenceAudioStore.key(book.request.withPause(30)));
         book.invalidate(1); assertFalse(book.isComplete());
     }
-    @Test public void oldCachesWithAllSpeechPlayedRecoverWithoutCompletingWaitsOrRegeneratingAudio() throws Exception {
+    @Test public void oldGeneratedCachesRecoverWithoutPlaybackMarkersOrRegeneratingAudio() throws Exception {
         SentenceAudioStore store = new SentenceAudioStore(temporary.getRoot());
         SentenceAudioStore.Book book = store.open(request("[wait 5s]Breathe.[wait 5s]Relax.[wait 5s]", 1, "Kore", "", 0));
-        book.obtain(1, this::mp3, () -> { }); book.obtain(3, this::mp3, () -> { });
-        File folder = book.audio(1).getParentFile();
-        Files.write(new File(folder, "played-1").toPath(), new byte[] {1});
-        assertFalse(book.isComplete()); // Even available but unplayed speech still prevents publication.
-        Files.write(new File(folder, "played-3").toPath(), new byte[] {1});
+        book.obtain(1, this::mp3, () -> { }); assertFalse(book.isComplete());
+        book.obtain(3, this::mp3, () -> { });
         assertFalse(book.isPublished());
-        assertTrue(store.find(book.identity).isComplete());
-        assertTrue(book.isPublished());
+        assertTrue(store.find(book.identity).isComplete()); assertTrue(book.isPublished());
         for (int i : new int[] {0, 2, 4}) { assertFalse(book.audio(i).exists()); }
+        assertFalse(new File(book.audio(1).getParentFile(), "played-1").exists());
         book.invalidate(3); assertFalse(book.isComplete());
     }
-
     @Test public void pauseDoesNotInvalidateAudioButEverySynthesisSettingDoes() {
         PlaybackRequest original = request(); String key = SentenceAudioStore.key(original);
         assertEquals(key, SentenceAudioStore.key(original.withPause(30)));
@@ -61,12 +57,12 @@ public class SentenceAudioStoreTest {
             assertNotEquals(key, SentenceAudioStore.key(changed));
         }
     }
-    @Test public void prefetchDoesNotCompleteRecordingAndOfflineReuseNeverCallsProducer() throws Exception {
+    @Test public void generatedAudioIsOfflineWithoutPlaybackAndReuseNeverCallsProducer() throws Exception {
         SentenceAudioStore store = new SentenceAudioStore(temporary.getRoot());
         SentenceAudioStore.Book book = store.open(request());
         book.obtain(0, this::mp3, () -> { }); book.obtain(1, this::mp3, () -> { });
-        assertFalse(book.isComplete());
-        assertFalse(book.played(0)); assertTrue(book.played(1)); assertTrue(book.isComplete());
+        assertTrue(book.isComplete());
+        assertTrue(book.played(0)); assertTrue(book.played(1)); assertTrue(book.isComplete());
         SentenceAudioStore.Book reopened = store.find(book.identity);
         assertNotNull(reopened); assertTrue(reopened.isComplete());
         File audio = reopened.obtain(0, file -> fail("Offline replay must not contact a provider"), () -> { });

@@ -76,11 +76,11 @@ public class SentenceReplayTest extends BaselineTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1));
         assertEquals(Arrays.asList(0, 1), spoken);
         completeLast();
-        assertEquals(Arrays.asList(0, 1), completed); assertTrue(finished); assertTrue(errors.isEmpty());
+        assertEquals(Arrays.asList(0, 1), completed); await(() -> finished); assertTrue(errors.isEmpty());
     }
     @Test public void savedReplayCanStartAtASelectedSentence() throws Exception {
         start(1); assertEquals(Arrays.asList(1), spoken);
-        completeLast(); assertEquals(Arrays.asList(1), completed); assertTrue(finished);
+        completeLast(); assertEquals(Arrays.asList(1), completed); await(() -> finished);
     }
     @Test public void stoppingDuringASavedSentencePauseCancelsThePendingReplay() throws Exception {
         start(0); completeLast(); await(() -> secondStatuses >= 2);

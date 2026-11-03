@@ -86,11 +86,10 @@ public class SavedAudioLibraryTest extends BaselineTest {
         assertEquals(1.25, new VoiceProfiles(PreferenceUtil.getSharedPreferenceString(VoiceProfiles.PREFERENCE, "{}"))
                 .speed(SpeechBackend.GEMINI, "Kore", 3), 0);
     }
-    @Test public void downloadingAllSentencesWithoutFinishingDoesNotPublishALibraryEntry() throws Exception {
+    @Test public void creatingAllSentencesWithoutListeningPublishesALibraryEntry() throws Exception {
         audio(false);
-        assertEquals(0, SavedAudioLibrary.keepComplete(Application.getAppContext(), request(),
-                SavedAudioLibrary.Snapshot.current(Application.getAppContext())));
-        assertTrue(PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).isEmpty());
+        int id = SavedAudioLibrary.keepComplete(Application.getAppContext(), request(), SavedAudioLibrary.Snapshot.current(Application.getAppContext()));
+        assertTrue(id > 0); assertTrue(SavedAudioLibrary.hasAudio(Application.getAppContext(), id));
     }
     @Test public void aPlainTextSaveCanAttachAvailableAudioOnlyForMatchingSettings() throws Exception {
         audio(true);
