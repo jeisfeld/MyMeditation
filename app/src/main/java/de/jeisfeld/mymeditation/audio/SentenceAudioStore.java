@@ -129,7 +129,11 @@ public final class SentenceAudioStore {
         }
         public boolean isPublished() { return new File(directory, "complete").isFile(); }
         public boolean isComplete() {
-            if (!isPublished()) { return false; }
+            if (!isPublished()) {
+                // Recover older caches whose speech finished but skipped wait markers blocked publication.
+                if (!new File(directory, "manifest.json").isFile() || !allSpeechPlayed()) { return false; }
+                try { finish(); } catch (Exception e) { return false; }
+            }
             for (int i = 0; i < sentences.size(); i++) {
                 if (!ready(i)) { new File(directory, "complete").delete(); return false; }
             }
@@ -148,15 +152,20 @@ public final class SentenceAudioStore {
             }
             Files.write(new File(directory, "complete").toPath(), new byte[] {1});
         }
-        /** Automatic retention requires completed playback of every sentence, not speculative downloads. */
+        private boolean allSpeechPlayed() {
+            for (int i = 0; i < sentences.size(); i++) {
+                if (MeditationPauses.seconds(sentences.get(i)) < 0
+                        && (!new File(directory, "played-" + i).isFile() || available(i) == null)) { return false; }
+            }
+            return true;
+        }
+        /** Automatic retention requires every spoken sentence; waits need neither audio nor playback. */
         public boolean played(int index) throws Exception {
             index(index);
             if (!ready(index)) { return false; }
             initialize();
             Files.write(new File(directory, "played-" + index).toPath(), new byte[] {1});
-            for (int i = 0; i < sentences.size(); i++) {
-                if (!new File(directory, "played-" + i).isFile() || !ready(i)) { return false; }
-            }
+            if (!allSpeechPlayed()) { return false; }
             finish();
             return true;
         }

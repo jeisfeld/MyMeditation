@@ -31,8 +31,12 @@ public class SentencePlaybackServiceTest extends BaselineTest {
         return new PlaybackRequest("Breathe slowly. Relax.", SpeechBackend.GEMINI, "gemini-3.8-flash-tts", "Kore", speed, "Calm", 0);
     }
     private SentenceAudioStore.Book prefetched(double speed) throws Exception {
-        SentenceAudioStore.Book book = SentenceAudio.store(Application.getAppContext()).open(request(speed));
+        return prefetched(request(speed));
+    }
+    private SentenceAudioStore.Book prefetched(PlaybackRequest request) throws Exception {
+        SentenceAudioStore.Book book = SentenceAudio.store(Application.getAppContext()).open(request);
         for (int i = 0; i < book.sentences.size(); i++) {
+            if (MeditationPauses.seconds(book.sentences.get(i)) >= 0) { continue; }
             File file = book.obtain(i, target -> {
                 try (FileOutputStream output = new FileOutputStream(target); Mp3Writer writer = new Mp3Writer(output)) { writer.silence(0.1, () -> { }); }
             }, () -> { });
@@ -56,6 +60,29 @@ public class SentencePlaybackServiceTest extends BaselineTest {
     }
     private void complete(int index) { shadowOf(players.get(index)).getOnCompletionListener().onCompletion(players.get(index)); idle(); }
     @After public void close() { if (controller != null) { controller.destroy(); idle(); } }
+
+    @Test public void skippingWaitsStillKeepsOfflineAudioOnceEverySpokenSentenceFinishes() throws Exception {
+        String text = "[wait 300s]Breathe slowly.[wait 300s]Relax.[wait 300s]";
+        PlaybackRequest scripted = new PlaybackRequest(text, SpeechBackend.GEMINI, "gemini-3.8-flash-tts", "Kore", 1, "Calm", 0);
+        SentenceAudioStore.Book book = prefetched(scripted);
+        PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_text, text);
+        start();
+        assertFalse(book.isComplete());
+        service.onStartCommand(new Intent().setAction("meditation.NEXT"), 0, 2);
+        await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 1);
+        complete(0);
+        await(() -> MeditationPlaybackService.state().getValue().position == 2);
+        service.onStartCommand(new Intent().setAction("meditation.NEXT"), 0, 3);
+        await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 3);
+        assertFalse(book.isComplete());
+        complete(1);
+        await(() -> !PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).isEmpty());
+        assertTrue(book.isComplete());
+        int id = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).get(0);
+        assertTrue(SavedAudioLibrary.hasAudio(Application.getAppContext(), id));
+        for (int i : new int[] {0, 2, 4}) { assertFalse(book.audio(i).exists()); }
+        service.onStartCommand(new Intent().setAction("meditation.STOP"), 0, 4);
+    }
 
     @Test public void listeningToAllSentencesAutomaticallyKeepsACompleteAudioMeditation() throws Exception {
         SentenceAudioStore.Book book = prefetched(1); assertFalse(book.isComplete());
