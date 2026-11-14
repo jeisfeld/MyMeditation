@@ -173,31 +173,25 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 			return false;
 		});
 
-		holder.mDeleteButton.setOnClickListener(v -> {
-			Fragment fragment = mFragment.get();
-			if (fragment != null && fragment.getActivity() != null) {
-				DialogUtil.displayConfirmationMessage(fragment.getActivity(), dialog -> {
-                    if (de.jeisfeld.mymeditation.audio.MeditationPlaybackService.state().getValue().savedId == meditationId) {
-                        de.jeisfeld.mymeditation.audio.MeditationPlaybackService.end(fragment.requireContext());
-                    }
-                    de.jeisfeld.mymeditation.audio.SavedAudioLibrary.unlink(meditationId);
-					PreferenceUtil.setSharedPreferenceString("offline_settings_" + meditationId, "");
-					PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_meditation_name, meditationId);
-					PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_system_prompt, meditationId);
-                    PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_pause_guidance, meditationId);
-					PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_query_template, meditationId);
-					PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_meditation_content, meditationId);
-					PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_meditation_text, meditationId);
-					ArrayList<Integer> savedMeditationIds = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids);
-					savedMeditationIds.remove(Integer.valueOf(meditationId));
-					PreferenceUtil.setSharedPreferenceIntList(R.string.key_saved_meditation_ids, savedMeditationIds);
-                    de.jeisfeld.mymeditation.audio.SavedAudioLibrary.cleanupDeleted(fragment.requireContext());
-					int removed = mMeditationIds.indexOf(meditationId);
-					mMeditationIds.remove(Integer.valueOf(meditationId));
-					if (removed >= 0) { notifyItemRemoved(removed); notifyItemRangeChanged(removed, mMeditationIds.size() - removed); }
-				}, null, R.string.button_cancel, R.string.button_delete, R.string.message_confirm_delete_meditation, meditationName);
-			}
-		});
+        holder.mDeleteButton.setOnClickListener(v -> {
+            Fragment fragment = mFragment.get();
+            if (fragment == null || fragment.getActivity() == null) { return; }
+            if (de.jeisfeld.mymeditation.audio.SavedAudioLibrary.hasRecording(meditationId)) {
+                new android.app.AlertDialog.Builder(fragment.requireContext())
+                        .setTitle(R.string.title_dialog_confirmation)
+                        .setMessage(fragment.getString(R.string.delete_meditation_options, meditationName))
+                        .setNegativeButton(R.string.button_cancel, null)
+                        .setPositiveButton(R.string.button_delete, (dialog, which) -> deleteMeditation(fragment, meditationId))
+                        .setNeutralButton(R.string.delete_audio_only, (dialog, which) -> {
+                            boolean removed = de.jeisfeld.mymeditation.audio.SavedAudioLibrary.removeAudio(fragment.requireContext(), meditationId);
+                            android.widget.Toast.makeText(fragment.requireContext(), removed ? R.string.audio_only_removed : de.jeisfeld.mymeditation.audio.AppStorage.isCleaning() ? R.string.storage_cleaning : R.string.storage_stop_first,
+                                    android.widget.Toast.LENGTH_LONG).show();
+                        }).show();
+            } else {
+                DialogUtil.displayConfirmationMessage(fragment.requireActivity(), dialog -> deleteMeditation(fragment, meditationId),
+                        null, R.string.button_cancel, R.string.button_delete, R.string.message_confirm_delete_meditation, meditationName);
+            }
+        });
 
         holder.mTitle.setOnClickListener(v -> {
             Fragment fragment = mFragment.get();
@@ -211,6 +205,27 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
         });
 
 	}
+
+    private void deleteMeditation(Fragment fragment, int meditationId) {
+        if (de.jeisfeld.mymeditation.audio.MeditationPlaybackService.state().getValue().savedId == meditationId) {
+            de.jeisfeld.mymeditation.audio.MeditationPlaybackService.end(fragment.requireContext());
+        }
+        de.jeisfeld.mymeditation.audio.SavedAudioLibrary.unlink(meditationId);
+        PreferenceUtil.setSharedPreferenceString("offline_settings_" + meditationId, "");
+        PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_meditation_name, meditationId);
+        PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_system_prompt, meditationId);
+        PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_pause_guidance, meditationId);
+        PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_query_template, meditationId);
+        PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_meditation_content, meditationId);
+        PreferenceUtil.removeIndexedSharedPreference(R.string.key_saved_meditation_text, meditationId);
+        ArrayList<Integer> savedMeditationIds = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids);
+        savedMeditationIds.remove(Integer.valueOf(meditationId));
+        PreferenceUtil.setSharedPreferenceIntList(R.string.key_saved_meditation_ids, savedMeditationIds);
+        de.jeisfeld.mymeditation.audio.SavedAudioLibrary.cleanupDeleted(fragment.requireContext());
+        int removed = mMeditationIds.indexOf(meditationId);
+        mMeditationIds.remove(Integer.valueOf(meditationId));
+        if (removed >= 0) { notifyItemRemoved(removed); notifyItemRangeChanged(removed, mMeditationIds.size() - removed); }
+    }
 
     private static void refreshDraft(Fragment fragment) {
         new ViewModelProvider(fragment.requireActivity()).get(ConfigurationViewModel.class).getStoredData();

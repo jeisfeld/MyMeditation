@@ -224,6 +224,10 @@ public final class MeditationPlaybackService extends Service {
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null) { stopSelf(); return START_NOT_STICKY; }
         String action = intent.getAction();
+        if (AppStorage.isCleaning() && !PAUSE.equals(action) && !STOP.equals(action)) {
+            playbackError(new IllegalArgumentException(getString(R.string.storage_cleaning)));
+            return START_NOT_STICKY;
+        }
         if (PAUSE.equals(action)) { pausePlayback(); }
         else if (STOP.equals(action)) { stopPlayback(); }
         else if (APPLY_SETTINGS.equals(action)) {

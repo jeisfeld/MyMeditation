@@ -73,7 +73,7 @@ This original text-save operation does not generate audio. If a complete sentenc
 
 Tap a saved entry's **name** to restore its prompts, topic and text into the current draft. This changes the current configuration as well as the meditation text. For audio entries it also restores recorded provider, model, voice, instructions and speed. The current pause duration stays unchanged. Loading stops the previous playback session and does not automatically start speaking. Go to Meditation to read, edit or play the restored text.
 
-Drag the handle at the far right to change saved order. Use the pencil immediately before Trash to rename an entry. Use Trash to delete, then confirm; Cancel keeps it. Deleting one entry does not remove the others or reset their order. Renaming preserves the associated text and audio.
+Drag the handle at the far right to change saved order. Use the pencil immediately before Trash to rename an entry. Use Trash to delete, then confirm; Cancel keeps it. Entries with audio also offer **Audio only / Nur Audio**, which keeps the name, text, prompts, pause selection and recorded speech settings. Shared recording files remain while another saved entry uses them; the last removal releases the recording after active work has ended. Stop playback and sharing before removing audio only. Deleting one entry does not remove the others or reset their order. Renaming preserves the associated text and audio.
 
 The name filter matches part of a name without case sensitivity. **Audio only** limits the list to entries with a completed local recording. Drag reordering remains available with either or both filters active. Dragging upward puts the meditation immediately before the visible entry you cross; dragging downward puts it immediately after that entry in the full saved list. Hidden entries keep their order relative to each other. Clear the filters to see the resulting full order. Filters do not delete hidden entries.
 
@@ -100,3 +100,15 @@ Open **Configuration → Additional settings / Weitere Einstellungen**. **Save s
 **Restore settings from file / Einstellungen aus Datei wiederherstellen** opens the file picker. Choose a MyMeditation settings JSON file, then confirm restoring active settings and adding new dropdown entries. Cancel keeps current settings. Files are validated before any settings change; invalid, unsupported or oversized files (over 2 MiB) are rejected. Restoring refreshes the visible prompt editors, template pickers and inline controls. Existing prompt templates and voices are kept. Identical prompt text and existing voice IDs are not added again. If a new template or voice needs a name that is already taken, it receives a numbered suffix such as `(2)`. Existing voice names and explicitly saved per-voice speeds win on conflicts. Both existing and imported custom model IDs remain available without duplicates. Repeating the same import does not add more copies. Other active settings are restored from the file; optional scalar values absent from a backup return to defaults. Version 1 files remain supported; new exports use version 2.
 
 These files contain settings only. Saved meditation entries, current meditation topic/text, audio recordings and playback position are preserved. API keys embedded in the app are not included. This is separate from Android’s app-data backup.
+
+## Storage and audio cleanup
+
+Open **Configuration → Additional settings / Weitere Einstellungen** and scroll to **Storage / Speicherplatz**. The display divides approximate private app data into:
+
+- **Offline meditations:** recording files and metadata linked to saved meditations. Shared files count once.
+- **Other audio:** provider caches (including persistent ElevenLabs source audio), unfinished/unlinked recordings, legacy audio and temporary MP3s prepared for sharing.
+- **Other app data:** settings, prompt libraries, saved texts, settings-export staging files and other private data/cache files.
+
+The installed APK and copies you shared outside the app are excluded. Use **Refresh storage / Speicheranzeige aktualisieren** to recalculate sizes.
+
+**Delete other audio / Sonstige Audiodaten löschen** asks for confirmation and preserves saved offline recordings, text and settings. It is available when playback and sharing have stopped; new audio work cannot start during cleanup. Clearing provider caches or partial recordings may require generating that audio again, using normal provider credit. Deleting audio from a saved entry does not necessarily remove provider caches; those can be cleared separately here. Files shared outside the app are never deleted.

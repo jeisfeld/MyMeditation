@@ -37,6 +37,7 @@ Preferences use `PreferenceManager`'s application-default SharedPreferences. Exi
 | Highest allocated ID | `max_saved_meditation_id`: monotonic integer, not reused after deletion |
 | Saved name | `saved_meditation_name[id]` |
 | Saved prompts | `saved_system_prompt[id]`, `saved_query_template[id]` |
+| Speech settings retained after audio removal | `saved_speech_settings_<id>`: serialized playback request, no credentials |
 | Saved generation pacing | `saved_pause_guidance[id]`: `none`, `few`, `many`; absent/invalid means `few` |
 | Saved topic/text | `meditation_content[id]`, `meditation_text[id]` |
 

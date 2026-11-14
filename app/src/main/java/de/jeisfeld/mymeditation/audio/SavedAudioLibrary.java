@@ -75,6 +75,30 @@ public final class SavedAudioLibrary {
         // rather than opening hundreds of MP3s every time a saved-list row is bound or filtered.
         return book != null && book.isPublished();
     }
+    public static boolean hasRecording(int id) { return PreferenceUtil.getSharedPreferenceString(link(id), "").matches("[0-9a-f]{64}"); }
+    static Set<String> referencedRecordings() {
+        Set<String> result = new java.util.HashSet<>();
+        for (int id : PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids)) {
+            String identity = PreferenceUtil.getSharedPreferenceString(link(id), "");
+            if (identity.matches("[0-9a-f]{64}")) { result.add(identity); }
+        }
+        return result;
+    }
+    /** Main-thread operation: detach this entry only; shared recordings retain their other links. */
+    public static boolean removeAudio(Context context, int id) {
+        if (AppStorage.isCleaning() || AppStorage.audioActive()) { return false; }
+        SentenceAudioStore.Book recording = book(context, id);
+        if (!hasRecording(id)) { return false; }
+        String settings = recording == null ? PreferenceUtil.getSharedPreferenceString("saved_speech_settings_" + id, "") : recording.request.json();
+        boolean restored = Integer.toString(id).equals(PreferenceUtil.getSharedPreferenceString(RESTORED_SOURCE, "0"));
+        unlink(id);
+        if (restored) { PreferenceUtil.setSharedPreferenceString(RESTORED_SOURCE, Integer.toString(id)); }
+        PreferenceUtil.setSharedPreferenceString("saved_speech_settings_" + id, settings);
+        CHANGES.setValue(CHANGES.getValue() + 1);
+        cleanupDeleted(context);
+        return true;
+    }
+
     public static void begin(PlaybackRequest request) {
         synchronized (LIFECYCLE) {
             if (request.backend != SpeechBackend.DEVICE) { DELETED.remove(SentenceAudioStore.key(request)); }
@@ -83,7 +107,7 @@ public final class SavedAudioLibrary {
 
     /** Only called on main: ID allocation remains serialized with ordinary text saves. */
     public static int keepComplete(Context context, PlaybackRequest request, Snapshot snapshot) {
-        synchronized (LIFECYCLE) { return keep(context, request, snapshot); }
+        synchronized (LIFECYCLE) { return AppStorage.isCleaning() ? 0 : keep(context, request, snapshot); }
     }
     private static int keep(Context context, PlaybackRequest request, Snapshot snapshot) {
         SentenceAudioStore.Book book = SentenceAudio.store(context).open(request);
@@ -127,7 +151,7 @@ public final class SavedAudioLibrary {
         return target;
     }
     public static void attachAvailable(Context context, int id) {
-        synchronized (LIFECYCLE) { attach(context, id); }
+        synchronized (LIFECYCLE) { if (!AppStorage.isCleaning()) { attach(context, id); } }
     }
     private static void attach(Context context, int id) {
         try {
@@ -162,13 +186,17 @@ public final class SavedAudioLibrary {
         PreferenceUtil.setSharedPreferenceString(MeditationPauses.PREFERENCE, SavedMeditations.guidance(id).id);
         SentenceAudioStore.Book recording = book(context, id);
         if (recording != null) { restoreVoice(recording.request); return; }
-
+        try {
+            PlaybackRequest settings = PlaybackRequest.parse(PreferenceUtil.getSharedPreferenceString("saved_speech_settings_" + id, ""));
+            if (settings.text.equals(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id))) { restoreVoice(settings); }
+        } catch (Exception ignored) { /* Older text-only entries have no recorded speech settings. */ }
     }
     public static void unlink(int id) {
         synchronized (LIFECYCLE) {
             String identity = PreferenceUtil.getSharedPreferenceString(link(id), "");
             if (!identity.isEmpty()) { DELETED.add(identity); }
             PreferenceUtil.setSharedPreferenceString(link(id), "");
+            PreferenceUtil.setSharedPreferenceString("saved_speech_settings_" + id, "");
             PreferenceUtil.setSharedPreferenceString("audio_variant_source_" + id, "");
             if (Integer.toString(id).equals(PreferenceUtil.getSharedPreferenceString(RESTORED_SOURCE, "0"))) { clearSource(); }
         }

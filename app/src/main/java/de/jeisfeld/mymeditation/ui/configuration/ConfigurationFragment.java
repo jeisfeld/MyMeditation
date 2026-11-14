@@ -232,6 +232,7 @@ public class ConfigurationFragment extends Fragment {
                 .setView(settings.getRoot())
                 .setNegativeButton(R.string.button_cancel, null)
                 .setPositiveButton(R.string.ai_settings_save, null).create();
+        StorageSettings storage = new StorageSettings(this, settings);
         java.util.function.Consumer<Boolean> save = exporting -> {
                 String model = settings.editTextAiModel.getText().toString().trim();
                 if (model.isEmpty()) { model = getString(R.string.default_ai_model); }
@@ -287,6 +288,7 @@ public class ConfigurationFragment extends Fragment {
             settings.buttonImportSettings.setOnClickListener(button -> { dialog.dismiss(); settingsFiles.restore(); });
         });
         dialog.setOnDismissListener(d -> {
+            storage.close();
             if (inlineAiSettings != null) { inlineAiSettings.refresh(); }
         });
         dialog.show();

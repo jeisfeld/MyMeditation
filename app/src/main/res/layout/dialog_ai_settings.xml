@@ -151,5 +151,18 @@
         android:layout_height="wrap_content"
         android:text="@string/import_settings"
         android:textAllCaps="false" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/storage_heading"
+        android:textStyle="bold"
+        android:accessibilityHeading="true" />
+    <TextView android:id="@+id/textStorageOffline" android:layout_width="match_parent" android:layout_height="wrap_content" />
+    <TextView android:id="@+id/textStorageOtherAudio" android:layout_width="match_parent" android:layout_height="wrap_content" />
+    <TextView android:id="@+id/textStorageOtherData" android:layout_width="match_parent" android:layout_height="wrap_content" />
+    <TextView android:id="@+id/textStorageStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/storage_calculating" />
+    <Button android:id="@+id/buttonRefreshStorage" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/refresh_storage" android:textAllCaps="false" />
+    <Button android:id="@+id/buttonClearOtherAudio" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/clear_other_audio" android:textAllCaps="false" android:enabled="false" />
 </LinearLayout>
 </ScrollView>
