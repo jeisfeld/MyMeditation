@@ -6,6 +6,24 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AiProtocolTest {
+    @Test public void titleRequestsUseDedicatedInstructionsForEveryProvider() throws Exception {
+        for (AiProvider provider : AiProvider.values()) {
+            JSONObject request = AiProtocol.titleRequest(provider, "test-model", "Ein ruhiger Wald");
+            String serialized = request.toString();
+            assertTrue(serialized.contains("Ein ruhiger Wald"));
+            String instructions = provider == AiProvider.CLAUDE ? request.getString("system")
+                    : provider == AiProvider.OPENAI ? request.getString("instructions")
+                    : provider == AiProvider.GEMINI ? request.getJSONObject("systemInstruction").getJSONArray("parts").getJSONObject(0).getString("text")
+                    : request.getJSONArray("messages").getJSONObject(0).getString("content");
+            assertTrue(instructions.contains("around 20 characters"));
+            assertTrue(instructions.contains("never more than 30 including spaces"));
+            assertTrue(instructions.contains("specific, distinctive subject"));
+            assertTrue(instructions.contains("omit generic meditation themes"));
+            assertFalse(instructions.contains(MeditationPauses.systemInstruction("")));
+        }
+        assertEquals(2048, AiProtocol.titleRequest(AiProvider.OPENAI, "o3", "Topic").getInt("max_output_tokens"));
+        assertEquals(1024, AiProtocol.titleRequest(AiProvider.CLAUDE, "claude-test", "Topic").getInt("max_tokens"));
+    }
     @Test public void routesNativeModelIds() {
         assertEquals(AiProvider.CLAUDE, AiProvider.forModel("claude-sonnet-4-5"));
         assertEquals(AiProvider.OPENAI, AiProvider.forModel("gpt-4.1"));

@@ -22,8 +22,23 @@ public final class SavedAudioLibrary {
     });
     private SavedAudioLibrary() { }
     public static LiveData<Long> changes() { return CHANGES; }
+    static void notifyChanged() { CHANGES.setValue(CHANGES.getValue() + 1); }
     private static final String RESTORED_SOURCE = "restored_meditation_source";
-    public static void clearSource() { PreferenceUtil.setSharedPreferenceString(RESTORED_SOURCE, "0"); }
+    private static final String CONTENT_SOURCE = "restored_meditation_content_source";
+    public static void clearSource() {
+        // Carry forward topic provenance from older installs before generation clears the text source.
+        int topicSource = restoredContentSource(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content));
+        if (topicSource > 0) { PreferenceUtil.setSharedPreferenceString(CONTENT_SOURCE, Integer.toString(topicSource)); }
+        PreferenceUtil.setSharedPreferenceString(RESTORED_SOURCE, "0");
+    }
+    public static int restoredContentSource(String content) {
+        int source;
+        try { source = Integer.parseInt(PreferenceUtil.getSharedPreferenceString(CONTENT_SOURCE,
+                PreferenceUtil.getSharedPreferenceString(RESTORED_SOURCE, "0"))); }
+        catch (NumberFormatException e) { return 0; }
+        return source > 0 && PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).contains(source)
+                && Objects.equals(content, PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_content, source)) ? source : 0;
+    }
     /** Loaded entry whose text still matches the visible draft, independent of speech/generation settings. */
     public static int restoredSource(String text) {
         int source;
@@ -38,6 +53,8 @@ public final class SavedAudioLibrary {
     public static final class Snapshot {
         public final String name, system, query, content;
         public final int sourceId;
+        final int contentSourceId;
+        final String titleModel;
         public final MeditationPauses.Guidance guidance;
         public Snapshot(String name, String system, String query, String content) {
             this(name, system, query, content, 0, MeditationPauses.Guidance.fromId(
@@ -46,13 +63,14 @@ public final class SavedAudioLibrary {
         private Snapshot(String name, String system, String query, String content, int sourceId, MeditationPauses.Guidance guidance) {
             this.guidance = guidance;
             this.sourceId = sourceId;
+            this.contentSourceId = restoredContentSource(content);
+            this.titleModel = MeditationTitles.model();
             this.name = clean(name); this.system = clean(system); this.query = clean(query); this.content = clean(content);
         }
         public static Snapshot current(Context context) {
             String content = clean(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content));
-            String name = content.trim();
-            if (name.length() > 80) { name = name.substring(0, Character.isHighSurrogate(name.charAt(79)) ? 79 : 80); }
-            if (name.isEmpty()) { name = context.getString(R.string.default_offline_name); }
+            String name = MeditationTitles.suggestion(context, content);
+            MeditationTitles.prefetch(context, content);
             Snapshot draft = new Snapshot(name, PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt),
                     PreferenceUtil.getSharedPreferenceString(R.string.key_query_template), content);
             int source = restoredSource(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text));
@@ -142,7 +160,9 @@ public final class SavedAudioLibrary {
             }
         }
         if (target == 0) {
-            String name = source > 0 ? PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, source) : snapshot.name;
+            int titleSource = ids.contains(snapshot.contentSourceId) ? snapshot.contentSourceId : source;
+            String name = titleSource > 0 ? MeditationTitles.nextNumber(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, titleSource))
+                    : MeditationTitles.unique(snapshot.name, 0);
             target = SavedMeditations.save(name, snapshot.system, snapshot.query, snapshot.content, request.text, snapshot.guidance);
             if (source > 0) {
                 java.util.ArrayList<Integer> order = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids);
@@ -151,6 +171,7 @@ public final class SavedAudioLibrary {
                 PreferenceUtil.setSharedPreferenceIntList(R.string.key_saved_meditation_ids, order);
                 PreferenceUtil.setSharedPreferenceString("audio_variant_source_" + target, Integer.toString(source));
             }
+            if (titleSource == 0) { MeditationTitles.improveAutomaticName(target, snapshot.content, snapshot.titleModel, name); }
         }
         PreferenceUtil.setSharedPreferenceString(link(target), book.identity);
         DELETED.remove(book.identity);
@@ -183,6 +204,7 @@ public final class SavedAudioLibrary {
     }
     public static void restore(Context context, int id) {
         PreferenceUtil.setSharedPreferenceString(RESTORED_SOURCE, Integer.toString(id));
+        PreferenceUtil.setSharedPreferenceString(CONTENT_SOURCE, Integer.toString(id));
         int[][] fields = {{R.string.key_system_prompt, R.string.key_saved_system_prompt},
                 {R.string.key_query_template, R.string.key_saved_query_template},
                 {R.string.key_meditation_content, R.string.key_saved_meditation_content},

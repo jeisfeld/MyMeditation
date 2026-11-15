@@ -137,8 +137,9 @@ public final class DialogUtil {
 	 * @param textValue       the text to be displayed in the input field
 	 * @param messageResource the confirmation message
 	 * @param args            arguments for the confirmation message
+	 * @return the dialog fragment, for optional updates to an untouched suggestion
 	 */
-	public static void displayInputDialog(final FragmentActivity activity,
+	public static RequestInputDialogFragment displayInputDialog(final FragmentActivity activity,
 										  final RequestInputDialogListener listener, final int titleResource, final int buttonResource,
 										  final String textValue, final int messageResource, final Object... args) {
 		String message = capitalizeFirst(activity.getString(messageResource, args));
@@ -156,6 +157,7 @@ public final class DialogUtil {
 		catch (IllegalStateException e) {
 			// May appear if activity is not active any more - ignore.
 		}
+		return fragment;
 	}
 
 	/**
@@ -281,6 +283,14 @@ public final class DialogUtil {
 	 * Fragment to request an input.
 	 */
 	public static class RequestInputDialogFragment extends DialogFragment {
+        public final void updateSuggestion(String expected, String suggestion) {
+            Dialog dialog = getDialog();
+            if (dialog == null || !dialog.isShowing()) { return; }
+            EditText input = dialog.findViewById(R.id.editTextDialog);
+            if (input != null && expected.equals(input.getText().toString())) {
+                input.setText(suggestion); input.selectAll();
+            }
+        }
 		/**
 		 * The listener called when the dialog is ended.
 		 */

@@ -12,10 +12,11 @@ import org.robolectric.annotation.LooperMode;
 import static org.robolectric.Shadows.shadowOf;
 /** Isolated Android preferences and neutral fixtures; never calls a provider API. */
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 35, qualifiers = "en-rUS-w411dp-h891dp")
+@Config(sdk = 35, qualifiers = "en-rUS-w411dp-h891dp", shadows = ShadowTitleAi.class)
 @LooperMode(LooperMode.Mode.PAUSED)
 public abstract class BaselineTest {
     @Before public void seedLocalPreferences() {
+        ShadowTitleAi.reset();
         PreferenceManager.getDefaultSharedPreferences(Application.getAppContext()).edit().clear().commit();
         PreferenceUtil.setSharedPreferenceString(R.string.key_system_prompt, "Guide a calm meditation.");
         PreferenceUtil.setSharedPreferenceString(R.string.key_query_template, "Meditate on @TEXT@.");

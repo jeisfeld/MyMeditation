@@ -17,6 +17,14 @@ public final class AiClient {
     private AiClient() { }
 
     public static void create(String model, String system, String prompt, Callback callback) {
+        request(model, system, prompt, false, callback);
+    }
+
+    public static void createTitle(String model, String content, Callback callback) {
+        request(model, "", content, true, callback);
+    }
+
+    private static void request(String model, String system, String prompt, boolean title, Callback callback) {
         // Capture the selection before starting the request; later UI edits affect the next request.
         final MeditationPauses.Guidance guidance =
                 MeditationPauses.Guidance.fromId(
@@ -33,11 +41,12 @@ public final class AiClient {
                 if (apiKey.isEmpty()) {
                     throw new IllegalStateException(UiText.LOCAL_KEY.text(provider.keyField));
                 }
-                JSONObject body = AiProtocol.request(provider, modelId, system, prompt, guidance);
+                JSONObject body = title ? AiProtocol.titleRequest(provider, modelId, prompt)
+                        : AiProtocol.request(provider, modelId, system, prompt, guidance);
                 connection = (HttpsURLConnection) new URL(provider.url(modelId)).openConnection();
                 connection.setInstanceFollowRedirects(false);
                 connection.setConnectTimeout(15000);
-                connection.setReadTimeout(180000);
+                connection.setReadTimeout(title ? 30000 : 180000);
                 connection.setRequestMethod("POST");
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json");

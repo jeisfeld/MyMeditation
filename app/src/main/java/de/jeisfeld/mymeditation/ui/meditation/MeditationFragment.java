@@ -51,6 +51,11 @@ public class MeditationFragment extends Fragment {
     private String offlineIdentity = "";
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable refreshOfflineLabel = this::checkOfflineLabel;
+    private final Runnable prefetchTitle = () -> {
+        if (binding != null) {
+            de.jeisfeld.mymeditation.audio.MeditationTitles.prefetch(requireContext(), binding.editTextMeditationContent.getText().toString());
+        }
+    };
     private final android.content.SharedPreferences.OnSharedPreferenceChangeListener offlinePreferences = (preferences, key) -> {
         scheduleOfflineLabel();
         if (binding != null && MeditationPauses.PREFERENCE.equals(key)) {
@@ -306,6 +311,13 @@ public class MeditationFragment extends Fragment {
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { scheduleOfflineLabel(); }
             @Override public void afterTextChanged(android.text.Editable s) { }
         });
+        binding.editTextMeditationContent.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                ui.removeCallbacks(prefetchTitle); ui.postDelayed(prefetchTitle, 1500);
+            }
+            @Override public void afterTextChanged(android.text.Editable s) { }
+        });
         de.jeisfeld.mymeditation.audio.SavedAudioLibrary.changes().observe(getViewLifecycleOwner(), version -> scheduleOfflineLabel());
         androidx.preference.PreferenceManager.getDefaultSharedPreferences(requireContext()).registerOnSharedPreferenceChangeListener(offlinePreferences);
         refreshSpeed();
@@ -315,7 +327,7 @@ public class MeditationFragment extends Fragment {
 
     @Override public void onResume() {
         super.onResume();
-        if (binding != null) { refreshSpeed(); scheduleOfflineLabel(); }
+        if (binding != null) { refreshSpeed(); scheduleOfflineLabel(); ui.removeCallbacks(prefetchTitle); ui.postDelayed(prefetchTitle, 1500); }
     }
     private String number(double value) {
         java.text.NumberFormat format = java.text.NumberFormat.getNumberInstance(getResources().getConfiguration().getLocales().get(0));
@@ -472,6 +484,7 @@ public class MeditationFragment extends Fragment {
         offlineCheck++;
         offlineIdentity = "";
         ui.removeCallbacks(refreshOfflineLabel);
+        ui.removeCallbacks(prefetchTitle);
         binding.textSpeechStatus.removeCallbacks(showSpeechStatus);
         pendingSpeechStatus = "";
         reading = false; highlightedPosition = -2; highlightedText = "";

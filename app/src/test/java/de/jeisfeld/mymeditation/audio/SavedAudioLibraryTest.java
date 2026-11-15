@@ -158,7 +158,7 @@ public class SavedAudioLibraryTest extends BaselineTest {
         PreferenceUtil.setIndexedSharedPreferenceString(R.string.key_saved_meditation_name, source, "Renamed while playing");
         int saved = SavedAudioLibrary.keepComplete(Application.getAppContext(), changed, snapshot);
         assertNotEquals(source, saved);
-        assertEquals("Renamed while playing", PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, saved));
+        assertEquals("Renamed while playing 2", PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, saved));
         assertEquals(java.util.Arrays.asList(before, source, saved, after), PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids));
         assertEquals(saved, SavedAudioLibrary.keepComplete(Application.getAppContext(), changed, snapshot));
         assertEquals(SentenceAudioStore.key(request()), SavedAudioLibrary.book(Application.getAppContext(), source).identity);

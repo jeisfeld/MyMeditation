@@ -112,3 +112,12 @@ Open **Configuration → Additional settings / Weitere Einstellungen** and scrol
 The installed APK and copies you shared outside the app are excluded. Use **Refresh storage / Speicheranzeige aktualisieren** to recalculate sizes.
 
 **Delete other audio / Sonstige Audiodaten löschen** asks for confirmation and preserves saved offline recordings, text and settings. It is available when playback and sharing have stopped; new audio work cannot start during cleanup. Clearing provider caches or partial recordings may require generating that audio again, using normal provider credit. Deleting audio from a saved entry does not necessarily remove provider caches; those can be cleared separately here. Files shared outside the app are never deleted.
+
+
+## Suggested meditation names
+
+Manual saves now start with an editable name suggestion. When the current Meditation content was loaded from a saved meditation and that content is unchanged, the suggestion uses its saved name with the next number: `Forest` becomes `Forest 2`; if `Forest 1`, `Forest 2` and `Forest 3` exist, the next suggestion is `Forest 4`. A trailing number is replaced rather than stacked. Regenerating/editing the meditation text or changing voice settings does not change this content-based naming choice.
+
+For new content, the app asks the selected text-generation model for a title around 20 characters in the topic’s language, focused on its distinctive subject rather than generic meditation themes. It prefetches after 1.5 seconds without content edits and when opening Saved meditations. This additional request uses the configured provider/account and its normal API billing. Suggestions are cached locally for the most recent 16 content/model combinations. The editable system instruction and query template do not affect title requests.
+
+Saving never waits for the network. Until a title is available, or if generation fails, a short suggestion from the content (at most four words/30 characters) is used. A late AI result can update an untouched save-dialog suggestion or an automatically created entry; it never overwrites an edited name. Automatic saves use the same suggestions and numbering when they create a new entry. Attaching audio to an existing entry keeps its name, and repeated completion callbacks reuse the existing recording entry.

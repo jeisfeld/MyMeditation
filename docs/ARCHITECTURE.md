@@ -36,6 +36,8 @@ Preferences use `PreferenceManager`'s application-default SharedPreferences. Exi
 | Saved order | `saved_meditation_ids`: newline-delimited integer IDs, preserving user order; legacy CRLF is accepted |
 | Highest allocated ID | `max_saved_meditation_id`: monotonic integer, not reused after deletion |
 | Saved name | `saved_meditation_name[id]` |
+| Suggested title cache | `meditation_title_cache`: last 16 model/content hashes and short titles |
+| Loaded topic provenance | `restored_meditation_content_source`: saved ID, independent of regenerated text |
 | Saved prompts | `saved_system_prompt[id]`, `saved_query_template[id]` |
 | Speech settings retained after audio removal | `saved_speech_settings_<id>`: serialized playback request, no credentials |
 | Saved generation pacing | `saved_pause_guidance[id]`: `none`, `few`, `many`; absent/invalid means `few` |
@@ -43,7 +45,7 @@ Preferences use `PreferenceManager`'s application-default SharedPreferences. Exi
 
 A plain-text save captures four text fields, a name and the selected generation pacing. It does not generate audio, but can attach an already complete sentence recording with matching current settings. The restore action copies those four fields back into current preferences, refreshes both ViewModels, and stops previous playback. Recorded entries additionally restore their synthesis settings and speed while retaining the independently selected pause duration. Editing/deleting/reordering uses saved IDs, not a displayed row's name. Duplicate names therefore remain independent entries.
 
-Saved IDs may link through `sentence_audio_<id>` to an immutable sentence recording under `files/sentence-audio/<identity>/`; several names may share a recording. `SentenceAudioStore` owns manifests and MP3 publication, `SentenceAudio` owns generation/rendering, `SavedAudioLibrary` owns links/settings restoration, and `SentenceAudioAssembler` creates whole MP3s only for sharing. `LegacyAudioCleanup` deletes retired full-length MP3 files and their settings metadata at launch while preserving text entries and sentence recordings. Restored entry provenance guides attachment or insertion of same-named recording variants directly below their source. See [AI integration](../AI-INTEGRATION.md) for recording format, cache, foreground-service and credential details.
+Saved IDs may link through `sentence_audio_<id>` to an immutable sentence recording under `files/sentence-audio/<identity>/`; several names may share a recording. `SentenceAudioStore` owns manifests and MP3 publication, `SentenceAudio` owns generation/rendering, `SavedAudioLibrary` owns links/settings restoration, and `SentenceAudioAssembler` creates whole MP3s only for sharing. `LegacyAudioCleanup` deletes retired full-length MP3 files and their settings metadata at launch while preserving text entries and sentence recordings. Restored entry provenance guides attachment or insertion of numbered recording variants directly below their source. See [AI integration](../AI-INTEGRATION.md) for recording format, cache, foreground-service and credential details.
 
 ## Boundaries of this baseline
 

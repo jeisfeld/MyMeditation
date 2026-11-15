@@ -85,7 +85,7 @@ Cloud creation and listening checks require a locally configured provider key an
 
 Timed-pause validation uses the configured SDK 37, AGP 9.5.0, Gradle 9.6.0 and JDK 21 directly, without downgrading build settings or dependencies. In this sandbox, an ignored Gradle init script under `work/pause-validation.gradle` redirects the JVM test `user.home` to `work/test-user` so Robolectric can write its runtime-download lock and cache, and configures the session proxy for its Maven downloads. The app build, lint and complete local JVM suite run with this setup. Device tests are compiled; real-device listening, Bluetooth behavior and live AI generation remain manual checks.
 
-Sentence recording regression tests also cover upgrade cleanup, restored-source attachment, same-named variant insertion and deduplication, and the offline heading reacting to exact text/settings while ignoring pauses.
+Sentence recording regression tests also cover upgrade cleanup, restored-source attachment, numbered variant insertion and deduplication, and the offline heading reacting to exact text/settings while ignoring pauses.
 
 `KeyboardEditingLayoutTest` dispatches IME insets through the activity and real page layouts, checking expanded meditation/topic/prompt editors, hidden/restored navigation and controls, cursor preservation, and the existing focus-based prompt saving. Physical keyboard behavior, keyboard animations and real-device portrait/landscape rendering remain manual checks.
 
@@ -114,3 +114,8 @@ Offline readiness now depends on complete generated speech files, including pref
 Native speech caches under `files/native-speech` are included in Other audio and deleted by targeted audio cleanup while saved sentence recordings and settings remain intact.
 
 `SentenceAudioUiTest` also verifies saved playback headings while playing/paused, shared recordings with distinct names, renaming, non-ASCII names, device-speech entries without an offline suffix, and fallback headings for unsaved/deleted or unnamed entries. Loaded, stopped meditations retain their name independently of speech and generation settings; further checks cover visible unsaved edits, reverting text, loading a distinct same-text entry, idle renaming, recreation, and clearing provenance.
+
+
+`MeditationTitlesTest` covers next-number selection, large suffixes, unchanged content provenance after text generation, cache/coalescing/model separation, failure fallback, manual prefills and late-result edit protection, automatic recording retention with a late title, and debounce timing. `AiProtocolTest` checks dedicated title requests for all providers. `ShadowTitleAi` intercepts only title generation in Robolectric tests; no title request uses real credentials or contacts a provider. Device checks should audition selected-provider title quality/language, verify a prefetched manual save is immediate, and check behavior with no network/API access.
+
+Compact-title coverage checks the 20-character target and distinctive-topic instructions for every provider, rejection of cached suggestions from the older policy, and the 30-character Unicode-safe bound.

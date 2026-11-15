@@ -56,7 +56,12 @@ public class SavedMeditationsFragment extends Fragment {
 		final RecyclerView recyclerView = binding.recyclerViewSavedMeditations;
 		populateRecyclerView(recyclerView);
 
-		binding.buttonSaveCurrentMeditation.setOnClickListener(v -> DialogUtil.displayInputDialog(requireActivity(), new RequestInputDialogListener() {
+        String initialContent = PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content);
+        de.jeisfeld.mymeditation.audio.MeditationTitles.prefetch(requireContext(), initialContent);
+		binding.buttonSaveCurrentMeditation.setOnClickListener(v -> {
+            String content = PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content);
+            String suggestion = de.jeisfeld.mymeditation.audio.MeditationTitles.suggestion(requireContext(), content);
+            DialogUtil.RequestInputDialogFragment input = DialogUtil.displayInputDialog(requireActivity(), new RequestInputDialogListener() {
 			@Override
 			public void onDialogPositiveClick(DialogFragment dialog, String text) {
 				int savedId = de.jeisfeld.mymeditation.audio.SavedMeditations.save(text,
@@ -72,7 +77,18 @@ public class SavedMeditationsFragment extends Fragment {
 			public void onDialogNegativeClick(DialogFragment dialog) {
 				// do nothing
 			}
-		}, R.string.title_dialog_save_meditation, R.string.button_save, "", R.string.text_dialog_save_meditation));
+		}, R.string.title_dialog_save_meditation, R.string.button_save, suggestion, R.string.text_dialog_save_meditation);
+            if (de.jeisfeld.mymeditation.audio.SavedAudioLibrary.restoredContentSource(content) == 0) {
+                java.lang.ref.WeakReference<DialogUtil.RequestInputDialogFragment> dialog = new java.lang.ref.WeakReference<>(input);
+                de.jeisfeld.mymeditation.audio.MeditationTitles.request(de.jeisfeld.mymeditation.audio.MeditationTitles.model(), content, title -> {
+                    DialogUtil.RequestInputDialogFragment open = dialog.get();
+                    if (open != null && content.equals(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content))) {
+                        open.updateSuggestion(suggestion, de.jeisfeld.mymeditation.audio.MeditationTitles.suggestion(
+                                de.jeisfeld.mymeditation.Application.getAppContext(), content));
+                    }
+                });
+            }
+        });
 
 		MeditationViewModel events = new androidx.lifecycle.ViewModelProvider(requireActivity()).get(MeditationViewModel.class);
 		de.jeisfeld.mymeditation.audio.MeditationExportService.state().observe(getViewLifecycleOwner(), state -> {
