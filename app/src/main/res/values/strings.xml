@@ -105,6 +105,7 @@
         <item>ElevenLabs</item>
     </string-array>
     <string name="saved_meditation_filter_hint">Filter by name</string>
+    <string name="clear_saved_meditation_filter">Clear name filter</string>
     <string name="saved_meditation_audio_only">Audio only</string>
     <string name="rename_saved_meditation">Rename meditation</string>
     <string name="saved_meditation_name_required">Name must not be empty.</string>

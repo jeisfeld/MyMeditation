@@ -190,9 +190,9 @@
     </LinearLayout>
     <Button
         android:id="@+id/buttonAiSettings"
+        style="@style/Widget.MyMeditation.PageButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="@dimen/activity_horizontal_margin"
-        android:text="@string/additional_settings"
-        android:textAllCaps="false" />
+        android:layout_marginHorizontal="@dimen/single_button_horizontal_margin"
+        android:text="@string/additional_settings" />
 </LinearLayout>

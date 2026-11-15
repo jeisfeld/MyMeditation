@@ -39,11 +39,14 @@ public class SavedMeditationsFragment extends Fragment {
             audioOnly = savedInstanceState.getBoolean("savedAudioOnly", false);
         }
         binding.editTextMeditationFilter.setText(nameFilter);
+        binding.buttonClearMeditationFilter.setVisibility(nameFilter.isEmpty() ? View.GONE : View.VISIBLE);
+        binding.buttonClearMeditationFilter.setOnClickListener(v -> binding.editTextMeditationFilter.getText().clear());
         binding.checkBoxAudioOnly.setChecked(audioOnly);
         binding.editTextMeditationFilter.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 nameFilter = s.toString();
+                binding.buttonClearMeditationFilter.setVisibility(nameFilter.isEmpty() ? View.GONE : View.VISIBLE);
                 applyFilters();
             }
             @Override public void afterTextChanged(android.text.Editable s) { }

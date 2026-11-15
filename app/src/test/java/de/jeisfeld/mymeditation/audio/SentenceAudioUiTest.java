@@ -102,6 +102,26 @@ public class SentenceAudioUiTest extends BaselineTest {
         assertEquals(7.5, PreferenceUtil.getPauseSeconds(), 0);
         assertEquals("device", PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend));
     }
+    @Test public void clearingNameFilterRestoresResultsAndPreservesAudioFilterAndSavedOrder() throws Exception {
+        int recorded = recorded();
+        int textOnly = SavedMeditations.save("Text only", "s", "@TEXT@", "c", "Unrecorded.");
+        openSaved();
+        assertEquals(View.GONE, activity.findViewById(R.id.buttonClearMeditationFilter).getVisibility());
+        ((android.widget.CheckBox) activity.findViewById(R.id.checkBoxAudioOnly)).setChecked(true);
+        ((EditText) activity.findViewById(R.id.editTextMeditationFilter)).setText("No matches"); idle();
+        assertEquals(0, ((RecyclerView) activity.findViewById(R.id.recyclerViewSavedMeditations)).getAdapter().getItemCount());
+        assertEquals(View.VISIBLE, activity.findViewById(R.id.buttonClearMeditationFilter).getVisibility());
+        controller.recreate(); activity = controller.get(); idle();
+        assertEquals("No matches", ((EditText) activity.findViewById(R.id.editTextMeditationFilter)).getText().toString());
+        activity.findViewById(R.id.buttonClearMeditationFilter).performClick(); idle();
+        assertEquals("", ((EditText) activity.findViewById(R.id.editTextMeditationFilter)).getText().toString());
+        assertEquals(View.GONE, activity.findViewById(R.id.buttonClearMeditationFilter).getVisibility());
+        assertTrue(((android.widget.CheckBox) activity.findViewById(R.id.checkBoxAudioOnly)).isChecked());
+        assertEquals(1, ((RecyclerView) activity.findViewById(R.id.recyclerViewSavedMeditations)).getAdapter().getItemCount());
+        ((android.widget.CheckBox) activity.findViewById(R.id.checkBoxAudioOnly)).setChecked(false); idle();
+        assertEquals(2, ((RecyclerView) activity.findViewById(R.id.recyclerViewSavedMeditations)).getAdapter().getItemCount());
+        assertEquals(java.util.Arrays.asList(recorded, textOnly), PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids));
+    }
     private void awaitLabel(String expected) throws Exception {
         long deadline = System.nanoTime() + 5000000000L;
         android.widget.TextView label = activity.findViewById(R.id.labelMeditationText);
