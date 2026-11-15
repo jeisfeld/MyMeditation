@@ -98,6 +98,7 @@
     <string name="share_pause_prompt">Pause zwischen den Sätzen der geteilten MP3, in Sekunden (Standard: 2).</string>
     <string name="audio_operation_active">Audio wird bereits gespeichert oder zum Teilen vorbereitet.</string>
     <string name="label_meditation_text_offline">Meditationstext (offline)</string>
+    <string name="label_named_meditation_offline">%1$s (offline)</string>
     <string name="system_prompt_templates">Vorlagen für Systemanweisungen</string>
     <string name="query_prompt_templates">Anfragevorlagen</string>
     <string name="prompt_templates_hint">Vorlagen…</string>

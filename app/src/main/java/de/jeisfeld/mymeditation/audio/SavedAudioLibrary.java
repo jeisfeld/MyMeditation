@@ -24,6 +24,15 @@ public final class SavedAudioLibrary {
     public static LiveData<Long> changes() { return CHANGES; }
     private static final String RESTORED_SOURCE = "restored_meditation_source";
     public static void clearSource() { PreferenceUtil.setSharedPreferenceString(RESTORED_SOURCE, "0"); }
+    /** Loaded entry whose text still matches the visible draft, independent of speech/generation settings. */
+    public static int restoredSource(String text) {
+        int source;
+        try { source = Integer.parseInt(PreferenceUtil.getSharedPreferenceString(RESTORED_SOURCE, "0")); }
+        catch (NumberFormatException e) { return 0; }
+        return source > 0 && PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).contains(source)
+                && Objects.equals(text, PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, source))
+                ? source : 0;
+    }
     private static String link(int id) { return "sentence_audio_" + id; }
 
     public static final class Snapshot {
@@ -46,10 +55,8 @@ public final class SavedAudioLibrary {
             if (name.isEmpty()) { name = context.getString(R.string.default_offline_name); }
             Snapshot draft = new Snapshot(name, PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt),
                     PreferenceUtil.getSharedPreferenceString(R.string.key_query_template), content);
-            int source;
-            try { source = Integer.parseInt(PreferenceUtil.getSharedPreferenceString(RESTORED_SOURCE, "0")); }
-            catch (NumberFormatException e) { source = 0; }
-            if (PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).contains(source)
+            int source = restoredSource(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text));
+            if (source > 0
                     && draft.matches(source, PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text))) {
                 return new Snapshot(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, source),
                         draft.system, draft.query, draft.content, source, draft.guidance);

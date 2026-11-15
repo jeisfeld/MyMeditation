@@ -26,6 +26,7 @@ import static org.robolectric.Shadows.shadowOf;
 public class SentenceAudioUiTest extends BaselineTest {
     private ActivityController<MainActivity> controller;
     private MainActivity activity;
+    private boolean publishedPlayback;
     private int recorded() throws Exception {
         PlaybackRequest request = new PlaybackRequest("Breathe slowly. Relax.", SpeechBackend.GEMINI,
                 "gemini-3.8-flash-tts", "Kore", 1.25, "Calm", 5);
@@ -58,7 +59,18 @@ public class SentenceAudioUiTest extends BaselineTest {
         }
         return null;
     }
-    @After public void close() { if (controller != null) { controller.pause().stop().destroy(); idle(); } }
+    private void playbackHeading(int id, boolean active, boolean running) {
+        publishedPlayback = true;
+        String text = "Breathe slowly. Relax.";
+        ((androidx.lifecycle.MutableLiveData<MeditationPlaybackService.State>) MeditationPlaybackService.state()).setValue(
+                new MeditationPlaybackService.State(running, 0, SpeechSegments.split(text), "", "", 0,
+                        active, text, -1, false, id));
+        idle();
+    }
+    @After public void close() {
+        if (controller != null) { controller.pause().stop().destroy(); idle(); }
+        if (publishedPlayback) { playbackHeading(0, false, false); }
+    }
 
     @Test public void audioOnlyFilterIncludesSentenceRecordingsAndPlayUsesTheHighlightedMeditationPage() throws Exception {
         int id = recorded();
@@ -96,17 +108,73 @@ public class SentenceAudioUiTest extends BaselineTest {
         while (!expected.equals(label.getText().toString()) && System.nanoTime() < deadline) { idle(); Thread.sleep(2); }
         assertEquals(expected, label.getText().toString());
     }
+    @Test public void savedPlaybackHeadingUsesEntryNameWhilePlayingAndPausedAndTracksRename() throws Exception {
+        int first = recorded(); SavedAudioLibrary.restore(Application.getAppContext(), first);
+        PreferenceUtil.setIndexedSharedPreferenceString(R.string.key_saved_meditation_name, first, "Abendruhe 🌙");
+        int second = SavedMeditations.save("Morning", PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt),
+                PreferenceUtil.getSharedPreferenceString(R.string.key_query_template),
+                PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content), "Breathe slowly. Relax.");
+        openSaved();
+        ((BottomNavigationView) activity.findViewById(R.id.nav_view)).setSelectedItemId(R.id.navigation_meditation); idle();
+        playbackHeading(first, true, true);
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline, "Abendruhe 🌙"));
+        playbackHeading(first, true, false);
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline, "Abendruhe 🌙"));
+        PreferenceUtil.setIndexedSharedPreferenceString(R.string.key_saved_meditation_name, first, "Evening"); idle();
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline, "Evening"));
+        playbackHeading(second, true, true);
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline, "Morning"));
+        playbackHeading(0, true, true);
+        awaitLabel(activity.getString(R.string.label_meditation_text_offline));
+        playbackHeading(first, false, false);
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline, "Evening"));
+    }
+    @Test public void savedTextWithDeviceSpeechUsesItsNameWithoutOfflineSuffixAndHandlesDeletion() throws Exception {
+        int id = SavedMeditations.save("Quiet garden", "s", "@TEXT@", "c", "Breathe slowly. Relax.");
+        openSaved();
+        ((BottomNavigationView) activity.findViewById(R.id.nav_view)).setSelectedItemId(R.id.navigation_meditation); idle();
+        playbackHeading(id, true, true); awaitLabel("Quiet garden");
+        playbackHeading(id, true, false); awaitLabel("Quiet garden");
+        PreferenceUtil.setIndexedSharedPreferenceString(R.string.key_saved_meditation_name, id, " "); idle();
+        awaitLabel(activity.getString(R.string.label_meditation_text));
+        PreferenceUtil.setSharedPreferenceIntList(R.string.key_saved_meditation_ids, new java.util.ArrayList<>()); idle();
+        awaitLabel(activity.getString(R.string.label_meditation_text));
+    }
+    @Test public void loadedTextKeepsSavedHeadingUntilEditedAndUsesSelectedEntryForIdenticalTexts() throws Exception {
+        int first = SavedMeditations.save("First name", "s", "@TEXT@", "c", "Breathe slowly. Relax.");
+        SavedMeditations.save("Second name", "s", "@TEXT@", "c", "Breathe slowly. Relax.");
+        openSaved();
+        row(1).findViewById(R.id.textViewMeditationName).performClick(); idle();
+        ((BottomNavigationView) activity.findViewById(R.id.nav_view)).setSelectedItemId(R.id.navigation_meditation); idle();
+        awaitLabel("Second name");
+        PreferenceUtil.setSharedPreferenceString(R.string.key_system_prompt, "New instructions");
+        PreferenceUtil.setSharedPreferenceString(MeditationPauses.PREFERENCE, "none"); idle();
+        awaitLabel("Second name");
+        EditText editor = activity.findViewById(R.id.editTextMeditationText);
+        editor.setText("Edited text, not yet saved to preferences."); idle();
+        awaitLabel(activity.getString(R.string.label_meditation_text));
+        editor.setText("Breathe slowly. Relax."); idle(); awaitLabel("Second name");
+        ((BottomNavigationView) activity.findViewById(R.id.nav_view)).setSelectedItemId(R.id.navigation_saved_meditations); idle();
+        row(0).findViewById(R.id.textViewMeditationName).performClick(); idle();
+        ((BottomNavigationView) activity.findViewById(R.id.nav_view)).setSelectedItemId(R.id.navigation_meditation); idle();
+        awaitLabel("First name");
+        PreferenceUtil.setIndexedSharedPreferenceString(R.string.key_saved_meditation_name, first, "Renamed"); idle();
+        awaitLabel("Renamed");
+        controller.recreate(); activity = controller.get(); idle(); awaitLabel("Renamed");
+        SavedAudioLibrary.clearSource(); idle(); awaitLabel(activity.getString(R.string.label_meditation_text));
+    }
     @Test public void offlineHeadingTracksExactVoiceSpeedAndTextButIgnoresPauses() throws Exception {
         int id = recorded(); SavedAudioLibrary.restore(Application.getAppContext(), id);
+        String name = PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, id);
         controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
-        awaitLabel(activity.getString(R.string.label_meditation_text_offline));
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline, name));
         PreferenceUtil.setPauseSeconds(0.5); idle();
-        awaitLabel(activity.getString(R.string.label_meditation_text_offline));
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline, name));
         SavedAudioLibrary.restoreVoice(new PlaybackRequest("Breathe slowly. Relax.", SpeechBackend.GEMINI,
                 "gemini-3.8-flash-tts", "Kore", 1.5, "Calm", 0)); idle();
-        awaitLabel(activity.getString(R.string.label_meditation_text));
+        awaitLabel(name);
         SavedAudioLibrary.restore(Application.getAppContext(), id); idle();
-        awaitLabel(activity.getString(R.string.label_meditation_text_offline));
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline, name));
         ((EditText) activity.findViewById(R.id.editTextMeditationText)).setText("Different meditation."); idle();
         awaitLabel(activity.getString(R.string.label_meditation_text));
     }

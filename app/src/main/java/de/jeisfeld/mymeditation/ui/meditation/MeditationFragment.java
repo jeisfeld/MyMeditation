@@ -65,6 +65,18 @@ public class MeditationFragment extends Fragment {
         ui.removeCallbacks(refreshOfflineLabel);
         ui.post(refreshOfflineLabel);
     }
+    private String meditationHeading(boolean offline) {
+        MeditationPlaybackService.State state = MeditationPlaybackService.state().getValue();
+        int source = state.active ? state.savedId : de.jeisfeld.mymeditation.audio.SavedAudioLibrary.restoredSource(
+                binding.editTextMeditationText.getText().toString());
+        if (source > 0 && PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).contains(source)) {
+            String name = PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, source);
+            if (name != null && !name.trim().isEmpty()) {
+                return offline ? getString(R.string.label_named_meditation_offline, name) : name;
+            }
+        }
+        return getString(offline ? R.string.label_meditation_text_offline : R.string.label_meditation_text);
+    }
     private void checkOfflineLabel() {
         if (binding == null) { return; }
         final int check = offlineCheck;
@@ -72,14 +84,14 @@ public class MeditationFragment extends Fragment {
         try {
             request = MeditationPlaybackService.currentRequest(binding.editTextMeditationText.getText().toString(), PreferenceUtil.getPauseSeconds());
         } catch (IllegalArgumentException e) {
-            offlineIdentity = ""; binding.labelMeditationText.setText(R.string.label_meditation_text); return;
+            offlineIdentity = ""; binding.labelMeditationText.setText(meditationHeading(false)); return;
         }
         if (request.backend == SpeechBackend.DEVICE) {
-            offlineIdentity = ""; binding.labelMeditationText.setText(R.string.label_meditation_text); return;
+            offlineIdentity = ""; binding.labelMeditationText.setText(meditationHeading(false)); return;
         }
         String identity = de.jeisfeld.mymeditation.audio.SentenceAudioStore.key(request);
         if (!identity.equals(offlineIdentity)) {
-            binding.labelMeditationText.setText(R.string.label_meditation_text);
+            binding.labelMeditationText.setText(meditationHeading(false));
             offlineIdentity = identity;
         }
         android.content.Context context = requireContext().getApplicationContext();
@@ -89,7 +101,7 @@ public class MeditationFragment extends Fragment {
             boolean offline = book != null && book.isComplete();
             ui.post(() -> {
                 if (binding != null && check == offlineCheck) {
-                    binding.labelMeditationText.setText(offline ? R.string.label_meditation_text_offline : R.string.label_meditation_text);
+                    binding.labelMeditationText.setText(meditationHeading(offline));
                 }
             });
         });

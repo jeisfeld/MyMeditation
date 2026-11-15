@@ -114,6 +114,7 @@
     <string name="share_pause_prompt">Pause between sentences in the shared MP3, in seconds (default: 2).</string>
     <string name="audio_operation_active">An audio save or share is already running.</string>
     <string name="label_meditation_text_offline">Meditation text (offline)</string>
+    <string name="label_named_meditation_offline">%1$s (offline)</string>
     <string name="system_prompt_templates">System prompt templates</string>
     <string name="query_prompt_templates">Query templates</string>
     <string name="prompt_templates_hint">Templates…</string>
