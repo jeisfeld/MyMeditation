@@ -213,6 +213,16 @@ public class SentenceAudioUiTest extends BaselineTest {
         assertEquals(2, ((RecyclerView) activity.findViewById(R.id.recyclerViewSavedMeditations)).getAdapter().getItemCount());
         assertEquals(java.util.Arrays.asList(recorded, textOnly), PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids));
     }
+    @Test public void loadingAnotherSavedEntryExplicitlyResetsThePreviousPlaybackPosition() {
+        int first = SavedMeditations.save("First", "s", "@TEXT@", "c", "Breathe slowly. Relax.");
+        SavedMeditations.save("Second", "s", "@TEXT@", "c", "Other meditation.");
+        openSaved(); playbackHeading(first, true, false);
+        row(1).findViewById(R.id.textViewMeditationName).performClick(); idle();
+        Intent stop = shadowOf((android.app.Application) Application.getAppContext()).getNextStartedService();
+        assertEquals("meditation.STOP", stop.getAction());
+        assertTrue(stop.getBooleanExtra("rewind", false));
+        assertEquals("Other meditation.", PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_text));
+    }
     @Test public void readOnlyPlaybackSelectionDoesNotSeekAudio() {
         controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
         playbackHeading(0, true, true);

@@ -113,12 +113,42 @@ public class SentencePlaybackServiceTest extends BaselineTest {
         complete(0);
         await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 1);
         complete(1);
+        await(() -> !MeditationPlaybackService.state().getValue().active);
+        assertTrue(MeditationPlaybackService.state().getValue().completed);
+        assertEquals(0, MeditationPlaybackService.state().getValue().position);
+        assertEquals("0", PreferenceUtil.getSharedPreferenceString("playback_position", ""));
         await(() -> !PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).isEmpty());
         assertTrue(book.isComplete());
         int id = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).get(0);
         assertTrue(SavedAudioLibrary.hasAudio(Application.getAppContext(), id));
         assertEquals(request(1).text, PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id));
     }
+    @Test public void stopRetainsPositionAcrossDestructionAndExplicitRewindResetsIt() throws Exception {
+        prefetched(1); start(); await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 0);
+        service.onStartCommand(new Intent().setAction("meditation.NEXT"), 0, 2);
+        await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 1);
+        MeditationPlaybackService.end(Application.getAppContext());
+        Intent stop = shadowOf((android.app.Application) Application.getAppContext()).getNextStartedService();
+        assertFalse(stop.getBooleanExtra("rewind", true));
+        service.onStartCommand(stop, 0, 3);
+        assertFalse(MeditationPlaybackService.state().getValue().active);
+        assertEquals(1, MeditationPlaybackService.state().getValue().position);
+        assertFalse(MeditationPlaybackService.state().getValue().completed);
+        assertEquals("1", PreferenceUtil.getSharedPreferenceString("playback_position", ""));
+        controller.destroy(); controller = null;
+        assertEquals(1, MeditationPlaybackService.state().getValue().position);
+        controller = Robolectric.buildService(MeditationPlaybackService.class).create(); service = controller.get();
+        service.onStartCommand(new Intent().setAction("meditation.START").putExtra("position", 1), 0, 1);
+        await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 1);
+        MeditationPlaybackService.end(Application.getAppContext(), true);
+        Intent rewind = shadowOf((android.app.Application) Application.getAppContext()).getNextStartedService();
+        assertTrue(rewind.getBooleanExtra("rewind", false));
+        service.onStartCommand(rewind, 0, 2);
+        assertFalse(MeditationPlaybackService.state().getValue().active);
+        assertEquals(0, MeditationPlaybackService.state().getValue().position);
+        assertEquals("0", PreferenceUtil.getSharedPreferenceString("playback_position", ""));
+    }
+
     @Test public void changingLocalSpeedKeepsOfflineFilesAndCurrentSentence() throws Exception {
         SentenceAudioStore.Book original = prefetched(1), changed = prefetched(1.25);
         start(); await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 0);

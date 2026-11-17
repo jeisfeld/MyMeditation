@@ -50,6 +50,7 @@ public class MeditationFragment extends Fragment {
     private final de.jeisfeld.mymeditation.audio.OfflineDuration offlineDuration = new de.jeisfeld.mymeditation.audio.OfflineDuration();
     private int offlineCheck;
     private String offlineIdentity = "";
+    private boolean rewindAfterStop;
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable refreshOfflineLabel = this::checkOfflineLabel;
     private final Runnable prefetchTitle = () -> {
@@ -171,6 +172,11 @@ public class MeditationFragment extends Fragment {
         });
         MeditationPlaybackService.state().observe(getViewLifecycleOwner(), state -> {
             renderReadingMode(state);
+            if (!state.active && (rewindAfterStop || state.completed)) {
+                rewindAfterStop = false;
+                binding.editTextMeditationText.setSelection(0);
+                scrollStoppedEditor(binding.editTextMeditationText, 0, 0);
+            }
             scheduleOfflineLabel();
             binding.idlePlaybackActions.setVisibility(state.active ? View.GONE : View.VISIBLE);
             binding.playbackControls.setVisibility(state.active ? View.VISIBLE : View.GONE);
@@ -261,6 +267,15 @@ public class MeditationFragment extends Fragment {
         binding.buttonNextMeditation.setOnClickListener(v -> MeditationPlaybackService.skip(requireContext(), 1));
         binding.buttonPauseMeditation.setOnClickListener(v -> stopAudio());
         binding.buttonEndMeditation.setOnClickListener(v -> MeditationPlaybackService.end(requireContext()));
+        binding.buttonEndMeditation.setOnLongClickListener(v -> {
+            rewindAfterStop = true;
+            MeditationPlaybackService.end(requireContext(), true);
+            return true;
+        });
+        binding.buttonEndMeditation.setTooltipText(getString(R.string.stop_meditation_hint));
+        androidx.core.view.ViewCompat.replaceAccessibilityAction(binding.buttonEndMeditation,
+                androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_LONG_CLICK,
+                getString(R.string.stop_meditation_rewind), (view, args) -> view.performLongClick());
 
         binding.editTextMeditationContent.setOnFocusChangeListener((v, hasFocus) -> {
             if (!hasFocus) {
@@ -431,6 +446,7 @@ public class MeditationFragment extends Fragment {
     private void renderReadingMode(MeditationPlaybackService.State state) {
         android.widget.EditText editor = binding.editTextMeditationText;
         if (reading != state.active) {
+            int scrollX = editor.getScrollX(), scrollY = editor.getScrollY();
             reading = state.active;
 
             editor.setKeyListener(reading ? null : editorKeyListener);
@@ -442,7 +458,11 @@ public class MeditationFragment extends Fragment {
                 ((android.view.inputmethod.InputMethodManager) requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE))
                         .hideSoftInputFromWindow(editor.getWindowToken(), 0);
             } else {
-                editor.setText(meditationViewModel.getMeditationText().getValue());
+                String draft = meditationViewModel.getMeditationText().getValue();
+                if (!editor.getText().toString().equals(draft)) { editor.setText(draft); }
+                int[] current = de.jeisfeld.mymeditation.audio.SpokenTextRanges.range(editor.getText().toString(), state.sentences, state.position);
+                if (current[0] >= 0) { editor.setSelection(current[0]); }
+                scrollStoppedEditor(editor, scrollX, scrollY);
             }
             highlightedPosition = -2;
         }
@@ -472,6 +492,13 @@ public class MeditationFragment extends Fragment {
             if (top < editor.getScrollY() || bottom > editor.getScrollY() + height) {
                 editor.scrollTo(0, Math.max(0, Math.min(top - height / 4, layout.getHeight() - height)));
             }
+        });
+    }
+
+    private void scrollStoppedEditor(android.widget.EditText editor, int x, int y) {
+        editor.scrollTo(x, y);
+        androidx.core.view.OneShotPreDrawListener.add(editor, () -> {
+            if (binding != null && binding.editTextMeditationText == editor && !reading) { editor.scrollTo(x, y); }
         });
     }
 

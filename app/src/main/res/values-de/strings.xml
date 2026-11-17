@@ -119,4 +119,6 @@
     <string name="sentence_position">%1$d/%2$d</string>
     <string name="sentence_position_description">Satz %1$d von %2$d</string>
     <string name="pause_setting_help" formatted="false">Unter 1 Sekunde werden Pausen als Prozentwert angezeigt. Bei 50% dauern 10 Sekunden Wartezeit plus 1 Sekunde Grundpause insgesamt 5,5 Sekunden. Gib einen Prozentwert oder eine Pause in Sekunden ein.</string>
+    <string name="stop_meditation_hint">Beenden; gedrückt halten, um zum Anfang zurückzukehren</string>
+    <string name="stop_meditation_rewind">Beenden und zum Anfang zurückkehren</string>
 </resources>

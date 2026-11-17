@@ -170,7 +170,7 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
             Fragment fragment = mFragment.get();
             if (fragment == null || fragment.getContext() == null) { return; }
             if (de.jeisfeld.mymeditation.audio.MeditationPlaybackService.state().getValue().active) {
-                de.jeisfeld.mymeditation.audio.MeditationPlaybackService.end(fragment.requireContext());
+                de.jeisfeld.mymeditation.audio.MeditationPlaybackService.end(fragment.requireContext(), true);
             }
             de.jeisfeld.mymeditation.audio.SavedAudioLibrary.restore(fragment.requireContext(), meditationId);
             refreshDraft(fragment);
@@ -182,7 +182,7 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
     private void deleteMeditation(Fragment fragment, int meditationId) {
         de.jeisfeld.mymeditation.audio.MeditationOfflineService.cancel(fragment.requireContext(), meditationId);
         if (de.jeisfeld.mymeditation.audio.MeditationPlaybackService.state().getValue().savedId == meditationId) {
-            de.jeisfeld.mymeditation.audio.MeditationPlaybackService.end(fragment.requireContext());
+            de.jeisfeld.mymeditation.audio.MeditationPlaybackService.end(fragment.requireContext(), true);
         }
         de.jeisfeld.mymeditation.audio.SavedAudioLibrary.unlink(meditationId);
         PreferenceUtil.setSharedPreferenceString("offline_settings_" + meditationId, "");

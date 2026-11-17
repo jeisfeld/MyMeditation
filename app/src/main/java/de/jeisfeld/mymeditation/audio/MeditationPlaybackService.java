@@ -40,6 +40,7 @@ public final class MeditationPlaybackService extends Service {
         public final boolean running;
         public final boolean waitingForAudioFocus;
         public final boolean active;
+        public final boolean completed;
         public final String text;
         public final int spokenPosition, savedId;
         public final int position;
@@ -48,6 +49,11 @@ public final class MeditationPlaybackService extends Service {
         public final long errorId;
         State(boolean running, int position, List<String> sentences, String status, String error, long errorId,
                 boolean active, String text, int spokenPosition, boolean waitingForAudioFocus, int savedId) {
+            this(running, position, sentences, status, error, errorId, active, text, spokenPosition, waitingForAudioFocus, savedId, false);
+        }
+        State(boolean running, int position, List<String> sentences, String status, String error, long errorId,
+                boolean active, String text, int spokenPosition, boolean waitingForAudioFocus, int savedId, boolean completed) {
+            this.completed = completed;
             this.waitingForAudioFocus = waitingForAudioFocus;
             this.savedId = savedId;
             this.active = active; this.text = text; this.spokenPosition = spokenPosition;
@@ -89,8 +95,9 @@ public final class MeditationPlaybackService extends Service {
             context.startService(new Intent(context, MeditationPlaybackService.class).setAction(APPLY_SETTINGS));
         }
     }
-    public static void end(Context context) {
-        context.startService(new Intent(context, MeditationPlaybackService.class).setAction(STOP));
+    public static void end(Context context) { end(context, false); }
+    public static void end(Context context, boolean rewind) {
+        context.startService(new Intent(context, MeditationPlaybackService.class).setAction(STOP).putExtra("rewind", rewind));
     }
     public static void setPause(Context context, double seconds) {
         if (STATE.getValue().running) { context.startService(new Intent(context, MeditationPlaybackService.class).setAction(SET_PAUSE).putExtra("seconds", seconds)); }
@@ -98,7 +105,7 @@ public final class MeditationPlaybackService extends Service {
 
     private boolean running, transition, destroying, keepNotification, stopping, active, waitingForAudioFocus;
     private int spokenPosition = -1, playbackGeneration;
-    private boolean finalizingRecording;
+    private boolean finalizingRecording, completed;
     private final android.os.Handler idleHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable stopIdle = () -> { if (!running && !waitingForAudioFocus) { stopSelf(); } };
     private final Runnable renewWakeLock = new Runnable() {
@@ -206,7 +213,8 @@ public final class MeditationPlaybackService extends Service {
                 });
             }
             @Override public void onFinished() {
-                active = false; spokenPosition = -1; position = 0; PreferenceUtil.setSharedPreferenceString(POSITION, "0"); publish();
+                active = false; spokenPosition = -1; position = 0; completed = true;
+                PreferenceUtil.setSharedPreferenceString(POSITION, Integer.toString(position)); publish();
                 if (finalizingRecording) {
                     int generation = playbackGeneration;
                     recordingWriter.execute(() -> new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
@@ -239,7 +247,7 @@ public final class MeditationPlaybackService extends Service {
             return START_NOT_STICKY;
         }
         if (PAUSE.equals(action)) { pausePlayback(); }
-        else if (STOP.equals(action)) { stopPlayback(); }
+        else if (STOP.equals(action)) { stopPlayback(intent.getBooleanExtra("rewind", false)); }
         else if (APPLY_SETTINGS.equals(action)) {
             if (running && request != null) {
                 try { applyCurrentSettings(); } catch (Exception e) { playbackError(e); }
@@ -336,6 +344,7 @@ public final class MeditationPlaybackService extends Service {
         PreferenceUtil.setSharedPreferenceInt(R.string.key_saved_playback_source, savedId);
     }
     private void startAt(int index) {
+        completed = false;
         playbackGeneration++; finalizingRecording = false;
         SavedAudioLibrary.begin(request);
         active = true; spokenPosition = -1;
@@ -386,7 +395,15 @@ public final class MeditationPlaybackService extends Service {
         try { player.stop(); running = false; status = ""; releaseWakeLock(); publish(); updateSession(); pausedNotification(); }
         finally { transition = false; }
     }
-    private void stopPlayback() { playbackGeneration++; finalizingRecording = false; pausePlayback(); active = false; spokenPosition = -1; position = 0; PreferenceUtil.setSharedPreferenceString(POSITION, "0"); publish(); finishService(false); }
+    private void stopPlayback() { stopPlayback(false); }
+    private void stopPlayback(boolean rewind) {
+        completed = false;
+        playbackGeneration++; finalizingRecording = false; pausePlayback();
+        active = false; spokenPosition = -1;
+        position = rewind ? 0 : Math.max(0, Math.min(position, sentences.size() - 1));
+        PreferenceUtil.setSharedPreferenceString(POSITION, Integer.toString(position));
+        publish(); finishService(false);
+    }
     private void pausedNotification() {
         keepNotification = true; stopping = true;
         stopForeground(STOP_FOREGROUND_DETACH);
@@ -411,7 +428,7 @@ public final class MeditationPlaybackService extends Service {
         idleHandler.removeCallbacks(renewWakeLock);
         if (wakeLock != null && wakeLock.isHeld()) { wakeLock.release(); }
     }
-    private void publish() { STATE.setValue(new State(running, position, sentences, status, error, errorId, active, request == null ? "" : request.text, spokenPosition, waitingForAudioFocus, savedId)); }
+    private void publish() { STATE.setValue(new State(running, position, sentences, status, error, errorId, active, request == null ? "" : request.text, spokenPosition, waitingForAudioFocus, savedId, completed)); }
     private void updateSession() {
         session.setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE
                 | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_STOP | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS)
