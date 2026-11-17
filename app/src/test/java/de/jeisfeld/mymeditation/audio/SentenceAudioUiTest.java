@@ -126,6 +126,56 @@ public class SentenceAudioUiTest extends BaselineTest {
         assertEquals(0.9, export.speed, 0); assertEquals(3, export.pauseSeconds, 0);
         assertEquals(SentenceAudioStore.key(original), SentenceAudioStore.key(export));
     }
+    @Test public void offlineHeadingIncludesDurationAndRefreshesForSpeedAndPause() throws Exception {
+        int id = recorded(); SavedAudioLibrary.restore(Application.getAppContext(), id);
+        SentenceAudioStore.Book book = SavedAudioLibrary.book(Application.getAppContext(), id);
+        for (int i = 0; i < book.sentences.size(); i++) {
+            org.robolectric.shadows.ShadowMediaMetadataRetriever.addMetadata(book.available(i).getAbsolutePath(),
+                    android.media.MediaMetadataRetriever.METADATA_KEY_DURATION, "10000");
+        }
+        PreferenceUtil.setPauseSeconds(2);
+        controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
+        String name = PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, id);
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline_duration, name, "0:18"));
+        SavedAudioLibrary.restoreVoice(book.request.withSpeed(2)); idle();
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline_duration, name, "0:12"));
+        PreferenceUtil.setPauseSeconds(5); idle();
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline_duration, name, "0:15"));
+        playbackHeading(id, true, true);
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline_duration, name, "0:15"));
+    }
+    private void publishPosition(java.util.List<String> segments, int position) {
+        publishedPlayback = true;
+        ((androidx.lifecycle.MutableLiveData<MeditationPlaybackService.State>) MeditationPlaybackService.state()).setValue(
+                new MeditationPlaybackService.State(true, position, segments, "", "", 0,
+                        true, String.join(" ", segments), -1, false, 0));
+        idle();
+    }
+    @Test public void sentenceCounterKeepsWidthAcrossDigitBoundariesAndExcludesWaits() {
+        controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
+        android.widget.TextView counter = activity.findViewById(R.id.textSentencePosition);
+        assertEquals("1/2", counter.getText().toString());
+        for (int total : new int[]{245, 1001}) {
+            java.util.List<String> segments = java.util.Collections.nCopies(total, "Breathe.");
+            publishPosition(segments, 0);
+            assertEquals("1/" + total, counter.getText().toString());
+            counter.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+            int width = counter.getMeasuredWidth();
+            assertTrue(width >= Math.ceil(counter.getPaint().measureText(total + "/" + total)));
+            publishPosition(segments, 99);
+            assertEquals("100/" + total, counter.getText().toString());
+            counter.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+            assertEquals(width, counter.getMeasuredWidth());
+            publishPosition(segments, total - 1);
+            assertEquals(total + "/" + total, counter.getText().toString());
+            counter.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+            assertEquals(width, counter.getMeasuredWidth());
+        }
+        publishPosition(java.util.Arrays.asList("One.", "[wait 5s]", "Two."), 1);
+        assertEquals("1/2", counter.getText().toString());
+        publishPosition(java.util.Arrays.asList("One.", "[wait 5s]", "Two."), 2);
+        assertEquals("2/2", counter.getText().toString());
+    }
     @Test public void clearingNameFilterRestoresResultsAndPreservesAudioFilterAndSavedOrder() throws Exception {
         int recorded = recorded();
         int textOnly = SavedMeditations.save("Text only", "s", "@TEXT@", "c", "Unrecorded.");

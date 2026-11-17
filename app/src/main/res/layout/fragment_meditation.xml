@@ -249,16 +249,34 @@
                 android:enabled="false" />
         </LinearLayout>
 
-        <SeekBar
-            android:id="@+id/seekBarAudio"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="@dimen/editText_horizontal_margin"
             android:layout_marginEnd="@dimen/editText_horizontal_margin"
-            android:indeterminate="false"
-            android:max="100"
-            android:min="0"
-            android:progress="0" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <SeekBar
+                android:id="@+id/seekBarAudio"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:indeterminate="false"
+                android:max="100"
+                android:min="0"
+                android:progress="0" />
+
+            <TextView
+                android:id="@+id/textSentencePosition"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFeatureSettings="tnum"
+                android:gravity="end|center_vertical"
+                android:textDirection="ltr"
+                android:paddingStart="4dp"
+                android:singleLine="true" />
+        </LinearLayout>
 
     </LinearLayout>
 

@@ -47,6 +47,7 @@ public class MeditationFragment extends Fragment {
     private final java.util.concurrent.ExecutorService offlineChecker = java.util.concurrent.Executors.newSingleThreadExecutor(task -> {
         Thread thread = new Thread(task, "offline-availability"); thread.setDaemon(true); return thread;
     });
+    private final de.jeisfeld.mymeditation.audio.OfflineDuration offlineDuration = new de.jeisfeld.mymeditation.audio.OfflineDuration();
     private int offlineCheck;
     private String offlineIdentity = "";
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -70,15 +71,23 @@ public class MeditationFragment extends Fragment {
         ui.removeCallbacks(refreshOfflineLabel);
         ui.post(refreshOfflineLabel);
     }
-    private String meditationHeading(boolean offline) {
+    private String meditationHeading(boolean offline) { return meditationHeading(offline, null); }
+    private String meditationHeading(boolean offline, Long duration) {
         MeditationPlaybackService.State state = MeditationPlaybackService.state().getValue();
         int source = state.active ? state.savedId : de.jeisfeld.mymeditation.audio.SavedAudioLibrary.restoredSource(
                 binding.editTextMeditationText.getText().toString());
         if (source > 0 && PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).contains(source)) {
             String name = PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, source);
             if (name != null && !name.trim().isEmpty()) {
-                return offline ? getString(R.string.label_named_meditation_offline, name) : name;
+                if (!offline) { return name; }
+                return duration == null ? getString(R.string.label_named_meditation_offline, name)
+                        : getString(R.string.label_named_meditation_offline_duration, name,
+                                de.jeisfeld.mymeditation.audio.OfflineDuration.format(duration));
             }
+        }
+        if (offline && duration != null) {
+            return getString(R.string.label_meditation_text_offline_duration,
+                    de.jeisfeld.mymeditation.audio.OfflineDuration.format(duration));
         }
         return getString(offline ? R.string.label_meditation_text_offline : R.string.label_meditation_text);
     }
@@ -94,17 +103,19 @@ public class MeditationFragment extends Fragment {
         if (request.backend == SpeechBackend.DEVICE) {
             offlineIdentity = ""; binding.labelMeditationText.setText(meditationHeading(false)); return;
         }
-        String identity = de.jeisfeld.mymeditation.audio.SentenceAudioStore.key(request);
+        String identity = de.jeisfeld.mymeditation.audio.SentenceAudioStore.key(request) + ":" + request.speed + ":" + request.pauseSeconds;
         if (!identity.equals(offlineIdentity)) {
             binding.labelMeditationText.setText(meditationHeading(false));
             offlineIdentity = identity;
         }
         android.content.Context context = requireContext().getApplicationContext();
         offlineChecker.execute(() -> {
-            boolean offline = de.jeisfeld.mymeditation.audio.SentenceAudio.store(context).open(request).isComplete();
+            de.jeisfeld.mymeditation.audio.SentenceAudioStore.Book book = de.jeisfeld.mymeditation.audio.SentenceAudio.store(context).open(request);
+            boolean offline = book.isComplete();
+            Long duration = offline ? offlineDuration.milliseconds(book, request.pauseSeconds) : null;
             ui.post(() -> {
                 if (binding != null && check == offlineCheck) {
-                    binding.labelMeditationText.setText(meditationHeading(offline));
+                    binding.labelMeditationText.setText(meditationHeading(offline, duration));
                 }
             });
         });
@@ -152,7 +163,9 @@ public class MeditationFragment extends Fragment {
             binding.textPauseDuration.setText(number(pauseDuration) + " s");
         });
         meditationViewModel.getSeekBarMax().observe(getViewLifecycleOwner(), binding.seekBarAudio::setMax);
-        meditationViewModel.getSeekBarProgress().observe(getViewLifecycleOwner(), binding.seekBarAudio::setProgress);
+        meditationViewModel.getSeekBarProgress().observe(getViewLifecycleOwner(), position -> {
+            binding.seekBarAudio.setProgress(position); refreshSentencePosition();
+        });
         MeditationPlaybackService.state().observe(getViewLifecycleOwner(), state -> {
             renderReadingMode(state);
             scheduleOfflineLabel();
@@ -170,6 +183,7 @@ public class MeditationFragment extends Fragment {
                 meditationViewModel.setSeekBarMax(Math.max(0, sentences.size() - 1));
                 meditationViewModel.setSeekBarProgress(state.position);
             }
+            refreshSentencePosition();
             updateSpeechStatus(state.status);
             if (!state.error.isEmpty() && meditationViewModel.consumePlaybackError(state.errorId)) {
                 new AlertDialog.Builder(requireContext()).setTitle(R.string.button_speak_meditation)
@@ -280,6 +294,7 @@ public class MeditationFragment extends Fragment {
             private boolean resumeAfterSeek;
             @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) { meditationViewModel.setSeekBarProgress(progress); }
+                refreshSentencePosition();
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) {
                 resumeAfterSeek = Boolean.TRUE.equals(meditationViewModel.isMeditationRunning().getValue());
@@ -306,7 +321,7 @@ public class MeditationFragment extends Fragment {
         binding.textVoiceSpeed.setOnClickListener(v -> valueDialog(true));
         binding.editTextMeditationText.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { scheduleOfflineLabel(); }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { scheduleOfflineLabel(); refreshSentencePosition(); }
             @Override public void afterTextChanged(android.text.Editable s) { }
         });
         binding.editTextMeditationContent.addTextChangedListener(new android.text.TextWatcher() {
@@ -319,6 +334,7 @@ public class MeditationFragment extends Fragment {
         de.jeisfeld.mymeditation.audio.SavedAudioLibrary.changes().observe(getViewLifecycleOwner(), version -> scheduleOfflineLabel());
         androidx.preference.PreferenceManager.getDefaultSharedPreferences(requireContext()).registerOnSharedPreferenceChangeListener(offlinePreferences);
         refreshSpeed();
+        refreshSentencePosition();
         scheduleOfflineLabel();
         return root;
     }
@@ -449,6 +465,31 @@ public class MeditationFragment extends Fragment {
                 editor.scrollTo(0, Math.max(0, Math.min(top - height / 4, layout.getHeight() - height)));
             }
         });
+    }
+
+    private void refreshSentencePosition() {
+        if (binding == null) { return; }
+        MeditationPlaybackService.State state = MeditationPlaybackService.state().getValue();
+        List<String> segments;
+        try {
+            segments = state.active ? state.sentences : SpeechSegments.split(
+                    binding.editTextMeditationText.getText().toString(), speechBackend().segmentLimit);
+        } catch (IllegalArgumentException e) { segments = java.util.Collections.emptyList(); }
+        if (!state.active) { binding.seekBarAudio.setMax(Math.max(0, segments.size() - 1)); }
+        int position = binding.seekBarAudio.getProgress(), total = 0, current = 0;
+        for (int i = 0; i < segments.size(); i++) {
+            if (MeditationPauses.seconds(segments.get(i)) < 0) {
+                total++;
+                if (i <= position) { current++; }
+            }
+        }
+        android.widget.TextView counter = binding.textSentencePosition;
+        String maximum = getString(R.string.sentence_position, total, total);
+        // Tabular digits and space for the largest numerator keep the seek bar stable.
+        counter.setWidth((int) Math.ceil(counter.getPaint().measureText(maximum))
+                + counter.getCompoundPaddingLeft() + counter.getCompoundPaddingRight());
+        counter.setText(getString(R.string.sentence_position, current, total));
+        counter.setContentDescription(getString(R.string.sentence_position_description, current, total));
     }
 
     private void updateSpeechStatus(String status) {

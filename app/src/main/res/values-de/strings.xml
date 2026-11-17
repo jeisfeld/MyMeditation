@@ -114,4 +114,8 @@
     <string name="prompt_template_delete_confirmation">Vorlage „%1$s“ löschen? Der aktuelle Text bleibt erhalten.</string>
     <string name="prompt_template_update_confirmation">Den Text von „%1$s“ durch den aktuellen Text ersetzen?</string>
     <string name="button_close">Schließen</string>
+    <string name="label_meditation_text_offline_duration">Meditationstext (offline %1$s)</string>
+    <string name="label_named_meditation_offline_duration">%1$s (offline %2$s)</string>
+    <string name="sentence_position">%1$d/%2$d</string>
+    <string name="sentence_position_description">Satz %1$d von %2$d</string>
 </resources>

@@ -130,4 +130,8 @@
     <string name="prompt_template_delete_confirmation">Delete the template “%1$s”? The current text stays unchanged.</string>
     <string name="prompt_template_update_confirmation">Replace the text of “%1$s” with the current text?</string>
     <string name="button_close">Close</string>
+    <string name="label_meditation_text_offline_duration">Meditation text (offline %1$s)</string>
+    <string name="label_named_meditation_offline_duration">%1$s (offline %2$s)</string>
+    <string name="sentence_position">%1$d/%2$d</string>
+    <string name="sentence_position_description">Sentence %1$d of %2$d</string>
 </resources>
