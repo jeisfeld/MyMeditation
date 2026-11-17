@@ -71,7 +71,7 @@ public class SentenceTimedPauseTest extends BaselineTest {
         assertEquals(Arrays.asList(0), spoken);
         completeLast(); assertEquals(Arrays.asList(0, 1), spoken);
         player.setPauseSeconds(0);
-        advance(1249); assertEquals(1, media.size());
+        advance(31249); assertEquals(1, media.size());
         advance(1); await(() -> media.size() == 2); idle();
         assertEquals(Arrays.asList(0, 1, 2), spoken);
         completeLast(); assertFalse(finished); advance(1999); assertFalse(finished);

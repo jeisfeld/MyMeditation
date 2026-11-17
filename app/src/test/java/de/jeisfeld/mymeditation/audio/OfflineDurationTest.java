@@ -26,11 +26,11 @@ public class OfflineDurationTest {
         int[] reads = {0};
         OfflineDuration duration = new OfflineDuration(file -> { reads[0]++; return 1000; });
         String text = "One.One.[wait 5s]Two.[wait 2s]";
-        assertEquals(Long.valueOf(11500), duration.milliseconds(book(text, SpeechBackend.GEMINI, 2, 3), 3));
+        assertEquals(Long.valueOf(17500), duration.milliseconds(book(text, SpeechBackend.GEMINI, 2, 3), 3));
         assertEquals(2, reads[0]); // Repeated sentences use the same source metadata.
-        assertEquals(Long.valueOf(11000), duration.milliseconds(book(text, SpeechBackend.GEMINI, 1, 1), 1));
+        assertEquals(Long.valueOf(13000), duration.milliseconds(book(text, SpeechBackend.GEMINI, 1, 1), 1));
         assertEquals(2, reads[0]);
-        assertEquals(Long.valueOf(5000), duration.milliseconds(book("[wait 5s]", SpeechBackend.GEMINI, 4, 30), 30));
+        assertEquals(Long.valueOf(35000), duration.milliseconds(book("[wait 5s]", SpeechBackend.GEMINI, 4, 30), 30));
     }
     @Test public void openAiAudioAlreadyContainsSpeedAndHasNoTrailingGap() throws Exception {
         OfflineDuration duration = new OfflineDuration(file -> 10000);

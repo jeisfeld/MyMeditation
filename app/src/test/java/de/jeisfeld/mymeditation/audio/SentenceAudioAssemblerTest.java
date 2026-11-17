@@ -15,7 +15,7 @@ import static org.junit.Assert.*;
 
 public class SentenceAudioAssemblerTest {
     @Rule public TemporaryFolder directory = new TemporaryFolder();
-    @Test public void sharedMp3RendersExactExplicitPausesAndNormalGapsOnlyBetweenSpokenSentences() throws Exception {
+    @Test public void sharedMp3AddsConfiguredGapOncePerWaitGroupAndBetweenSpokenSentences() throws Exception {
         PlaybackRequest request = new PlaybackRequest("[wait 0.1s]First.[wait 0.25s][wait 0.5s]Second.Third.[wait 0.2s]",
                 SpeechBackend.GEMINI, "gemini-3.8-flash-tts", "Kore", 4, "", 30);
         SentenceAudioStore.Book book = new SentenceAudioStore(directory.getRoot()).open(request);
@@ -30,7 +30,7 @@ public class SentenceAudioAssemblerTest {
             decoded.add(file.getName()); writer.write(ByteBuffer.allocate(2000));
         }, count -> { }, () -> { });
         assertEquals(Arrays.asList(book.audio(1).getName(), book.audio(4).getName(), book.audio(5).getName()), decoded);
-        assertEquals(3000 + Math.round(3.05 * Mp3Writer.SAMPLE_RATE), frames);
+        assertEquals(3000 + Math.round(9.05 * Mp3Writer.SAMPLE_RATE), frames);
     }
     private SentenceAudioStore.Book book(boolean complete) throws Exception {
         PlaybackRequest request = new PlaybackRequest("First. Second. Third.", SpeechBackend.GEMINI,

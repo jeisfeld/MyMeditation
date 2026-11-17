@@ -20,6 +20,7 @@ public final class OfflineDuration {
         double total = 0;
         for (int i = 0; i < book.sentences.size(); i++) {
             if (Thread.currentThread().isInterrupted()) { return null; }
+            total += MeditationPauses.gapBefore(book.sentences, i, pause) * 1000;
             double wait = MeditationPauses.seconds(book.sentences.get(i));
             if (wait >= 0) { total += wait * 1000; continue; }
             File file = book.available(i);
@@ -33,7 +34,6 @@ public final class OfflineDuration {
                 cache.put(key, duration);
             }
             total += duration / (book.request.localSpeed() ? book.request.speed : 1);
-            total += MeditationPauses.gapBefore(book.sentences, i, pause) * 1000;
         }
         return Math.round(total);
     }

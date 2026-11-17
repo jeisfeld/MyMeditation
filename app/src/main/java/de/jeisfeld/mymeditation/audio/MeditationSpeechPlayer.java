@@ -227,7 +227,8 @@ public final class MeditationSpeechPlayer {
             listener.onStatus("");
             listener.onSpeaking(index);
             if (backend != SpeechBackend.DEVICE) { prefetch(index + 1, backend == SpeechBackend.ELEVENLABS ? 3 : 1); }
-            waitSilently((int) Math.round(pause * 1000), token, () -> complete(token));
+            waitSilently((int) Math.round(pause * 1000 + MeditationPauses.gapBefore(sentences, index, pauseMs)),
+                    token, () -> complete(token));
             return;
         }
         int gap = first ? 500 : (int) MeditationPauses.gapBefore(sentences, index, pauseMs);

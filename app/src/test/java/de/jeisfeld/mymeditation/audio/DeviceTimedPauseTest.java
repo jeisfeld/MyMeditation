@@ -37,21 +37,21 @@ public class DeviceTimedPauseTest extends BaselineTest {
     private void advance(long millis) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(millis)); }
     @After public void close() { if (player != null) { player.close(); idle(); } }
 
-    @Test public void activityPauseReplacesNormalGapAndIgnoresVoiceSpeedAndPauseSlider() {
+    @Test public void activityPauseAddsConfiguredGapOnceAndIgnoresVoiceSpeed() {
         ShadowTextToSpeech tts = start("Breathe. [wait 1.25s] Relax.", 0);
         advance(500); assertEquals(Arrays.asList("Breathe."), tts.getSpokenTextList());
         player.setPauseSeconds(0);
-        advance(1249); assertEquals(Arrays.asList("Breathe."), tts.getSpokenTextList());
+        advance(31249); assertEquals(Arrays.asList("Breathe."), tts.getSpokenTextList());
         advance(1); assertEquals(Arrays.asList("Breathe.", "Relax."), tts.getSpokenTextList());
         assertEquals(Arrays.asList(0, 1, 2), completed); assertTrue(finished);
     }
 
     @Test public void leadingConsecutiveAndTrailingPausesRunToCompletionWithoutSpeechCommands() {
         ShadowTextToSpeech tts = start("[wait 1s][wait 2s]Rest.[wait 3s]", 0);
-        advance(2999); assertNull(tts.getLastSpokenText());
+        advance(32999); assertNull(tts.getLastSpokenText());
         advance(1); assertEquals(Arrays.asList("Rest."), tts.getSpokenTextList());
         assertFalse(finished);
-        advance(2999); assertFalse(finished);
+        advance(32999); assertFalse(finished);
         advance(1); assertTrue(finished); assertEquals(Arrays.asList(0, 1, 2, 3), completed);
     }
 

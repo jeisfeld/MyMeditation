@@ -22,7 +22,7 @@ public final class MeditationPauses {
     private static final String FORMAT = "If a timed pause is needed, use exactly [wait Ns], replacing N with seconds, "
             + "greater than 0 and at most 300. Use ASCII digits and a decimal point if needed (at most three decimal places). "
             + "Never translate wait or s, even in a non-English meditation. "
-            + "The player renders commands as silence, replacing the normal gap at that location. "
+            + "The player adds the command duration to the configured sentence pause, once per consecutive group of wait commands. "
             + "Use ordinary prose elsewhere, without code fences or explanations of commands. "
             + "Do not use alternative pause commands or describe an unmarked long silence.";
 
@@ -79,8 +79,11 @@ public final class MeditationPauses {
         }
     }
 
-    /** Default gaps only join two spoken segments; explicit commands supply the entire silence. */
+    /** Add the normal gap once before each wait group, never again after or within it.
+     * Leading waits also include the configured gap; ordinary speech has no leading gap.
+     */
     public static double gapBefore(List<String> segments, int index, double normal) {
-        return index > 0 && seconds(segments.get(index)) < 0 && seconds(segments.get(index - 1)) < 0 ? normal : 0;
+        boolean leadingWait = index == 0 && seconds(segments.get(index)) >= 0;
+        return leadingWait || index > 0 && seconds(segments.get(index - 1)) < 0 ? normal : 0;
     }
 }

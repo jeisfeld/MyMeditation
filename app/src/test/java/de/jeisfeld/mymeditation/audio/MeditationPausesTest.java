@@ -45,8 +45,17 @@ public class MeditationPausesTest {
         PlaybackRequest qwen = new PlaybackRequest(text, SpeechBackend.QWEN, "qwen3-tts-flash", "Cherry", 1, "", 5);
         assertEquals(2, device.positionFor(qwen, 1));
         List<String> parts = SpeechSegments.split(text);
-        assertEquals(0, MeditationPauses.gapBefore(parts, 1, 5), 0);
+        assertEquals(5, MeditationPauses.gapBefore(parts, 1, 5), 0);
         assertEquals(0, MeditationPauses.gapBefore(parts, 2, 5), 0);
         assertEquals(5, MeditationPauses.gapBefore(parts, 3, 5), 0);
     }
+    @Test public void normalGapIsAddedOncePerWaitGroupIncludingLeadingAndTrailingWaits() {
+        List<String> parts = SpeechSegments.split("[wait 1s][wait 2s]One.[wait 1s]Two.Three.[wait 1s][wait 2s]");
+        double[] expected = {5, 0, 0, 5, 0, 5, 5, 0};
+        for (int i = 0; i < parts.size(); i++) {
+            assertEquals("segment " + i, expected[i], MeditationPauses.gapBefore(parts, i, 5), 0);
+            assertEquals(0, MeditationPauses.gapBefore(parts, i, 0), 0);
+        }
+    }
+
 }
