@@ -56,8 +56,8 @@ public final class AppStorage {
         return roots;
     }
     public static Usage measure(Context context) throws IOException {
-        Set<String> referenced = SavedAudioLibrary.referencedRecordings();
-        Set<String> pinnedClips = SentenceAudio.store(context).clips(referenced);
+        SavedAudioReferences ownership = SavedAudioReferences.collect(context);
+        Set<String> referenced = ownership.books, pinnedClips = ownership.clips;
         Path recordings = sentences(context); List<Path> other = otherAudioRoots(context);
         long[] totals = new long[3];
         Files.walkFileTree(context.getDataDir().toPath(), new SimpleFileVisitor<Path>() {
@@ -79,6 +79,7 @@ public final class AppStorage {
                 } else {
                     for (Path root : other) { if (path.startsWith(root)) { bucket = 1; break; } }
                 }
+                if (ownership.caches.contains(path)) { bucket = 0; }
                 totals[bucket] += attributes.size(); return FileVisitResult.CONTINUE;
             }
         });
@@ -88,9 +89,9 @@ public final class AppStorage {
     public static void clearOtherAudio(Context context) throws IOException {
         if (!isCleaning() || audioActive()) { throw new IllegalStateException("Audio maintenance is not reserved"); }
         boolean failed = false;
-        for (Path root : otherAudioRoots(context)) { try { deleteTree(context, root); } catch (IOException e) { failed = true; } }
-        Set<String> referenced = SavedAudioLibrary.referencedRecordings();
-        Set<String> pinnedClips = SentenceAudio.store(context).clips(referenced);
+        SavedAudioReferences ownership = SavedAudioReferences.collect(context);
+        for (Path root : otherAudioRoots(context)) { try { deleteTree(context, root, ownership.caches); } catch (IOException e) { failed = true; } }
+        Set<String> referenced = ownership.books, pinnedClips = ownership.clips;
         Path recordings = sentences(context);
         if (Files.isSymbolicLink(recordings)) { throw new IOException("Invalid audio directory"); }
         File[] entries = recordings.toFile().listFiles();
@@ -113,6 +114,9 @@ public final class AppStorage {
         if (failed) { throw new IOException("Some audio files could not be deleted"); }
     }
     private static void deleteTree(Context context, Path root) throws IOException {
+        deleteTree(context, root, java.util.Collections.emptySet());
+    }
+    private static void deleteTree(Context context, Path root, Set<Path> retained) throws IOException {
         root = root.toAbsolutePath().normalize();
         Path data = context.getDataDir().toPath().toAbsolutePath().normalize();
         if (!root.startsWith(data) || root.equals(data)) { throw new IOException("Invalid audio location"); }
@@ -127,11 +131,16 @@ public final class AppStorage {
                 throw error;
             }
             @Override public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException {
-                Files.deleteIfExists(file); return FileVisitResult.CONTINUE;
+                if (!retained.contains(file.toAbsolutePath().normalize())) { Files.deleteIfExists(file); }
+                return FileVisitResult.CONTINUE;
             }
             @Override public FileVisitResult postVisitDirectory(Path directory, IOException failure) throws IOException {
                 if (failure != null) { throw failure; }
-                Files.deleteIfExists(directory); return FileVisitResult.CONTINUE;
+                try { Files.deleteIfExists(directory); }
+                catch (java.nio.file.DirectoryNotEmptyException retainedFiles) {
+                    if (retained.stream().noneMatch(path -> path.startsWith(directory.toAbsolutePath().normalize()))) { throw retainedFiles; }
+                }
+                return FileVisitResult.CONTINUE;
             }
         });
     }

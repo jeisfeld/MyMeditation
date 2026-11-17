@@ -36,6 +36,7 @@ Preferences use `PreferenceManager`'s application-default SharedPreferences. Exi
 | Saved order | `saved_meditation_ids`: newline-delimited integer IDs, preserving user order; legacy CRLF is accepted |
 | Highest allocated ID | `max_saved_meditation_id`: monotonic integer, not reused after deletion |
 | Saved name | `saved_meditation_name[id]` |
+| Explicit audio-only removal | `saved_audio_detached_<id>`: excludes retained speech settings from storage ownership until preparation/attachment |
 | Suggested title cache | `meditation_title_cache`: last 16 model/content hashes and short titles |
 | Loaded topic provenance | `restored_meditation_content_source`: saved ID, independent of regenerated text |
 | Saved prompts | `saved_system_prompt[id]`, `saved_query_template[id]` |
@@ -57,3 +58,5 @@ The one-time global-audio migration has been retired: no startup hook or convert
 
 
 `MeditationOfflineService` silently fills missing global sources for an explicit saved ID, then attaches the captured request through `SavedAudioLibrary.attachPrepared`. It shares the audio-maintenance exclusion policy with playback/export. `OfflineCoverage` supplies word-weighted immutable snapshots; `SavedMeditationEditor` displays them and owns only its measurement worker/observers, while the foreground service owns synthesis/cancellation.
+
+`SavedAudioReferences` is the common association model for storage totals and cleanup. It combines complete links and partial saved speech requests, including matching provider caches; current GUI settings never define ownership.

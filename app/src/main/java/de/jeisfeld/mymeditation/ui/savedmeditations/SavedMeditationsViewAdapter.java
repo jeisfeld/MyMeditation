@@ -149,7 +149,7 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
         holder.mDeleteButton.setOnClickListener(v -> {
             Fragment fragment = mFragment.get();
             if (fragment == null || fragment.getActivity() == null) { return; }
-            if (de.jeisfeld.mymeditation.audio.SavedAudioLibrary.hasRecording(meditationId)) {
+            if (de.jeisfeld.mymeditation.audio.SavedAudioLibrary.hasAudioMaterial(fragment.requireContext(), meditationId)) {
                 new android.app.AlertDialog.Builder(fragment.requireContext())
                         .setTitle(R.string.title_dialog_confirmation)
                         .setMessage(fragment.getString(R.string.delete_meditation_options, meditationName))

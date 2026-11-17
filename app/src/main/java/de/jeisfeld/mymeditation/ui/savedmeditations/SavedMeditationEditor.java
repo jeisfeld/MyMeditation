@@ -92,7 +92,7 @@ final class SavedMeditationEditor implements AutoCloseable {
         boolean device = request != null && request.backend == SpeechBackend.DEVICE;
         view.progressOfflineCoverage.setVisibility(device || request == null ? View.GONE : View.VISIBLE);
         view.textOfflineVoice.setVisibility(device || request == null ? View.GONE : View.VISIBLE);
-        view.textOfflinePreparationNote.setVisibility(device || request == null ? View.GONE : View.VISIBLE);
+        view.textOfflinePreparationNote.setVisibility(!device && request != null && coverage != null && !coverage.complete ? View.VISIBLE : View.GONE);
         view.progressOfflineCoverage.setIndeterminate(coverage == null);
         if (coverage != null) {
             NumberFormat percent = NumberFormat.getPercentInstance(owner.getResources().getConfiguration().getLocales().get(0)); percent.setMaximumFractionDigits(1);

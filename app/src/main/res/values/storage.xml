@@ -3,7 +3,7 @@
     <string name="storage_offline_size">Offline meditations: %1$s</string>
     <string name="storage_other_audio_size">Other audio: %1$s</string>
     <string name="storage_other_data_size">Other app data: %1$s</string>
-    <string name="storage_note">Approximate private app data, excluding the installed app. Shared sentences count once. Other audio includes unused sentences, provider caches, migration backups and temporary shared MP3s.</string>
+    <string name="storage_note">Audio associated with saved meditations counts as Offline meditations, including partial recordings and matching provider caches. Each file counts once. Other audio is unlinked audio, migration backups and temporary shared MP3s. Sizes exclude the installed app.</string>
     <string name="storage_stop_first">Stop playback, sharing and offline preparation before deleting audio.</string>
     <string name="storage_cleaning">Audio cleanup is running. Please try again when it finishes.</string>
     <string name="storage_calculating">Calculating storage…</string>
@@ -12,7 +12,7 @@
     <string name="storage_cleared">Other audio deleted.</string>
     <string name="refresh_storage">Refresh storage</string>
     <string name="clear_other_audio">Delete other audio</string>
-    <string name="clear_other_audio_confirmation">Delete cached, unused and temporary audio, including old migration backups? Sentences used by saved offline meditations, texts and settings will be kept. Other audio may need to be generated again.</string>
+    <string name="clear_other_audio_confirmation">Delete audio not associated with saved meditations, including unused caches, temporary files and old migration backups? Audio associated with saved meditations, including partial recordings, texts and settings will be kept.</string>
     <string name="delete_audio_only">Audio only</string>
     <string name="delete_meditation_options">Delete “%1$s” completely, or remove only its audio and keep the text and settings? Audio shared with another saved entry will be kept for that entry.</string>
     <string name="audio_only_removed">Audio removed; text and settings kept. Shared audio is kept for other entries.</string>

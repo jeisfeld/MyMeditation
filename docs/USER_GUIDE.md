@@ -105,8 +105,8 @@ These files contain settings only. Saved meditation entries, current meditation 
 
 Open **Configuration → Additional settings / Weitere Einstellungen** and scroll to **Storage / Speicherplatz**. The display divides approximate private app data into:
 
-- **Offline meditations:** shared sentence source files and metadata linked to saved meditations. Each source counts once, even across different meditation texts.
-- **Other audio:** unused sentence sources, provider caches, unfinished/unlinked recordings, retained backups from the one-time migration, legacy audio and temporary MP3s prepared for sharing.
+- **Offline meditations:** all audio associated with saved meditations, including partial sentence sources, matching provider-cache files and recording metadata. Each physical file counts once, even when several entries use it.
+- **Other audio:** audio not associated with saved meditations: unused sentence sources/cache files, unlinked recording data, retained migration backups, legacy audio and temporary MP3s prepared for sharing.
 - **Other app data:** settings, prompt libraries, saved texts, settings-export staging files and other private data/cache files.
 
 The installed APK and copies you shared outside the app are excluded. Use **Refresh storage / Speicheranzeige aktualisieren** to recalculate sizes.
@@ -139,3 +139,6 @@ The voice/model shown in the dialog is used for both coverage and preparation. S
 **Make available offline / Offline verfügbar machen** prepares only missing sentences, reusing global sources and provider caches. It can also attach an already-complete set of shared sources to this saved entry without synthesis. Normal provider charges apply for new speech. The operation is silent and does not replace the current draft or voice selection. A foreground notification and the edit dialog show word-weighted progress and offer cancellation. Closing the dialog leaves preparation running. Playback, sharing, other preparation jobs and audio cleanup wait until it finishes or is cancelled.
 
 Cancellation, errors and process interruption keep completed sentences. Retry from the edit dialog to generate only what remains. Renaming is allowed during preparation; deleting or changing the saved entry prevents stale work from reattaching it. Successful preparation adds audio to the same saved entry, preserving its name, prompts, order and pause guidance.
+
+
+Storage accounting uses each saved entry's retained speech settings and explicit recording links, independently of whether all its audio is ready. Incomplete/cancelled preparation still belongs to that saved entry, and Other-audio cleanup preserves its matching clips and provider caches. Changing the current GUI voice does not change these associations. **Audio only / Nur Audio** is also available for partial audio: it releases that entry's storage association while retaining speech settings for later restoration/retry. Sources still used by another saved entry remain protected. Explicitly preparing or playing that text-only entry again re-establishes its association. Old migration backups are not active recording links and remain Other audio.

@@ -142,6 +142,64 @@ public class AppStorageTest extends BaselineTest {
             service.get().onStartCommand(new Intent().setAction("meditation.STOP"), 0, 2); service.destroy(); idle();
         }
     }
+    @Test public void partialSavedSourcesAndTheirMatchingCachesCountAsOfflineAndSurviveOtherCleanup() throws Exception {
+        PlaybackRequest request = new PlaybackRequest("Breathe.Missing sentence.", request().backend, request().model, request().voice, 1.2, "Calm", 0);
+        SentenceAudioStore.Book partial = recording(request);
+        int id = SavedMeditations.save("Partial", "s", "@TEXT@", "topic", request.text);
+        SavedAudioLibrary.rememberPreparation(id, request);
+        long cacheBytes = 0;
+        for (File cache : de.jeisfeld.mymeditation.http.CloudSpeech.cacheFiles(context(), request.backend, request.model, request.voice, "Breathe.", request.speed, request.style)) {
+            file(cache.getParentFile(), cache.getName(), 29); cacheBytes += 29;
+        }
+        File unrelated = file(context().getCacheDir(), "native-speech/unrelated.audio", 43);
+        File backup = file(context().getFilesDir(), "legacy-sentence-audio/old/0.mp3", 53);
+        assertFalse(SavedAudioLibrary.hasAudio(context(), id)); assertFalse(SavedAudioLibrary.hasRecording(id));
+        AppStorage.Usage usage = AppStorage.measure(context());
+        assertEquals(bytes(partial.directory()) + partial.audio(0).length() + cacheBytes, usage.offlineAudio);
+        assertEquals(43 + 53, usage.otherAudio);
+        PreferenceUtil.setSharedPreferenceString(R.string.key_speech_backend, "openai");
+        assertEquals(usage.offlineAudio, AppStorage.measure(context()).offlineAudio);
+        assertTrue(AppStorage.beginCleaning()); AppStorage.clearOtherAudio(context()); AppStorage.endCleaning();
+        assertTrue(partial.audio(0).exists()); assertFalse(unrelated.exists()); assertFalse(backup.exists());
+        for (File cache : de.jeisfeld.mymeditation.http.CloudSpeech.cacheFiles(context(), request.backend, request.model, request.voice, "Breathe.", request.speed, request.style)) { assertTrue(cache.exists()); }
+        assertEquals(usage.offlineAudio, AppStorage.measure(context()).offlineAudio);
+        assertEquals(0, AppStorage.measure(context()).otherAudio);
+    }
+    @Test public void audioOnlyReleasesPartialOwnershipButKeepsSpeechSettingsForRetry() throws Exception {
+        PlaybackRequest request = new PlaybackRequest("Breathe.Missing.", request().backend, request().model, request().voice, 1.2, "Calm", 0);
+        SentenceAudioStore.Book partial = recording(request);
+        int id = SavedMeditations.save("Partial", "s", "@TEXT@", "topic", request.text);
+        SavedAudioLibrary.rememberPreparation(id, request);
+        assertTrue(SavedAudioLibrary.hasAudioMaterial(context(), id)); assertTrue(AppStorage.measure(context()).offlineAudio > 0);
+        assertTrue(SavedAudioLibrary.removeAudio(context(), id)); awaitGone(partial.audio(0));
+        assertFalse(SavedAudioLibrary.hasAudioMaterial(context(), id)); assertTrue(SavedAudioLibrary.audioDetached(id));
+        assertEquals("Kore", SavedAudioLibrary.offlineRequest(context(), id).voice);
+        assertEquals(0, AppStorage.measure(context()).offlineAudio);
+        SavedAudioLibrary.rememberPreparation(id, request);
+        recording(request);
+        assertFalse(SavedAudioLibrary.audioDetached(id)); assertTrue(AppStorage.measure(context()).offlineAudio > 0);
+    }
+    @Test public void deletingCompleteBookCannotDeleteSourceOwnedByAnotherPartialSavedMeditation() throws Exception {
+        SentenceAudioStore.Book full = recording(request());
+        int complete = SavedAudioLibrary.keepComplete(context(), request(), SavedAudioLibrary.Snapshot.current(context()));
+        PlaybackRequest request = new PlaybackRequest("Breathe.Not yet stored.", request().backend, request().model, request().voice, 1.8, "Calm", 0);
+        int partial = SavedMeditations.save("Partial", "s", "@TEXT@", "topic", request.text);
+        SavedAudioLibrary.rememberPreparation(partial, request);
+        assertTrue(SavedAudioLibrary.removeAudio(context(), complete));
+        java.util.concurrent.ExecutorService cleaner = org.robolectric.util.ReflectionHelpers.getStaticField(SavedAudioLibrary.class, "CLEANER");
+        cleaner.submit(() -> { }).get(5, TimeUnit.SECONDS);
+        assertTrue(full.audio(0).exists()); assertTrue(AppStorage.measure(context()).offlineAudio > 0);
+        assertTrue(AppStorage.beginCleaning()); AppStorage.clearOtherAudio(context()); AppStorage.endCleaning();
+        assertTrue(full.audio(0).exists());
+    }
+    @Test public void staleSpeechSnapshotDoesNotClaimAudioForDifferentSavedText() throws Exception {
+        SentenceAudioStore.Book unlinked = recording(request());
+        int id = SavedMeditations.save("Different", "s", "@TEXT@", "topic", "Different text.");
+        SavedAudioLibrary.rememberPreparation(id, request());
+        assertEquals(0, AppStorage.measure(context()).offlineAudio);
+        assertTrue(AppStorage.beginCleaning()); AppStorage.clearOtherAudio(context()); AppStorage.endCleaning();
+        assertFalse(unlinked.audio(0).exists());
+    }
     @Test public void playbackAndSharingCannotStartWhileCleanupIsReserved() {
         assertTrue(AppStorage.beginCleaning());
         ServiceController<MeditationPlaybackService> playback = Robolectric.buildService(MeditationPlaybackService.class).create();

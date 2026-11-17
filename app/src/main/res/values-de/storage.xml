@@ -3,7 +3,7 @@
     <string name="storage_offline_size">Offline-Meditationen: %1$s</string>
     <string name="storage_other_audio_size">Sonstige Audiodaten: %1$s</string>
     <string name="storage_other_data_size">Sonstige App-Daten: %1$s</string>
-    <string name="storage_note">Ungefähre Größe der privaten App-Daten, ohne die installierte App. Gemeinsam genutzte Sätze zählen einmal. Sonstige Audiodaten enthalten ungenutzte Sätze, Anbieter-Caches, Migrationssicherungen und temporäre MP3-Dateien zum Teilen.</string>
+    <string name="storage_note">Audiodaten gespeicherter Meditationen zählen zu Offline-Meditationen, einschließlich unvollständiger Aufnahmen und zugehöriger Anbieter-Caches. Jede Datei zählt einmal. Sonstige Audiodaten sind unzugeordnete Audiodaten, Migrationssicherungen und temporäre MP3-Dateien zum Teilen. Die installierte App ist nicht enthalten.</string>
     <string name="storage_stop_first">Bitte Wiedergabe, Teilen und Offline-Vorbereitung beenden, bevor Audiodaten gelöscht werden.</string>
     <string name="storage_cleaning">Audiodaten werden bereinigt. Bitte warte, bis die Bereinigung abgeschlossen ist.</string>
     <string name="storage_calculating">Speicherplatz wird berechnet…</string>
@@ -12,7 +12,7 @@
     <string name="storage_cleared">Sonstige Audiodaten gelöscht.</string>
     <string name="refresh_storage">Speicheranzeige aktualisieren</string>
     <string name="clear_other_audio">Sonstige Audiodaten löschen</string>
-    <string name="clear_other_audio_confirmation">Zwischengespeicherte, ungenutzte und temporäre Audiodaten einschließlich alter Migrationssicherungen löschen? Sätze gespeicherter Offline-Meditationen, Texte und Einstellungen bleiben erhalten. Sonstige Audiodaten müssen eventuell neu erzeugt werden.</string>
+    <string name="clear_other_audio_confirmation">Audiodaten ohne Zuordnung zu gespeicherten Meditationen löschen, einschließlich ungenutzter Caches, temporärer Dateien und alter Migrationssicherungen? Audiodaten gespeicherter Meditationen, auch unvollständige Aufnahmen, sowie Texte und Einstellungen bleiben erhalten.</string>
     <string name="delete_audio_only">Nur Audio</string>
     <string name="delete_meditation_options">„%1$s“ vollständig löschen oder nur die Audiodaten entfernen und Text sowie Einstellungen behalten? Gemeinsam genutzte Audiodaten bleiben für andere gespeicherte Einträge erhalten.</string>
     <string name="audio_only_removed">Audio entfernt; Text und Einstellungen bleiben erhalten. Gemeinsam genutzte Audiodaten bleiben für andere Einträge erhalten.</string>

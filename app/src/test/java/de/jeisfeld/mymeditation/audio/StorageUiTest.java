@@ -84,4 +84,19 @@ public class StorageUiTest extends BaselineTest {
         assertEquals("Breathe.", PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id));
         assertEquals(View.GONE, row().findViewById(R.id.buttonPlayOffline).getVisibility());
     }
+    @Test public void partialSavedAudioAlsoOffersAudioOnlyRemoval() throws Exception {
+        PlaybackRequest request = new PlaybackRequest("Breathe.Missing.", SpeechBackend.GEMINI, "gemini-3.8-flash-tts", "Kore", 1, "", 0);
+        int id = SavedMeditations.save("Partial", "s", "@TEXT@", "topic", request.text);
+        SavedAudioLibrary.rememberPreparation(id, request);
+        SentenceAudio.store(Application.getAppContext()).open(request).obtain(0, file -> {
+            try (FileOutputStream out = new FileOutputStream(file); Mp3Writer writer = new Mp3Writer(out)) { writer.silence(0.1, () -> { }); }
+        }, () -> { });
+        assertFalse(SavedAudioLibrary.hasRecording(id));
+        open(R.id.navigation_saved_meditations); row().findViewById(R.id.imageViewDelete).performClick(); idle();
+        AlertDialog choices = (AlertDialog) ShadowDialog.getLatestDialog();
+        assertTrue(choices.getButton(AlertDialog.BUTTON_NEUTRAL).isShown());
+        choices.getButton(AlertDialog.BUTTON_NEUTRAL).performClick(); idle();
+        assertTrue(SavedAudioLibrary.audioDetached(id));
+        assertEquals(java.util.Arrays.asList(id), PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids));
+    }
 }

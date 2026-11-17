@@ -248,6 +248,9 @@ public final class MeditationPlaybackService extends Service {
                     snapshot = SavedAudioLibrary.Snapshot.current(this);
                     savedId = snapshot.sourceId;
                     request = configuredRequest();
+                    if (savedId > 0 && !SavedAudioLibrary.hasRecording(savedId) && request.backend != SpeechBackend.DEVICE) {
+                        SavedAudioLibrary.rememberPreparation(savedId, request);
+                    }
                     SavedAudioLibrary.begin(request);
                     startAt(intent.getIntExtra("position", 0));
                 } else if (START_SAVED.equals(action)) {

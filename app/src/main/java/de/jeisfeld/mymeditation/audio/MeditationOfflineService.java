@@ -71,7 +71,7 @@ public final class MeditationOfflineService extends Service {
             request = PlaybackRequest.parse(serialized); validateEntry();
             if (request.backend == SpeechBackend.DEVICE) { throw new IllegalArgumentException(getString(R.string.offline_device_notice)); }
             SavedAudioLibrary.begin(request);
-            PreferenceUtil.setSharedPreferenceString("saved_speech_settings_" + savedId, request.json());
+            SavedAudioLibrary.rememberPreparation(savedId, request);
             speech = new CloudSpeech(); speech.setBoundedRetries(true);
             working = true; int token = ++generation;
             STATE.setValue(new State(true, savedId, null, getString(R.string.export_preparing))); renew.run();

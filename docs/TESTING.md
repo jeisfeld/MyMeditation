@@ -127,3 +127,6 @@ Global-source tests verify byte-for-byte original storage, producer reuse across
 
 
 Offline preparation tests cover spoken-word weighting, repeated sentences, waits, Unicode/wordless segments, native speed reuse, missing-only synthesis, unchanged current draft/settings, same-ID attachment, cancellation/cleanup exclusion, partial failure/retry, entry deletion and attaching fully shared audio without a provider call. Editor tests check displayed coverage, saved voice selection, retained name editing and Device-speech guidance. Provider calls are shadowed; device checks should verify long background preparation with the screen off, notification cancel, OS interruption/retry and real provider error messages/billing.
+
+
+Storage-association regressions cover partial saved requests without completed links, matching provider-cache copies across all supported locations, current-voice independence, stale-text snapshot rejection, preserving shared sources for a different partial saved script, and Audio only releasing/re-establishing ownership while retaining voice metadata. A UI regression checks that partial audio offers Audio only removal. Other-audio cleanup is verified against the same association rules as byte accounting.
