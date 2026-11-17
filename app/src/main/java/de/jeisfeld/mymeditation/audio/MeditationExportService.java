@@ -65,8 +65,6 @@ public final class MeditationExportService extends Service {
     }
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null || CANCEL.equals(intent.getAction())) { cancelWork(); return START_NOT_STICKY; }
-        if (MeditationOfflineService.state().getValue().active) { failure(new IllegalArgumentException(getString(R.string.offline_prepare_busy))); return START_NOT_STICKY; }
-        if (AppStorage.isCleaning()) { failure(new IllegalArgumentException(getString(R.string.storage_cleaning))); return START_NOT_STICKY; }
         if (working) { return START_NOT_STICKY; }
         int token = ++generation;
         shareId = intent.getIntExtra("shareId", 0);
@@ -75,6 +73,9 @@ public final class MeditationExportService extends Service {
         status = getString(R.string.export_preparing);
         startForeground(NOTIFICATION, notification());
         try {
+            // A foreground-service start must be registered even when a busy guard rejects it.
+            if (MeditationOfflineService.state().getValue().active) { throw new IllegalArgumentException(getString(R.string.offline_prepare_busy)); }
+            if (AppStorage.isCleaning()) { throw new IllegalArgumentException(getString(R.string.storage_cleaning)); }
             SentenceAudioStore.Book book = SavedAudioLibrary.book(this, shareId);
             if (book == null || !book.isComplete()) { throw new IllegalArgumentException(getString(R.string.recorded_audio_unavailable)); }
             PlaybackRequest request = exportRequest(book.request, intent);

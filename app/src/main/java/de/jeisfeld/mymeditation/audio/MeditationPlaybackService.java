@@ -224,6 +224,13 @@ public final class MeditationPlaybackService extends Service {
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null) { stopSelf(); return START_NOT_STICKY; }
         String action = intent.getAction();
+        boolean foregroundCommand = !PAUSE.equals(action) && !STOP.equals(action)
+                && !APPLY_SETTINGS.equals(action) && !SET_PAUSE.equals(action);
+        if (foregroundCommand) {
+            // Even rejected foreground starts must register before reporting an error and stopping.
+            try { startForeground(NOTIFICATION, notification(true)); }
+            catch (Exception e) { playbackError(e); return START_NOT_STICKY; }
+        }
         if (MeditationOfflineService.state().getValue().active && !PAUSE.equals(action) && !STOP.equals(action)) {
             playbackError(new IllegalArgumentException(getString(R.string.offline_prepare_busy))); return START_NOT_STICKY;
         }
@@ -241,9 +248,8 @@ public final class MeditationPlaybackService extends Service {
         else if (SET_PAUSE.equals(action)) {
             if (request != null) { request = request.withPause(intent.getDoubleExtra("seconds", request.pauseSeconds)); saveRequest(); player.setPauseSeconds(request.pauseSeconds); }
         } else {
-            // Promotion precedes audio focus and any synthesis work (Android 15+ requirement).
+            // Foreground registration above also precedes audio focus and synthesis (Android 15+).
             try {
-                startForeground(NOTIFICATION, notification(true));
                 if (START.equals(action)) {
                     snapshot = SavedAudioLibrary.Snapshot.current(this);
                     savedId = snapshot.sourceId;

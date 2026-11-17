@@ -78,10 +78,28 @@ public class OfflinePreparationTest extends BaselineTest {
         PlaybackRequest request = request("Missing speech."); int id = saved(request); Speech.gate = new CountDownLatch(1);
         start(id, request); await(() -> !Speech.calls.isEmpty());
         assertFalse(AppStorage.beginCleaning());
-        ServiceController<MeditationPlaybackService> playback = Robolectric.buildService(MeditationPlaybackService.class).create();
-        playback.get().onStartCommand(new Intent().setAction("meditation.START"), 0, 1);
-        assertEquals(Application.getAppContext().getString(R.string.offline_prepare_busy), MeditationPlaybackService.state().getValue().error);
-        playback.destroy();
+        for (String action : new String[]{"meditation.START", "meditation.START_SAVED", "meditation.RESUME",
+                "meditation.SEEK", "meditation.NEXT", "meditation.PREVIOUS"}) {
+            ServiceController<MeditationPlaybackService> playback = Robolectric.buildService(MeditationPlaybackService.class).create();
+            try {
+                playback.get().onStartCommand(new Intent().setAction(action), 0, 1);
+                assertEquals(Application.getAppContext().getString(R.string.offline_prepare_busy), MeditationPlaybackService.state().getValue().error);
+                org.robolectric.shadows.ShadowService lifecycle = org.robolectric.Shadows.shadowOf(playback.get());
+                assertEquals(action, 42, lifecycle.getLastForegroundNotificationId());
+                assertTrue(lifecycle.isForegroundStopped()); assertTrue(lifecycle.isStoppedBySelf());
+                assertFalse(MeditationPlaybackService.state().getValue().running);
+                assertTrue(MeditationOfflineService.state().getValue().active);
+            } finally { playback.destroy(); }
+        }
+        ServiceController<MeditationExportService> export = Robolectric.buildService(MeditationExportService.class).create();
+        try {
+            export.get().onStartCommand(new Intent().putExtra("shareId", id), 0, 1);
+            assertEquals(Application.getAppContext().getString(R.string.offline_prepare_busy), MeditationExportService.state().getValue().error);
+            org.robolectric.shadows.ShadowService lifecycle = org.robolectric.Shadows.shadowOf(export.get());
+            assertEquals(43, lifecycle.getLastForegroundNotificationId());
+            assertTrue(lifecycle.isForegroundStopped()); assertTrue(lifecycle.isStoppedBySelf());
+            assertTrue(MeditationOfflineService.state().getValue().active);
+        } finally { export.destroy(); }
         controller.get().onStartCommand(new Intent().setAction("offline.CANCEL"), 0, 2); idle();
         assertFalse(MeditationOfflineService.state().getValue().active);
         assertFalse(SavedAudioLibrary.hasRecording(id));
