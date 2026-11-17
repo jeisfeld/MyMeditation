@@ -5,17 +5,17 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-/** Curated API model IDs checked October 2026; presets do not restrict manual AI IDs. */
+/** Curated API model IDs; text-model additions checked November 2026; presets do not restrict manual AI IDs. */
 public final class ModelCatalog {
     private ModelCatalog() { }
     private static final List<String> AI = Collections.unmodifiableList(Arrays.asList(
-            "claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-5-5", "claude-sonnet-4-6",
-            "gpt-6.1-sol", "gpt-6-luna", "gpt-6-astra", "gpt-5.4-mini",
-            "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-pro-preview",
+            "claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-5-5", "claude-fable-5-2", "claude-sonnet-4-6",
+            "gpt-6.2-sol", "gpt-6.2-astra", "gpt-6.1-sol", "gpt-6-luna", "gpt-6-astra", "gpt-5.4-mini",
+            "gemini-4-hydrogen", "gemini-4-argon", "gemini-4-carbon", "gemini-3.8-flash", "gemini-3.5-flash-lite",
             "grok-4.7", "grok-4.6",
             "deepseek-v4-pro", "deepseek-v4-flash", "deepseek-chat", "deepseek-reasoner",
             "kimi-k3.1-pro", "kimi-k3", "kimi-k2.6",
-            "qwen3.8-max", "qwen3.8-flash", "qwen-plus", "qwen-turbo"));
+            "qwen4-max", "qwen3.8-max", "qwen3.8-flash", "qwen-plus", "qwen-turbo"));
 
     public static List<String> aiModels() { return AI; }
 
