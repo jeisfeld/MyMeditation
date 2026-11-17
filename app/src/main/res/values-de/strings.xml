@@ -91,12 +91,12 @@
     </string-array>
     <string name="saved_meditation_filter_hint">Nach Namen filtern</string>
     <string name="clear_saved_meditation_filter">Namensfilter leeren</string>
-    <string name="saved_meditation_audio_only">Nur Audio</string>
+    <string name="saved_meditation_offline_only">Nur Offline</string>
     <string name="rename_saved_meditation">Meditation bearbeiten</string>
     <string name="saved_meditation_name_required">Der Name darf nicht leer sein.</string>
     <string name="recorded_audio_unavailable">Die Satzaufnahme ist unvollständig oder nicht verfügbar. Lade den Text und speichere das Audio erneut.</string>
     <string name="share_audio_progress">Satz %1$d von %2$d wird zusammengesetzt…</string>
-    <string name="share_pause_prompt">Pause zwischen den Sätzen der geteilten MP3, in Sekunden (Standard: 2).</string>
+    <string name="share_pause_prompt">Pause zwischen den Sätzen der geteilten MP3 (Sekunden)</string>
     <string name="audio_operation_active">Audio wird bereits gespeichert oder zum Teilen vorbereitet.</string>
     <string name="label_meditation_text_offline">Meditationstext (offline)</string>
     <string name="label_named_meditation_offline">%1$s (offline)</string>

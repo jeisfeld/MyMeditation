@@ -33,9 +33,11 @@ public final class MeditationExportService extends Service {
     }
     private static final MutableLiveData<State> STATE = new MutableLiveData<>(new State(false, "", "", "", 0, 0));
     public static LiveData<State> state() { return STATE; }
-    public static void share(Context context, int id, double pause) {
+    public static void share(Context context, int id, double pause, double speed) {
         if (!Double.isFinite(pause) || pause < 0 || pause > 30) { throw new IllegalArgumentException("Invalid share pause"); }
-        context.startForegroundService(new Intent(context, MeditationExportService.class).putExtra("shareId", id).putExtra("pause", pause));
+        de.jeisfeld.mymeditation.http.SpeechProtocol.validateSpeed(speed);
+        context.startForegroundService(new Intent(context, MeditationExportService.class).putExtra("shareId", id)
+                .putExtra("pause", pause).putExtra("speed", speed));
     }
     public static void cancel(Context context) {
         if (STATE.getValue().active) { context.startService(new Intent(context, MeditationExportService.class).setAction(CANCEL)); }
@@ -75,7 +77,7 @@ public final class MeditationExportService extends Service {
         try {
             SentenceAudioStore.Book book = SavedAudioLibrary.book(this, shareId);
             if (book == null || !book.isComplete()) { throw new IllegalArgumentException(getString(R.string.recorded_audio_unavailable)); }
-            PlaybackRequest request = book.request.withPause(intent.getDoubleExtra("pause", 2));
+            PlaybackRequest request = exportRequest(book.request, intent);
             working = true;
             STATE.setValue(new State(true, status, "", name, 0, 0));
             renew.run();
@@ -83,6 +85,10 @@ public final class MeditationExportService extends Service {
             executor.execute(() -> render(token, request, sharing));
         } catch (Exception e) { failure(e); }
         return START_NOT_STICKY;
+    }
+    static PlaybackRequest exportRequest(PlaybackRequest saved, Intent intent) {
+        PlaybackRequest request = saved.withPause(intent.getDoubleExtra("pause", saved.pauseSeconds));
+        return request.localSpeed() ? request.withSpeed(intent.getDoubleExtra("speed", saved.speed)) : request;
     }
     private void check(int token) {
         if (generation != token || destroyed || Thread.currentThread().isInterrupted()) { throw new CancellationException(); }

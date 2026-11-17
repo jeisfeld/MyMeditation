@@ -334,12 +334,7 @@ public class MeditationFragment extends Fragment {
         return format.format(value);
     }
     private double voiceSpeed() {
-        try {
-            return new de.jeisfeld.mymeditation.http.VoiceProfiles(PreferenceUtil.getSharedPreferenceString(
-                    de.jeisfeld.mymeditation.http.VoiceProfiles.PREFERENCE, "{}")).speed(speechBackend(),
-                    PreferenceUtil.getSharedPreferenceString(speechBackend().voiceKey(), speechBackend().defaultVoice),
-                    Double.parseDouble(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_speed, R.string.default_speech_speed)));
-        } catch (IllegalArgumentException e) { return 1; }
+        return MeditationPlaybackService.currentSpeed();
     }
     private void refreshSpeed() {
         double speed = voiceSpeed();

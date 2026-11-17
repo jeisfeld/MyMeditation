@@ -106,13 +106,13 @@
     </string-array>
     <string name="saved_meditation_filter_hint">Filter by name</string>
     <string name="clear_saved_meditation_filter">Clear name filter</string>
-    <string name="saved_meditation_audio_only">Audio only</string>
+    <string name="saved_meditation_offline_only">Offline only</string>
     <string name="rename_saved_meditation">Edit meditation</string>
     <string name="saved_meditation_name_required">Name must not be empty.</string>
     <string name="key_saved_playback_source" translatable="false">playback_saved_source</string>
     <string name="recorded_audio_unavailable">The sentence recording is incomplete or unavailable. Load its text and save the audio again.</string>
     <string name="share_audio_progress">Assembling sentence %1$d of %2$d…</string>
-    <string name="share_pause_prompt">Pause between sentences in the shared MP3, in seconds (default: 2).</string>
+    <string name="share_pause_prompt">Pause between sentences in the shared MP3 (seconds)</string>
     <string name="audio_operation_active">An audio save or share is already running.</string>
     <string name="label_meditation_text_offline">Meditation text (offline)</string>
     <string name="label_named_meditation_offline">%1$s (offline)</string>

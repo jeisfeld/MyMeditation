@@ -285,16 +285,21 @@ public final class MeditationPlaybackService extends Service {
     public static PlaybackRequest currentRequest(String activeText, double pauseSeconds) {
         SpeechBackend backend = SpeechBackend.fromId(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend, R.string.default_speech_backend));
         String voice = PreferenceUtil.getSharedPreferenceString(backend.voiceKey(), backend.defaultVoice);
-        double speed = 1.0;
-        try {
-            double legacy = Double.parseDouble(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_speed, R.string.default_speech_speed));
-            speed = new VoiceProfiles(PreferenceUtil.getSharedPreferenceString(VoiceProfiles.PREFERENCE, "{}")).speed(backend, voice, legacy);
-            SpeechProtocol.validateSpeed(speed);
-        } catch (IllegalArgumentException e) { speed = 1.0; }
         return new PlaybackRequest(activeText, backend,
-                PreferenceUtil.getSharedPreferenceString(backend.modelKey(), backend.defaultModel), voice, speed,
+                PreferenceUtil.getSharedPreferenceString(backend.modelKey(), backend.defaultModel), voice, currentSpeed(),
                 PreferenceUtil.getSharedPreferenceString(R.string.key_speech_style, R.string.default_speech_style),
                 pauseSeconds);
+    }
+    /** Speed displayed on the Meditation tab, including the selected voice's profile. */
+    public static double currentSpeed() {
+        SpeechBackend backend = SpeechBackend.fromId(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend, R.string.default_speech_backend));
+        String voice = PreferenceUtil.getSharedPreferenceString(backend.voiceKey(), backend.defaultVoice);
+        try {
+            double legacy = Double.parseDouble(PreferenceUtil.getSharedPreferenceString(R.string.key_speech_speed, R.string.default_speech_speed));
+            double speed = new VoiceProfiles(PreferenceUtil.getSharedPreferenceString(VoiceProfiles.PREFERENCE, "{}")).speed(backend, voice, legacy);
+            SpeechProtocol.validateSpeed(speed);
+            return speed;
+        } catch (IllegalArgumentException e) { return 1.0; }
     }
     private void applyCurrentSettings() {
         PlaybackRequest previous = request;

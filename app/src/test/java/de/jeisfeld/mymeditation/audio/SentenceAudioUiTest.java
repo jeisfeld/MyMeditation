@@ -2,7 +2,6 @@ package de.jeisfeld.mymeditation.audio;
 
 import android.content.Intent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.EditText;
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.RecyclerView;
@@ -28,8 +27,10 @@ public class SentenceAudioUiTest extends BaselineTest {
     private MainActivity activity;
     private boolean publishedPlayback;
     private int recorded() throws Exception {
-        PlaybackRequest request = new PlaybackRequest("Breathe slowly. Relax.", SpeechBackend.GEMINI,
-                "gemini-3.8-flash-tts", "Kore", 1.25, "Calm", 5);
+        return recorded(new PlaybackRequest("Breathe slowly. Relax.", SpeechBackend.GEMINI,
+                "gemini-3.8-flash-tts", "Kore", 1.25, "Calm", 5));
+    }
+    private int recorded(PlaybackRequest request) throws Exception {
         SavedAudioLibrary.begin(request);
         SentenceAudioStore.Book book = SentenceAudio.store(Application.getAppContext()).open(request);
         for (int i = 0; i < book.sentences.size(); i++) {
@@ -49,15 +50,6 @@ public class SentenceAudioUiTest extends BaselineTest {
         SavedMeditationsViewAdapter adapter = (SavedMeditationsViewAdapter) list.getAdapter();
         SavedMeditationsViewAdapter.MyViewHolder holder = adapter.createViewHolder(list, 0); adapter.bindViewHolder(holder, index);
         return holder.itemView;
-    }
-    private EditText input(View view) {
-        if (view instanceof EditText) { return (EditText) view; }
-        if (view instanceof ViewGroup) {
-            for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) {
-                EditText found = input(((ViewGroup) view).getChildAt(i)); if (found != null) { return found; }
-            }
-        }
-        return null;
     }
     private void playbackHeading(int id, boolean active, boolean running) {
         publishedPlayback = true;
@@ -87,20 +79,52 @@ public class SentenceAudioUiTest extends BaselineTest {
         assertEquals(R.id.navigation_meditation, ((BottomNavigationView) activity.findViewById(R.id.nav_view)).getSelectedItemId());
         assertEquals("Breathe slowly. Relax.", ((EditText) activity.findViewById(R.id.editTextMeditationText)).getText().toString());
     }
-    @Test public void shareAsksForPauseDefaultsToTwoAndDoesNotChangePlaybackPauseOrSettings() throws Exception {
-        int id = recorded(); PreferenceUtil.setPauseSeconds(7.5); openSaved();
-        row(0).findViewById(R.id.buttonShareOffline).performClick(); idle();
+    @Test public void sharePrefillsCurrentPauseAndVoiceProfileSpeedWithoutChangingSettings() throws Exception {
+        int id = recorded(); PreferenceUtil.setPauseSeconds(7.5);
+        de.jeisfeld.mymeditation.http.VoiceProfiles profiles = new de.jeisfeld.mymeditation.http.VoiceProfiles("{}");
+        PreferenceUtil.setSharedPreferenceString(R.string.key_speech_backend, SpeechBackend.GEMINI.id);
+        PreferenceUtil.setSharedPreferenceString(SpeechBackend.GEMINI.voiceKey(), "Puck");
+        profiles.setSpeed(SpeechBackend.GEMINI, "Puck", 1.1);
+        PreferenceUtil.setSharedPreferenceString(de.jeisfeld.mymeditation.http.VoiceProfiles.PREFERENCE, profiles.json());
+        PreferenceUtil.setSharedPreferenceString(R.string.key_speech_speed, "1.8");
+        openSaved(); row(0).findViewById(R.id.buttonShareOffline).performClick(); idle();
         AlertDialog dialog = (AlertDialog) ShadowDialog.getLatestDialog();
-        EditText input = input(dialog.getWindow().getDecorView()); assertNotNull(input);
-        assertEquals("2", input.getText().toString());
-        input.setText("-1"); dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
-        assertTrue(dialog.isShowing()); assertNotNull(input.getError());
-        input.setText("2,5"); dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); idle();
+        EditText pause = dialog.findViewById(R.id.inputSharePause), speed = dialog.findViewById(R.id.inputShareSpeed);
+        assertEquals(7.5, Double.parseDouble(pause.getText().toString().replace(',', '.')), 0);
+        assertEquals(1.1, Double.parseDouble(speed.getText().toString().replace(',', '.')), 0);
+        assertEquals(View.VISIBLE, dialog.findViewById(R.id.shareSpeedFields).getVisibility());
+        pause.setText("31"); dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        assertTrue(dialog.isShowing()); assertNotNull(pause.getError());
+        pause.setText("2,5"); speed.setText("0"); dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        assertTrue(dialog.isShowing()); assertNotNull(speed.getError());
+        speed.setText("1,2"); dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); idle();
         Intent start = shadowOf((android.app.Application) Application.getAppContext()).getNextStartedService();
         assertEquals(MeditationExportService.class.getName(), start.getComponent().getClassName());
         assertEquals(id, start.getIntExtra("shareId", 0)); assertEquals(2.5, start.getDoubleExtra("pause", -1), 0);
-        assertEquals(7.5, PreferenceUtil.getPauseSeconds(), 0);
-        assertEquals("device", PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend));
+        assertEquals(1.2, start.getDoubleExtra("speed", -1), 0);
+        PlaybackRequest original = SavedAudioLibrary.book(activity, id).request;
+        PlaybackRequest export = MeditationExportService.exportRequest(original, start);
+        assertEquals(1.2, export.speed, 0); assertEquals(2.5, export.pauseSeconds, 0);
+        assertTrue(SentenceAudio.store(activity).open(export).isComplete());
+        assertEquals(1.25, original.speed, 0); assertEquals(7.5, PreferenceUtil.getPauseSeconds(), 0);
+        assertEquals(1.1, MeditationPlaybackService.currentSpeed(), 0);
+        assertEquals("gemini", PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend));
+    }
+    @Test public void openAiShareKeepsServerGeneratedSpeedAndHidesSpeedInput() throws Exception {
+        int id = recorded(new PlaybackRequest("Breathe slowly. Relax.", SpeechBackend.OPENAI,
+                "gpt-4o-mini-tts", "coral", 0.9, "Calm", 5));
+        PreferenceUtil.setPauseSeconds(3); openSaved();
+        row(0).findViewById(R.id.buttonShareOffline).performClick(); idle();
+        AlertDialog dialog = (AlertDialog) ShadowDialog.getLatestDialog();
+        assertEquals(View.GONE, dialog.findViewById(R.id.shareSpeedFields).getVisibility());
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); idle();
+        Intent start = shadowOf((android.app.Application) Application.getAppContext()).getNextStartedService();
+        assertEquals(0.9, start.getDoubleExtra("speed", -1), 0);
+        start.putExtra("speed", 1.8);
+        PlaybackRequest original = SavedAudioLibrary.book(activity, id).request;
+        PlaybackRequest export = MeditationExportService.exportRequest(original, start);
+        assertEquals(0.9, export.speed, 0); assertEquals(3, export.pauseSeconds, 0);
+        assertEquals(SentenceAudioStore.key(original), SentenceAudioStore.key(export));
     }
     @Test public void clearingNameFilterRestoresResultsAndPreservesAudioFilterAndSavedOrder() throws Exception {
         int recorded = recorded();

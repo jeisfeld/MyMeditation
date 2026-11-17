@@ -51,7 +51,7 @@
             android:layout_height="wrap_content"
             android:minHeight="40dp"
             android:layout_marginStart="8dp"
-            android:text="@string/saved_meditation_audio_only" />
+            android:text="@string/saved_meditation_offline_only" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView

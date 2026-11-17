@@ -3,9 +3,9 @@ package de.jeisfeld.mymeditation.audio;
 import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
-import android.text.InputType;
+import android.view.View;
 import android.widget.EditText;
-import android.widget.LinearLayout;
+import de.jeisfeld.mymeditation.http.SpeechProtocol;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
@@ -25,28 +25,36 @@ public final class AudioSharing {
         if (book == null || !book.isComplete()) {
             Toast.makeText(owner.requireContext(), R.string.recorded_audio_unavailable, Toast.LENGTH_LONG).show(); return;
         }
-        EditText input = new EditText(owner.requireContext());
-        input.setSingleLine(true); input.setText("2"); input.selectAll();
-        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        input.setContentDescription(owner.getString(R.string.share_pause_prompt));
-        LinearLayout container = new LinearLayout(owner.requireContext());
-        int padding = owner.getResources().getDimensionPixelSize(R.dimen.activity_horizontal_margin);
-        container.setPadding(padding, 0, padding, 0);
-        container.addView(input, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        View container = owner.getLayoutInflater().inflate(R.layout.dialog_share_audio, null);
+        EditText pauseInput = container.findViewById(R.id.inputSharePause);
+        EditText speedInput = container.findViewById(R.id.inputShareSpeed);
+        java.text.NumberFormat format = java.text.NumberFormat.getNumberInstance(owner.getResources().getConfiguration().getLocales().get(0));
+        format.setGroupingUsed(false); format.setMaximumFractionDigits(3);
+        pauseInput.setText(format.format(PreferenceUtil.getPauseSeconds()));
+        speedInput.setText(format.format(MeditationPlaybackService.currentSpeed()));
+        container.findViewById(R.id.shareSpeedFields).setVisibility(book.request.localSpeed() ? View.VISIBLE : View.GONE);
         AlertDialog dialog = new AlertDialog.Builder(owner.requireContext()).setTitle(R.string.button_share_offline)
-                .setMessage(R.string.share_pause_prompt).setView(container)
+                .setView(container)
                 .setNegativeButton(R.string.button_cancel, null).setPositiveButton(R.string.button_share_offline, null).create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            double pause, speed = book.request.speed;
             try {
-                double pause = Double.parseDouble(input.getText().toString().trim().replace(',', '.'));
+                pause = Double.parseDouble(pauseInput.getText().toString().trim().replace(',', '.'));
                 if (!Double.isFinite(pause) || pause < 0 || pause > 30) { throw new IllegalArgumentException(); }
+            } catch (IllegalArgumentException e) { pauseInput.setError(owner.getString(R.string.pause_value_range)); return; }
+            if (book.request.localSpeed()) {
+                try {
+                    speed = Double.parseDouble(speedInput.getText().toString().trim().replace(',', '.'));
+                    SpeechProtocol.validateSpeed(speed);
+                } catch (IllegalArgumentException e) { speedInput.setError(owner.getString(R.string.speech_speed_label)); return; }
+            }
+            try {
                 if (MeditationExportService.state().getValue().active) {
                     Toast.makeText(owner.requireContext(), R.string.audio_operation_active, Toast.LENGTH_LONG).show(); return;
                 }
-                MeditationExportService.share(owner.requireContext(), id, pause);
+                MeditationExportService.share(owner.requireContext(), id, pause, speed);
                 dialog.dismiss();
-            } catch (IllegalArgumentException e) { input.setError(owner.getString(R.string.pause_value_range)); }
-            catch (RuntimeException e) { Toast.makeText(owner.requireContext(), R.string.offline_share_failed, Toast.LENGTH_LONG).show(); }
+            } catch (RuntimeException e) { Toast.makeText(owner.requireContext(), R.string.offline_share_failed, Toast.LENGTH_LONG).show(); }
         }));
         dialog.show();
     }
