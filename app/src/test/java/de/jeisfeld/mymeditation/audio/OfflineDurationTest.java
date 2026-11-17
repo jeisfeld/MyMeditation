@@ -32,6 +32,13 @@ public class OfflineDurationTest {
         assertEquals(2, reads[0]);
         assertEquals(Long.valueOf(35000), duration.milliseconds(book("[wait 5s]", SpeechBackend.GEMINI, 4, 30), 30));
     }
+    @Test public void percentageScalesWaitGroupsAndBaseGapButNotSpeechDuration() throws Exception {
+        OfflineDuration duration = new OfflineDuration(file -> 1000);
+        String text = "One.[wait 10s][wait 2s]Two.";
+        assertEquals(Long.valueOf(8500), duration.milliseconds(book(text, SpeechBackend.GEMINI, 1, 0.5), 0.5));
+        assertEquals(Long.valueOf(2000), duration.milliseconds(book(text, SpeechBackend.GEMINI, 1, 0), 0));
+        assertEquals(Long.valueOf(15000), duration.milliseconds(book(text, SpeechBackend.GEMINI, 1, 1), 1));
+    }
     @Test public void openAiAudioAlreadyContainsSpeedAndHasNoTrailingGap() throws Exception {
         OfflineDuration duration = new OfflineDuration(file -> 10000);
         assertEquals(Long.valueOf(23000), duration.milliseconds(book("One.Two.", SpeechBackend.OPENAI, 0.5, 3), 3));

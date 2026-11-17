@@ -17,7 +17,7 @@ public final class SentenceAudioAssembler {
                 check.run(); progress.accept(i + 1);
                 writer.silence(MeditationPauses.gapBefore(book.sentences, i, pause), check);
                 double explicitPause = MeditationPauses.seconds(book.sentences.get(i));
-                if (explicitPause >= 0) { writer.silence(explicitPause, check); continue; }
+                if (explicitPause >= 0) { writer.silence(MeditationPauses.scaledWait(explicitPause, pause), check); continue; }
                 File audio = book.available(i);
                 if (audio == null) { throw new java.io.IOException("Missing sentence audio"); }
                 long before = writer.frames();

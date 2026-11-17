@@ -56,7 +56,7 @@ public final class MeditationSpeechPlayer {
     private AudioTrack silence;
     private int session;
     private int index;
-    private int pauseMs;
+    private double pauseSeconds;
     private boolean running;
     private SpeechBackend backend;
     private String model;
@@ -98,7 +98,7 @@ public final class MeditationSpeechPlayer {
         this.recordingRequest = recordingRequest;
         sentences = new ArrayList<>(text);
         index = Math.max(0, Math.min(position, text.size() - 1));
-        pauseMs = (int) Math.round(Math.max(0, pauseSeconds) * 1000);
+        this.pauseSeconds = Math.max(0, pauseSeconds);
         this.backend = backend;
         this.model = model;
         this.voice = voice;
@@ -227,11 +227,11 @@ public final class MeditationSpeechPlayer {
             listener.onStatus("");
             listener.onSpeaking(index);
             if (backend != SpeechBackend.DEVICE) { prefetch(index + 1, backend == SpeechBackend.ELEVENLABS ? 3 : 1); }
-            waitSilently((int) Math.round(pause * 1000 + MeditationPauses.gapBefore(sentences, index, pauseMs)),
+            waitSilently((int) Math.round((MeditationPauses.scaledWait(pause, pauseSeconds) + MeditationPauses.gapBefore(sentences, index, pauseSeconds)) * 1000),
                     token, () -> complete(token));
             return;
         }
-        int gap = first ? 500 : (int) MeditationPauses.gapBefore(sentences, index, pauseMs);
+        int gap = first ? 500 : (int) Math.round(MeditationPauses.gapBefore(sentences, index, pauseSeconds) * 1000);
         if (backend != SpeechBackend.DEVICE) {
             final int position = index;
             Download job = download(position);
@@ -390,7 +390,7 @@ public final class MeditationSpeechPlayer {
         } catch (RuntimeException e) { return false; }
     }
 
-    public void setPauseSeconds(double seconds) { pauseMs = (int) Math.round(Math.max(0, seconds) * 1000); }
+    public void setPauseSeconds(double seconds) { pauseSeconds = Math.max(0, seconds); }
 
     private void stopPlaybackResources() {
         session++;

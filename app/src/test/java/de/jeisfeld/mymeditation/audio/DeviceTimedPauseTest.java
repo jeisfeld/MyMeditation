@@ -19,7 +19,8 @@ public class DeviceTimedPauseTest extends BaselineTest {
     private MeditationSpeechPlayer player;
     private final List<Integer> completed = new ArrayList<>();
     private boolean finished;
-    private ShadowTextToSpeech start(String text, int position) {
+    private ShadowTextToSpeech start(String text, int position) { return start(text, position, 30); }
+    private ShadowTextToSpeech start(String text, int position, double pause) {
         if (player == null) {
             player = new MeditationSpeechPlayer(Application.getAppContext(), new MeditationSpeechPlayer.Listener() {
                 @Override public void onSentence(int index) { }
@@ -29,7 +30,7 @@ public class DeviceTimedPauseTest extends BaselineTest {
                 @Override public void onFinished() { finished = true; }
             });
         }
-        player.start(SpeechSegments.split(text), position, 30, SpeechBackend.DEVICE, "", "", 4, "");
+        player.start(SpeechSegments.split(text), position, pause, SpeechBackend.DEVICE, "", "", 4, "");
         ShadowTextToSpeech tts = shadowOf(ShadowTextToSpeech.getLastTextToSpeechInstance());
         tts.getOnInitListener().onInit(TextToSpeech.SUCCESS); idle();
         return tts;
@@ -44,6 +45,20 @@ public class DeviceTimedPauseTest extends BaselineTest {
         advance(31249); assertEquals(Arrays.asList("Breathe."), tts.getSpokenTextList());
         advance(1); assertEquals(Arrays.asList("Breathe.", "Relax."), tts.getSpokenTextList());
         assertEquals(Arrays.asList(0, 1, 2), completed); assertTrue(finished);
+    }
+
+    @Test public void fiftyPercentScalesWaitAndOneSecondBaseTogether() {
+        ShadowTextToSpeech tts = start("Breathe.[wait 10s]Relax.", 0, 0.5);
+        advance(500); assertEquals(Arrays.asList("Breathe."), tts.getSpokenTextList());
+        advance(5499); assertEquals(Arrays.asList("Breathe."), tts.getSpokenTextList());
+        advance(1); assertEquals(Arrays.asList("Breathe.", "Relax."), tts.getSpokenTextList());
+        assertTrue(finished);
+    }
+    @Test public void zeroPercentSkipsWaitsWithoutBlockingCompletion() {
+        ShadowTextToSpeech tts = start("Breathe.[wait 10s]Relax.", 0, 0);
+        advance(500);
+        assertEquals(Arrays.asList("Breathe.", "Relax."), tts.getSpokenTextList());
+        assertTrue(finished);
     }
 
     @Test public void leadingConsecutiveAndTrailingPausesRunToCompletionWithoutSpeechCommands() {

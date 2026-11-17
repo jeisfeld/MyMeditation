@@ -28,9 +28,10 @@ public final class AudioSharing {
         View container = owner.getLayoutInflater().inflate(R.layout.dialog_share_audio, null);
         EditText pauseInput = container.findViewById(R.id.inputSharePause);
         EditText speedInput = container.findViewById(R.id.inputShareSpeed);
+        pauseInput.setRawInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         java.text.NumberFormat format = java.text.NumberFormat.getNumberInstance(owner.getResources().getConfiguration().getLocales().get(0));
         format.setGroupingUsed(false); format.setMaximumFractionDigits(3);
-        pauseInput.setText(format.format(PreferenceUtil.getPauseSeconds()));
+        pauseInput.setText(PauseSetting.input(PreferenceUtil.getPauseSeconds(), owner.getResources().getConfiguration().getLocales().get(0)));
         speedInput.setText(format.format(MeditationPlaybackService.currentSpeed()));
         container.findViewById(R.id.shareSpeedFields).setVisibility(book.request.localSpeed() ? View.VISIBLE : View.GONE);
         AlertDialog dialog = new AlertDialog.Builder(owner.requireContext()).setTitle(R.string.button_share_offline)
@@ -39,7 +40,7 @@ public final class AudioSharing {
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             double pause, speed = book.request.speed;
             try {
-                pause = Double.parseDouble(pauseInput.getText().toString().trim().replace(',', '.'));
+                pause = PauseSetting.parse(pauseInput.getText().toString());
                 if (!Double.isFinite(pause) || pause < 0 || pause > 30) { throw new IllegalArgumentException(); }
             } catch (IllegalArgumentException e) { pauseInput.setError(owner.getString(R.string.pause_value_range)); return; }
             if (book.request.localSpeed()) {

@@ -44,8 +44,9 @@ public class SentencePlaybackServiceTest extends BaselineTest {
         }
         return book;
     }
-    private void start() {
-        PreferenceUtil.setPauseSeconds(0); SavedAudioLibrary.restoreVoice(request(1));
+    private void start() { start(0); }
+    private void start(double pause) {
+        PreferenceUtil.setPauseSeconds(pause); SavedAudioLibrary.restoreVoice(request(1));
         ShadowMediaPlayer.setCreateListener((actual, shadow) -> players.add(actual));
         controller = Robolectric.buildService(MeditationPlaybackService.class).create(); service = controller.get();
         service.onStartCommand(new Intent().setAction("meditation.START"), 0, 1);
@@ -66,7 +67,7 @@ public class SentencePlaybackServiceTest extends BaselineTest {
         PlaybackRequest scripted = new PlaybackRequest(text, SpeechBackend.GEMINI, "gemini-3.8-flash-tts", "Kore", 1, "Calm", 0);
         SentenceAudioStore.Book book = prefetched(scripted);
         PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_text, text);
-        start();
+        start(1);
         assertTrue(book.isComplete());
         service.onStartCommand(new Intent().setAction("meditation.NEXT"), 0, 2);
         await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 1);

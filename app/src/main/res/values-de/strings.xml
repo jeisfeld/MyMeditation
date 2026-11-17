@@ -65,7 +65,7 @@
     </string-array>
     <string name="button_add_voice">Hinzufügen</string>
     <string name="label_voice_speed">Sprechgeschwindigkeit</string>
-    <string name="pause_value_range">Gib eine Pause zwischen 0 und 30 Sekunden ein.</string>
+    <string name="pause_value_range" formatted="false">Gib 0–100% oder 1–30 Sekunden ein.</string>
     <string name="button_end_meditation">Meditation beenden</string>
     <string name="ai_model_presets_label">KI-Modellvorlagen</string>
     <string name="ai_model_presets_hint">Vorlage auswählen…</string>
@@ -96,7 +96,7 @@
     <string name="saved_meditation_name_required">Der Name darf nicht leer sein.</string>
     <string name="recorded_audio_unavailable">Die Satzaufnahme ist unvollständig oder nicht verfügbar. Lade den Text und speichere das Audio erneut.</string>
     <string name="share_audio_progress">Satz %1$d von %2$d wird zusammengesetzt…</string>
-    <string name="share_pause_prompt">Pause zwischen den Sätzen der geteilten MP3 (Sekunden)</string>
+    <string name="share_pause_prompt" formatted="false">Pause in der geteilten MP3 (Sekunden oder %)</string>
     <string name="audio_operation_active">Audio wird bereits gespeichert oder zum Teilen vorbereitet.</string>
     <string name="label_meditation_text_offline">Meditationstext (offline)</string>
     <string name="label_named_meditation_offline">%1$s (offline)</string>
@@ -118,4 +118,5 @@
     <string name="label_named_meditation_offline_duration">%1$s (offline %2$s)</string>
     <string name="sentence_position">%1$d/%2$d</string>
     <string name="sentence_position_description">Satz %1$d von %2$d</string>
+    <string name="pause_setting_help" formatted="false">Unter 1 Sekunde werden Pausen als Prozentwert angezeigt. Bei 50% dauern 10 Sekunden Wartezeit plus 1 Sekunde Grundpause insgesamt 5,5 Sekunden. Gib einen Prozentwert oder eine Pause in Sekunden ein.</string>
 </resources>

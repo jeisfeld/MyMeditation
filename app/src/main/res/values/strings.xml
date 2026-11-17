@@ -80,7 +80,7 @@
     <string name="notification_stop">Stop</string>
     <string name="button_add_voice">Add voice</string>
     <string name="label_voice_speed">Voice speed</string>
-    <string name="pause_value_range">Enter a pause from 0 to 30 seconds.</string>
+    <string name="pause_value_range" formatted="false">Enter 0–100% or 1–30 seconds.</string>
     <string name="button_end_meditation">End meditation</string>
     <string name="ai_model_presets_label">AI model presets</string>
     <string name="ai_model_presets_hint">Choose a preset…</string>
@@ -112,7 +112,7 @@
     <string name="key_saved_playback_source" translatable="false">playback_saved_source</string>
     <string name="recorded_audio_unavailable">The sentence recording is incomplete or unavailable. Load its text and save the audio again.</string>
     <string name="share_audio_progress">Assembling sentence %1$d of %2$d…</string>
-    <string name="share_pause_prompt">Pause between sentences in the shared MP3 (seconds)</string>
+    <string name="share_pause_prompt" formatted="false">Pause in shared MP3 (seconds or %)</string>
     <string name="audio_operation_active">An audio save or share is already running.</string>
     <string name="label_meditation_text_offline">Meditation text (offline)</string>
     <string name="label_named_meditation_offline">%1$s (offline)</string>
@@ -134,4 +134,5 @@
     <string name="label_named_meditation_offline_duration">%1$s (offline %2$s)</string>
     <string name="sentence_position">%1$d/%2$d</string>
     <string name="sentence_position_description">Sentence %1$d of %2$d</string>
+    <string name="pause_setting_help" formatted="false">Below 1 second, pauses are shown as percentages. At 50%, a 10-second wait plus the 1-second base pause takes 5.5 seconds. Enter a percentage or a pause in seconds.</string>
 </resources>

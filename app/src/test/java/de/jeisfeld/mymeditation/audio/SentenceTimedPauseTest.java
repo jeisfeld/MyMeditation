@@ -70,11 +70,11 @@ public class SentenceTimedPauseTest extends BaselineTest {
         while (spoken.isEmpty() && System.nanoTime() < deadline) { advance(10); Thread.sleep(1); }
         assertEquals(Arrays.asList(0), spoken);
         completeLast(); assertEquals(Arrays.asList(0, 1), spoken);
-        player.setPauseSeconds(0);
+        player.setPauseSeconds(0.5);
         advance(31249); assertEquals(1, media.size());
         advance(1); await(() -> media.size() == 2); idle();
         assertEquals(Arrays.asList(0, 1, 2), spoken);
-        completeLast(); assertFalse(finished); advance(1999); assertFalse(finished);
+        completeLast(); assertFalse(finished); advance(1499); assertFalse(finished);
         advance(1); await(() -> finished);
         assertEquals(Arrays.asList(0, 1, 2, 3), completed);
         assertFalse(book.audio(1).exists()); assertFalse(book.audio(3).exists());

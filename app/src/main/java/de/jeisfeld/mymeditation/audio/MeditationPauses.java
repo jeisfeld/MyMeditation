@@ -22,7 +22,7 @@ public final class MeditationPauses {
     private static final String FORMAT = "If a timed pause is needed, use exactly [wait Ns], replacing N with seconds, "
             + "greater than 0 and at most 300. Use ASCII digits and a decimal point if needed (at most three decimal places). "
             + "Never translate wait or s, even in a non-English meditation. "
-            + "The player adds the command duration to the configured sentence pause, once per consecutive group of wait commands. "
+            + "The player adds the command duration to the configured sentence pause, once per consecutive group of wait commands. A playback setting below one second proportionally shortens the combined silence. "
             + "Use ordinary prose elsewhere, without code fences or explanations of commands. "
             + "Do not use alternative pause commands or describe an unmarked long silence.";
 
@@ -77,6 +77,11 @@ public final class MeditationPauses {
         while (commands.find()) {
             if (seconds(commands.group()) < 0) { throw new IllegalArgumentException(UiText.INVALID_WAIT_COMMAND.text()); }
         }
+    }
+
+    /** Below one, the setting is a factor applied to waits and to the one-second base gap. */
+    public static double scaledWait(double seconds, double pauseSetting) {
+        return seconds * Math.min(1, Math.max(0, pauseSetting));
     }
 
     /** Add the normal gap once before each wait group, never again after or within it.

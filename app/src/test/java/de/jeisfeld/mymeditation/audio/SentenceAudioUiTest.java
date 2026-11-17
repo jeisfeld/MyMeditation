@@ -110,6 +110,23 @@ public class SentenceAudioUiTest extends BaselineTest {
         assertEquals(1.1, MeditationPlaybackService.currentSpeed(), 0);
         assertEquals("gemini", PreferenceUtil.getSharedPreferenceString(R.string.key_speech_backend));
     }
+    @Test public void percentagePauseIsRestoredDisplayedAndPrefilledForSharing() throws Exception {
+        recorded(); PreferenceUtil.setPauseSeconds(0.5);
+        controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
+        assertEquals(250, ((android.widget.SeekBar) activity.findViewById(R.id.seekBarPauseDuration)).getProgress());
+        assertEquals("50%", ((android.widget.TextView) activity.findViewById(R.id.textPauseDuration)).getText().toString());
+        controller.recreate(); activity = controller.get(); idle();
+        assertEquals("50%", ((android.widget.TextView) activity.findViewById(R.id.textPauseDuration)).getText().toString());
+        ((BottomNavigationView) activity.findViewById(R.id.nav_view)).setSelectedItemId(R.id.navigation_saved_meditations); idle();
+        row(0).findViewById(R.id.buttonShareOffline).performClick(); idle();
+        AlertDialog dialog = (AlertDialog) ShadowDialog.getLatestDialog();
+        EditText pause = dialog.findViewById(R.id.inputSharePause);
+        assertEquals("50%", pause.getText().toString());
+        pause.setText("25%"); dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); idle();
+        Intent start = shadowOf((android.app.Application) Application.getAppContext()).getNextStartedService();
+        assertEquals(0.25, start.getDoubleExtra("pause", -1), 0);
+        assertEquals(0.5, PreferenceUtil.getPauseSeconds(), 0);
+    }
     @Test public void openAiShareKeepsServerGeneratedSpeedAndHidesSpeedInput() throws Exception {
         int id = recorded(new PlaybackRequest("Breathe slowly. Relax.", SpeechBackend.OPENAI,
                 "gpt-4o-mini-tts", "coral", 0.9, "Calm", 5));

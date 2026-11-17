@@ -160,7 +160,7 @@ public class MeditationFragment extends Fragment {
                 pauseDuration = 1.0;
             }
             binding.seekBarPauseDuration.setProgress(de.jeisfeld.mymeditation.audio.PlaybackScales.pauseProgress(pauseDuration));
-            binding.textPauseDuration.setText(number(pauseDuration) + " s");
+            binding.textPauseDuration.setText(de.jeisfeld.mymeditation.audio.PauseSetting.display(pauseDuration, getResources().getConfiguration().getLocales().get(0)));
         });
         meditationViewModel.getSeekBarMax().observe(getViewLifecycleOwner(), binding.seekBarAudio::setMax);
         meditationViewModel.getSeekBarProgress().observe(getViewLifecycleOwner(), position -> {
@@ -374,13 +374,17 @@ public class MeditationFragment extends Fragment {
     private void valueDialog(boolean speed) {
         android.widget.EditText input = new android.widget.EditText(requireContext());
         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        input.setKeyListener(android.text.method.DigitsKeyListener.getInstance("0123456789.,"));
-        input.setText(number(speed ? voiceSpeed() : PreferenceUtil.getPauseSeconds()));
+        input.setKeyListener(android.text.method.DigitsKeyListener.getInstance(speed ? "0123456789.," : "0123456789.,%"));
+        if (!speed) { input.setRawInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS); }
+        input.setText(speed ? number(voiceSpeed()) : de.jeisfeld.mymeditation.audio.PauseSetting.input(
+                PreferenceUtil.getPauseSeconds(), getResources().getConfiguration().getLocales().get(0)));
         AlertDialog dialog = new AlertDialog.Builder(requireContext()).setTitle(speed ? R.string.label_voice_speed : R.string.label_pause_duration)
                 .setView(input).setNegativeButton(R.string.button_cancel, null).setPositiveButton(R.string.button_save, null).create();
+        if (!speed) { dialog.setMessage(getString(R.string.pause_setting_help)); }
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             try {
-                double value = Double.parseDouble(input.getText().toString().trim().replace(',', '.'));
+                double value = speed ? Double.parseDouble(input.getText().toString().trim().replace(',', '.'))
+                        : de.jeisfeld.mymeditation.audio.PauseSetting.parse(input.getText().toString());
                 if (!Double.isFinite(value) || value < (speed ? 0.25 : 0) || value > (speed ? 4 : 30)) { throw new IllegalArgumentException(); }
                 if (speed) { setSpeed(value); } else { setPause(value); }
                 dialog.dismiss();

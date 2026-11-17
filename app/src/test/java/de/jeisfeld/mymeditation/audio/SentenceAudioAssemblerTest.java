@@ -32,6 +32,21 @@ public class SentenceAudioAssemblerTest {
         assertEquals(Arrays.asList(book.audio(1).getName(), book.audio(4).getName(), book.audio(5).getName()), decoded);
         assertEquals(3000 + Math.round(9.05 * Mp3Writer.SAMPLE_RATE), frames);
     }
+    @Test public void percentageScalesExplicitWaitsAndBaseGapInSharedAudio() throws Exception {
+        PlaybackRequest request = new PlaybackRequest("First.[wait 10s][wait 2s]Second.Third.[wait 4s]",
+                SpeechBackend.GEMINI, "gemini-3.8-flash-tts", "Kore", 1, "", 0.5);
+        SentenceAudioStore.Book book = new SentenceAudioStore(directory.getRoot()).open(request);
+        for (int i : new int[]{0, 3, 4}) {
+            book.obtain(i, file -> {
+                try (FileOutputStream output = new FileOutputStream(file); Mp3Writer writer = new Mp3Writer(output)) {
+                    writer.silence(0.1, () -> { });
+                }
+            }, () -> { });
+        }
+        long frames = SentenceAudioAssembler.write(book, 0.5, new ByteArrayOutputStream(),
+                (file, writer, check) -> writer.write(ByteBuffer.allocate(2000)), count -> { }, () -> { });
+        assertEquals(3000 + Math.round(9.5 * Mp3Writer.SAMPLE_RATE), frames);
+    }
     private SentenceAudioStore.Book book(boolean complete) throws Exception {
         PlaybackRequest request = new PlaybackRequest("First. Second. Third.", SpeechBackend.GEMINI,
                 "gemini-3.8-flash-tts", "Kore", 1.5, "", 0);

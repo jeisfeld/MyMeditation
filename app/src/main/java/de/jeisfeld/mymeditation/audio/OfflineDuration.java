@@ -22,7 +22,7 @@ public final class OfflineDuration {
             if (Thread.currentThread().isInterrupted()) { return null; }
             total += MeditationPauses.gapBefore(book.sentences, i, pause) * 1000;
             double wait = MeditationPauses.seconds(book.sentences.get(i));
-            if (wait >= 0) { total += wait * 1000; continue; }
+            if (wait >= 0) { total += MeditationPauses.scaledWait(wait, pause) * 1000; continue; }
             File file = book.available(i);
             if (file == null) { return null; }
             String key = file.getAbsolutePath() + ":" + file.length() + ":" + file.lastModified();
