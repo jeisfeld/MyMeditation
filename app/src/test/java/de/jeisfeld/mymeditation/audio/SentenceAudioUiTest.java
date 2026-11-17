@@ -213,6 +213,13 @@ public class SentenceAudioUiTest extends BaselineTest {
         assertEquals(2, ((RecyclerView) activity.findViewById(R.id.recyclerViewSavedMeditations)).getAdapter().getItemCount());
         assertEquals(java.util.Arrays.asList(recorded, textOnly), PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids));
     }
+    @Test public void readOnlyPlaybackSelectionDoesNotSeekAudio() {
+        controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
+        playbackHeading(0, true, true);
+        EditText editor = activity.findViewById(R.id.editTextMeditationText);
+        editor.requestFocus(); editor.setSelection(editor.length()); idle();
+        assertEquals(0, ((android.widget.SeekBar) activity.findViewById(R.id.seekBarAudio)).getProgress());
+    }
     private void awaitLabel(String expected) throws Exception {
         long deadline = System.nanoTime() + 5000000000L;
         android.widget.TextView label = activity.findViewById(R.id.labelMeditationText);

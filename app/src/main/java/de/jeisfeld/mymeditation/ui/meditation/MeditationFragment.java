@@ -150,10 +150,13 @@ public class MeditationFragment extends Fragment {
         spokenBackground = new android.text.style.BackgroundColorSpan(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.spoken_text_highlight));
 
         pageInsets = new de.jeisfeld.mymeditation.ui.PageInsets(root, keyboard -> renderEditingLayout(keyboard));
+        binding.editTextMeditationText.setOnCursorChangedListener(this::selectCursorSentence);
 
         meditationViewModel.getMeditationContent().observe(getViewLifecycleOwner(), binding.editTextMeditationContent::setText);
         meditationViewModel.getMeditationText().observe(getViewLifecycleOwner(), text -> {
-            if (!reading) { binding.editTextMeditationText.setText(text); }
+            if (!reading && !binding.editTextMeditationText.getText().toString().equals(text)) {
+                binding.editTextMeditationText.setText(text);
+            }
         });
         meditationViewModel.getPauseDuration().observe(getViewLifecycleOwner(), pauseDuration -> {
             if (pauseDuration == null) {
@@ -472,6 +475,22 @@ public class MeditationFragment extends Fragment {
         });
     }
 
+    private void selectCursorSentence(int offset) {
+        if (binding == null || reading || !binding.editTextMeditationText.hasFocus()) { return; }
+        String text = binding.editTextMeditationText.getText().toString();
+        List<String> segments;
+        try { segments = SpeechSegments.split(text, speechBackend().segmentLimit); }
+        catch (IllegalArgumentException e) { return; }
+        int position = de.jeisfeld.mymeditation.audio.SpokenTextRanges.position(text, segments, offset);
+        if (position < 0) { return; }
+        sentences = segments;
+        position = Math.min(SpeechSegments.nextSpeech(segments, position), segments.size() - 1);
+        binding.seekBarAudio.setMax(segments.size() - 1);
+        binding.seekBarAudio.setProgress(position);
+        meditationViewModel.setSeekBarProgress(position);
+        refreshSentencePosition();
+    }
+
     private void selectSeekSentence() {
         android.widget.EditText editor = binding.editTextMeditationText;
         String text = editor.getText().toString();
@@ -554,6 +573,7 @@ public class MeditationFragment extends Fragment {
         ui.removeCallbacks(refreshOfflineLabel);
         ui.removeCallbacks(prefetchTitle);
         binding.textSpeechStatus.removeCallbacks(showSpeechStatus);
+        binding.editTextMeditationText.setOnCursorChangedListener(null);
         pendingSpeechStatus = "";
         reading = false; highlightedPosition = -2; highlightedText = "";
         binding = null;

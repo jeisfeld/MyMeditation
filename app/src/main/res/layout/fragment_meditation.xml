@@ -149,7 +149,7 @@
             android:textSize="@dimen/text_size_content_heading"
             android:textStyle="bold" />
 
-        <EditText
+        <de.jeisfeld.mymeditation.ui.meditation.MeditationEditText
             android:id="@+id/editTextMeditationText"
             android:layout_width="match_parent"
             android:layout_height="0dp"

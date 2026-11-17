@@ -5,7 +5,7 @@
 1. Open **Meditation**. The upper **Meditation content** field describes the topic; the lower **Meditation text** field holds the words that will be spoken.
 2. Paste or write a short meditation in **Meditation text**. Creating a meditation with AI is optional.
 3. In **Configuration → AI settings**, choose **Device** for speech output. Android's installed TTS engine supplies the voice; its installation, language and voice settings are managed in Android settings.
-4. Return to Meditation and press **Speak Meditation**. Use Pause/Play to pause or continue, Previous/Next or the position slider to move between spoken segments, and Stop to finish and return to the start. Releasing the position slider places the text cursor at the selected sentence and scrolls it into view without opening the keyboard.
+4. Return to Meditation and press **Speak Meditation**. Use Pause/Play to pause or continue, Previous/Next or the position slider to move between spoken segments, and Stop to finish and return to the start. Releasing the position slider places the text cursor at the selected sentence and scrolls it into view without opening the keyboard. Placing the cursor in editable meditation text also moves the slider to that sentence, so Read starts there; a cursor inside a wait command selects the next speech for playback.
 
 Live playback highlights the current segment. While playing or paused, the creation controls are hidden; Stop displays them again. Pausing live speech and resuming may repeat the current segment. Text is split using sentence-ending punctuation, not a language-aware parser, so abbreviations and decimal numbers can also create boundaries.
 

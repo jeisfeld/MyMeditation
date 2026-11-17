@@ -60,6 +60,38 @@ public class SeekSentenceUiTest extends BaselineTest {
         android.content.Intent start = shadowOf((android.app.Application) activity.getApplication()).getNextStartedService();
         assertEquals(3, start.getIntExtra("position", -1));
     }
+    @Test public void placingCursorInRepeatedSentenceMovesSliderAndPreservesPlaybackStartAfterFocusLoss() {
+        String text = "Repeat.\n Repeat.\n Last sentence.";
+        open(text);
+        EditText editor = activity.findViewById(R.id.editTextMeditationText);
+        SeekBar bar = activity.findViewById(R.id.seekBarAudio);
+        editor.requestFocus(); editor.setSelection(text.indexOf("Last") + 4); idle();
+        assertEquals(2, bar.getProgress());
+        editor.setSelection(text.indexOf("Repeat", text.indexOf("Repeat") + 1) + 2); idle();
+        assertEquals(1, bar.getProgress());
+        int cursor = editor.getSelectionStart();
+        editor.clearFocus(); idle();
+        assertEquals(cursor, editor.getSelectionStart()); assertEquals(1, bar.getProgress());
+        activity.findViewById(R.id.buttonSpeakMeditation).performClick(); idle();
+        android.content.Intent start = shadowOf((android.app.Application) activity.getApplication()).getNextStartedService();
+        assertEquals(1, start.getIntExtra("position", -1));
+    }
+    @Test public void cursorInWaitSelectsNextSpeechWithoutMovingCaret() {
+        String text = "First.[wait 20s][wait 30s]Second.[wait 10s]";
+        open(text);
+        EditText editor = activity.findViewById(R.id.editTextMeditationText);
+        editor.requestFocus(); int offset = text.indexOf("20s"); editor.setSelection(offset); idle();
+        assertEquals(offset, editor.getSelectionStart());
+        assertEquals(3, ((SeekBar) activity.findViewById(R.id.seekBarAudio)).getProgress());
+    }
+    @Test public void programmaticTextReplacementDoesNotMovePlaybackPositionToItsResetCursor() {
+        open("First.Second.Third.");
+        EditText editor = activity.findViewById(R.id.editTextMeditationText);
+        editor.requestFocus(); editor.setSelection(editor.length() - 1); idle();
+        assertEquals(2, ((SeekBar) activity.findViewById(R.id.seekBarAudio)).getProgress());
+        editor.setText("New first.New second.New third."); idle();
+        assertEquals(2, ((SeekBar) activity.findViewById(R.id.seekBarAudio)).getProgress());
+    }
     @Test public void seekingPastLastSpeechPositionsCursorAtEnd() {
         String text = "First.[wait 20s]";
         open(text); seek(1);
