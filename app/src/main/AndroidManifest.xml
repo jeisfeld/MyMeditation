@@ -30,6 +30,8 @@
         </provider>
         <service android:name=".audio.MeditationExportService" android:exported="false"
             android:foregroundServiceType="dataSync" android:stopWithTask="false" />
+        <service android:name=".audio.MeditationOfflineService" android:exported="false"
+            android:foregroundServiceType="dataSync" android:stopWithTask="false" />
         <service
             android:name=".audio.MeditationPlaybackService"
             android:exported="false"

@@ -30,6 +30,7 @@ final class StorageSettings implements AutoCloseable {
     private final Observer<Boolean> cleanup = ignored -> render();
     private final Observer<MeditationPlaybackService.State> playback = state -> render();
     private final Observer<MeditationExportService.State> sharing = state -> render();
+    private final Observer<de.jeisfeld.mymeditation.audio.MeditationOfflineService.State> preparation = state -> render();
     private AppStorage.Usage usage;
     private boolean loading, closed;
     StorageSettings(Fragment owner, DialogAiSettingsBinding binding) {
@@ -43,6 +44,7 @@ final class StorageSettings implements AutoCloseable {
         AppStorage.cleaning().observe(owner.getViewLifecycleOwner(), cleanup);
         MeditationPlaybackService.state().observe(owner.getViewLifecycleOwner(), playback);
         MeditationExportService.state().observe(owner.getViewLifecycleOwner(), sharing);
+        de.jeisfeld.mymeditation.audio.MeditationOfflineService.state().observe(owner.getViewLifecycleOwner(), preparation);
         refresh();
     }
     private void render() {
@@ -92,6 +94,7 @@ final class StorageSettings implements AutoCloseable {
         AppStorage.cleaning().removeObserver(cleanup);
         MeditationPlaybackService.state().removeObserver(playback);
         MeditationExportService.state().removeObserver(sharing);
+        de.jeisfeld.mymeditation.audio.MeditationOfflineService.state().removeObserver(preparation);
         worker.shutdown();
     }
 }

@@ -54,3 +54,6 @@ Tests characterize retained behavior, not every public helper inherited from the
 Prompt template libraries are separate from named meditation snapshots. `system_prompt_templates` and `query_prompt_templates` store version-1 JSON containing stable IDs, names and verbatim text. Each library validates its own names; query entries additionally require `@TEXT@`. The compact picker follows exact draft text, and manager edits never implicitly replace the active draft. The libraries use ordinary private app preferences and the existing preference backup policy; deleting a saved meditation does not remove a prompt template.
 
 The one-time global-audio migration has been retired: no startup hook or converter remains. Its existing shared sources, per-entry synthesis snapshots and optional legacy backup directory remain supported. See the [historical migration and cleanup procedure](GLOBAL_AUDIO_MIGRATION.md).
+
+
+`MeditationOfflineService` silently fills missing global sources for an explicit saved ID, then attaches the captured request through `SavedAudioLibrary.attachPrepared`. It shares the audio-maintenance exclusion policy with playback/export. `OfflineCoverage` supplies word-weighted immutable snapshots; `SavedMeditationEditor` displays them and owns only its measurement worker/observers, while the foreground service owns synthesis/cancellation.

@@ -28,7 +28,8 @@ public final class AppStorage {
     }
     public static boolean isCleaning() { return CLEANING.get(); }
     public static boolean audioActive() {
-        return MeditationPlaybackService.state().getValue().active || MeditationExportService.state().getValue().active;
+        return MeditationPlaybackService.state().getValue().active || MeditationExportService.state().getValue().active
+                || MeditationOfflineService.state().getValue().active;
     }
     /** Reserve on main, before starting the worker; services reject starts while reserved. */
     public static boolean beginCleaning() {

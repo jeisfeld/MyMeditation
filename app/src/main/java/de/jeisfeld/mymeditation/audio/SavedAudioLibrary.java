@@ -105,6 +105,29 @@ public final class SavedAudioLibrary {
         return book != null && book.isComplete();
     }
     public static boolean hasRecording(int id) { return PreferenceUtil.getSharedPreferenceString(link(id), "").matches("[0-9a-f]{64}"); }
+    /** Inspect or prepare a saved entry without restoring it into the current draft. */
+    public static PlaybackRequest offlineRequest(Context context, int id) {
+        String text = PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id);
+        if (!PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).contains(id)) { throw new IllegalArgumentException(context.getString(R.string.offline_entry_changed)); }
+        try {
+            PlaybackRequest saved = PlaybackRequest.parse(PreferenceUtil.getSharedPreferenceString("saved_speech_settings_" + id, ""));
+            if (saved.text.equals(text)) { return saved; }
+        } catch (Exception ignored) { /* Legacy text-only saves use the current voice. */ }
+        SentenceAudioStore.Book book = book(context, id);
+        return book != null ? book.request : MeditationPlaybackService.currentRequest(text, 0);
+    }
+    public static void attachPrepared(Context context, int id, PlaybackRequest request) {
+        synchronized (LIFECYCLE) {
+            if (AppStorage.isCleaning() || !PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).contains(id)
+                    || !request.text.equals(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id))) {
+                throw new IllegalArgumentException(context.getString(R.string.offline_entry_changed));
+            }
+            if (!SentenceAudio.store(context).open(request).isComplete()) { throw new IllegalStateException(context.getString(R.string.recorded_audio_unavailable)); }
+            PreferenceUtil.setSharedPreferenceString(link(id), SentenceAudioStore.key(request));
+            PreferenceUtil.setSharedPreferenceString("saved_speech_settings_" + id, request.json());
+            DELETED.remove(SentenceAudioStore.key(request)); notifyChanged();
+        }
+    }
     static Set<String> referencedRecordings() {
         Set<String> result = new java.util.HashSet<>();
         for (int id : PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids)) {
@@ -190,6 +213,7 @@ public final class SavedAudioLibrary {
         try {
             PlaybackRequest request = MeditationPlaybackService.currentRequest(
                     PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id), PreferenceUtil.getPauseSeconds());
+            if (request.backend != SpeechBackend.DEVICE) { PreferenceUtil.setSharedPreferenceString("saved_speech_settings_" + id, request.json()); }
             if (request.backend != SpeechBackend.DEVICE && SentenceAudio.store(context).open(request).isComplete()) {
                 PreferenceUtil.setSharedPreferenceString(link(id), SentenceAudioStore.key(request));
                 PreferenceUtil.setSharedPreferenceString("saved_speech_settings_" + id, request.json());
@@ -240,7 +264,7 @@ public final class SavedAudioLibrary {
         Context application = context.getApplicationContext();
         CLEANER.execute(() -> {
             synchronized (LIFECYCLE) {
-                if (AppStorage.isCleaning() || MeditationPlaybackService.state().getValue().active || MeditationExportService.state().getValue().active) { return; }
+                if (AppStorage.isCleaning() || AppStorage.audioActive()) { return; }
                 List<Integer> ids = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids);
                 SentenceAudioStore store = SentenceAudio.store(application);
                 Set<String> retained = store.clips(referencedRecordings());

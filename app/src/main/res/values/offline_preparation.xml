@@ -1,0 +1,16 @@
+<resources>
+    <string name="offline_prepare">Make available offline</string>
+    <string name="offline_prepare_cancel">Cancel offline preparation</string>
+    <string name="offline_coverage_label">Offline audio coverage</string>
+    <string name="offline_coverage">Offline audio: %1$s (%2$d/%3$d words)</string>
+    <string name="offline_voice">Voice: %1$s · %2$s</string>
+    <string name="offline_prepare_note">Only missing speech is generated, using the voice shown above. Normal provider charges apply. Preparation continues if you close this dialog; completed sentences are kept if you cancel.</string>
+    <string name="offline_device_notice">Select a cloud speech voice in Settings to prepare offline audio for this entry.</string>
+    <string name="offline_prepare_busy">Stop playback, sharing or the other offline preparation first.</string>
+    <string name="offline_entry_changed">This saved meditation was deleted or changed. Reopen it to try again.</string>
+    <string name="offline_ready">Audio is available offline.</string>
+    <string name="offline_prepare_failed">Offline preparation failed. Completed audio is kept; you can retry.</string>
+    <string name="offline_prepare_cancelled">Offline preparation stopped. Completed audio is kept.</string>
+    <string name="offline_prepare_progress">Preparing offline audio: %1$d/%2$d words</string>
+    <string name="offline_prepare_channel">Offline meditation preparation</string>
+</resources>

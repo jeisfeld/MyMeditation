@@ -4,7 +4,7 @@
     <string name="storage_other_audio_size">Sonstige Audiodaten: %1$s</string>
     <string name="storage_other_data_size">Sonstige App-Daten: %1$s</string>
     <string name="storage_note">Ungefähre Größe der privaten App-Daten, ohne die installierte App. Gemeinsam genutzte Sätze zählen einmal. Sonstige Audiodaten enthalten ungenutzte Sätze, Anbieter-Caches, Migrationssicherungen und temporäre MP3-Dateien zum Teilen.</string>
-    <string name="storage_stop_first">Bitte Wiedergabe und Teilen beenden, bevor Audiodaten gelöscht werden.</string>
+    <string name="storage_stop_first">Bitte Wiedergabe, Teilen und Offline-Vorbereitung beenden, bevor Audiodaten gelöscht werden.</string>
     <string name="storage_cleaning">Audiodaten werden bereinigt. Bitte warte, bis die Bereinigung abgeschlossen ist.</string>
     <string name="storage_calculating">Speicherplatz wird berechnet…</string>
     <string name="storage_measure_error">Der Speicherplatz konnte nicht berechnet werden. Bitte versuche es erneut.</string>

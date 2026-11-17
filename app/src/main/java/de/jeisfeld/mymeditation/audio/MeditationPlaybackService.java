@@ -224,6 +224,9 @@ public final class MeditationPlaybackService extends Service {
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null) { stopSelf(); return START_NOT_STICKY; }
         String action = intent.getAction();
+        if (MeditationOfflineService.state().getValue().active && !PAUSE.equals(action) && !STOP.equals(action)) {
+            playbackError(new IllegalArgumentException(getString(R.string.offline_prepare_busy))); return START_NOT_STICKY;
+        }
         if (AppStorage.isCleaning() && !PAUSE.equals(action) && !STOP.equals(action)) {
             playbackError(new IllegalArgumentException(getString(R.string.storage_cleaning)));
             return START_NOT_STICKY;

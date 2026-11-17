@@ -4,7 +4,7 @@
     <string name="storage_other_audio_size">Other audio: %1$s</string>
     <string name="storage_other_data_size">Other app data: %1$s</string>
     <string name="storage_note">Approximate private app data, excluding the installed app. Shared sentences count once. Other audio includes unused sentences, provider caches, migration backups and temporary shared MP3s.</string>
-    <string name="storage_stop_first">Stop playback and sharing before deleting audio.</string>
+    <string name="storage_stop_first">Stop playback, sharing and offline preparation before deleting audio.</string>
     <string name="storage_cleaning">Audio cleanup is running. Please try again when it finishes.</string>
     <string name="storage_calculating">Calculating storage…</string>
     <string name="storage_measure_error">Could not measure storage. Please try again.</string>

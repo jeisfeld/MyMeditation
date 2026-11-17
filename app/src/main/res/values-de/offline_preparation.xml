@@ -1,0 +1,16 @@
+<resources>
+    <string name="offline_prepare">Offline verfügbar machen</string>
+    <string name="offline_prepare_cancel">Offline-Vorbereitung abbrechen</string>
+    <string name="offline_coverage_label">Verfügbarkeit der Offline-Audiodaten</string>
+    <string name="offline_coverage">Offline-Audio: %1$s (%2$d/%3$d Wörter)</string>
+    <string name="offline_voice">Stimme: %1$s · %2$s</string>
+    <string name="offline_prepare_note">Nur fehlende Sprache wird mit der oben angezeigten Stimme erzeugt. Dabei fallen die üblichen Anbietergebühren an. Die Vorbereitung läuft nach dem Schließen des Dialogs weiter; fertige Sätze bleiben bei Abbruch erhalten.</string>
+    <string name="offline_device_notice">Wähle in den Einstellungen eine Cloud-Sprachausgabe, um Offline-Audio für diesen Eintrag vorzubereiten.</string>
+    <string name="offline_prepare_busy">Beende zuerst die Wiedergabe, das Teilen oder die andere Offline-Vorbereitung.</string>
+    <string name="offline_entry_changed">Diese gespeicherte Meditation wurde gelöscht oder geändert. Öffne sie erneut, um es noch einmal zu versuchen.</string>
+    <string name="offline_ready">Audio ist offline verfügbar.</string>
+    <string name="offline_prepare_failed">Die Offline-Vorbereitung ist fehlgeschlagen. Fertige Audiodaten bleiben erhalten; du kannst es erneut versuchen.</string>
+    <string name="offline_prepare_cancelled">Offline-Vorbereitung beendet. Fertige Audiodaten bleiben erhalten.</string>
+    <string name="offline_prepare_progress">Offline-Audio wird vorbereitet: %1$d/%2$d Wörter</string>
+    <string name="offline_prepare_channel">Offline-Vorbereitung von Meditationen</string>
+</resources>

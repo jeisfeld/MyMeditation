@@ -7,6 +7,12 @@ import de.jeisfeld.mymeditation.util.PreferenceUtil;
 /** Saved text entries use stable numeric IDs. All saves run on main. */
 public final class SavedMeditations {
     private SavedMeditations() { }
+    public static void rename(int id, String name) {
+        if (name != null && !name.trim().isEmpty() && PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).contains(id)) {
+            PreferenceUtil.setIndexedSharedPreferenceString(R.string.key_saved_meditation_name, id, name.trim());
+            SavedAudioLibrary.notifyChanged();
+        }
+    }
     public static int save(String name, String system, String query, String content, String text) {
         return save(name, system, query, content, text, MeditationPauses.Guidance.fromId(
                 PreferenceUtil.getSharedPreferenceString(MeditationPauses.PREFERENCE, "few")));

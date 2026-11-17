@@ -69,33 +69,6 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 
     @Override public boolean canReorder() { return mMeditationIds.size() > 1; }
 
-    private void rename(Fragment fragment, int id, String oldName) {
-        android.widget.EditText input = new android.widget.EditText(fragment.requireContext());
-        input.setSingleLine(true);
-        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        input.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
-        input.setHint(R.string.text_dialog_save_meditation);
-        input.setText(oldName);
-        input.selectAll();
-        android.widget.FrameLayout container = new android.widget.FrameLayout(fragment.requireContext());
-        int padding = fragment.getResources().getDimensionPixelSize(R.dimen.activity_horizontal_margin);
-        container.setPadding(padding, 0, padding, 0);
-        container.addView(input);
-        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(fragment.requireContext())
-                .setTitle(R.string.rename_saved_meditation).setView(container)
-                .setNegativeButton(R.string.button_cancel, null).setPositiveButton(R.string.button_save, null).create();
-        dialog.setOnShowListener(d -> dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            String name = input.getText().toString().trim();
-            if (name.isEmpty()) { input.setError(fragment.getString(R.string.saved_meditation_name_required)); return; }
-            // Keep the stable ID: text, settings, order and the associated MP3 remain attached.
-            if (PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).contains(id)) {
-                PreferenceUtil.setIndexedSharedPreferenceString(R.string.key_saved_meditation_name, id, name);
-                setFilter(mNameFilter, mAudioOnly);
-            }
-            dialog.dismiss();
-        }));
-        dialog.show();
-    }
 
 	/**
 	 * Set the listener identifying start of drag.
@@ -123,7 +96,7 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
         holder.mTitle.setTooltipText(meditationName);
         holder.mRenameButton.setOnClickListener(v -> {
             Fragment fragment = mFragment.get();
-            if (fragment != null && fragment.getContext() != null) { rename(fragment, meditationId, meditationName); }
+            if (fragment != null && fragment.getContext() != null) { SavedMeditationEditor.show(fragment, meditationId); }
         });
         holder.mDragHandle.setVisibility(canReorder() ? View.VISIBLE : View.INVISIBLE);
 		Fragment owner = mFragment.get();
@@ -207,6 +180,7 @@ public class SavedMeditationsViewAdapter extends RecyclerView.Adapter<SavedMedit
 	}
 
     private void deleteMeditation(Fragment fragment, int meditationId) {
+        de.jeisfeld.mymeditation.audio.MeditationOfflineService.cancel(fragment.requireContext(), meditationId);
         if (de.jeisfeld.mymeditation.audio.MeditationPlaybackService.state().getValue().savedId == meditationId) {
             de.jeisfeld.mymeditation.audio.MeditationPlaybackService.end(fragment.requireContext());
         }
