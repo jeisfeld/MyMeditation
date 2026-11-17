@@ -92,13 +92,17 @@ public final class SavedAudioLibrary {
     private static String clean(String value) { return value == null ? "" : value; }
     public static SentenceAudioStore.Book book(Context context, int id) {
         SentenceAudioStore.Book book = SentenceAudio.store(context).find(PreferenceUtil.getSharedPreferenceString(link(id), ""));
+        if (book != null) {
+            try {
+                PlaybackRequest saved = PlaybackRequest.parse(PreferenceUtil.getSharedPreferenceString("saved_speech_settings_" + id, ""));
+                if (SentenceAudioStore.key(saved).equals(book.identity)) { book = SentenceAudio.store(context).open(saved); }
+            } catch (Exception ignored) { /* Older entries inherit manifest settings until migration stores their snapshot. */ }
+        }
         return book != null && book.request.text.equals(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id)) ? book : null;
     }
     public static boolean hasAudio(Context context, int id) {
         SentenceAudioStore.Book book = book(context, id);
-        // The completion marker is atomic publication. Full file validation happens on play/share,
-        // rather than opening hundreds of MP3s every time a saved-list row is bound or filtered.
-        return book != null && book.isPublished();
+        return book != null && book.isComplete();
     }
     public static boolean hasRecording(int id) { return PreferenceUtil.getSharedPreferenceString(link(id), "").matches("[0-9a-f]{64}"); }
     static Set<String> referencedRecordings() {
@@ -174,6 +178,7 @@ public final class SavedAudioLibrary {
             if (titleSource == 0) { MeditationTitles.improveAutomaticName(target, snapshot.content, snapshot.titleModel, name); }
         }
         PreferenceUtil.setSharedPreferenceString(link(target), book.identity);
+        PreferenceUtil.setSharedPreferenceString("saved_speech_settings_" + target, request.json());
         DELETED.remove(book.identity);
         CHANGES.setValue(CHANGES.getValue() + 1);
         return target;
@@ -187,6 +192,7 @@ public final class SavedAudioLibrary {
                     PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id), PreferenceUtil.getPauseSeconds());
             if (request.backend != SpeechBackend.DEVICE && SentenceAudio.store(context).open(request).isComplete()) {
                 PreferenceUtil.setSharedPreferenceString(link(id), SentenceAudioStore.key(request));
+                PreferenceUtil.setSharedPreferenceString("saved_speech_settings_" + id, request.json());
             }
         } catch (IllegalArgumentException ignored) { }
     }
@@ -234,17 +240,22 @@ public final class SavedAudioLibrary {
         Context application = context.getApplicationContext();
         CLEANER.execute(() -> {
             synchronized (LIFECYCLE) {
-                if (MeditationPlaybackService.state().getValue().active || MeditationExportService.state().getValue().active) { return; }
+                if (AppStorage.isCleaning() || MeditationPlaybackService.state().getValue().active || MeditationExportService.state().getValue().active) { return; }
                 List<Integer> ids = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids);
+                SentenceAudioStore store = SentenceAudio.store(application);
+                Set<String> retained = store.clips(referencedRecordings());
                 for (String identity : DELETED) {
                     boolean referenced = false;
                     for (int id : ids) {
                         if (identity.equals(PreferenceUtil.getSharedPreferenceString(link(id), ""))) { referenced = true; break; }
                     }
                     if (!referenced) {
-                        SentenceAudio.store(application).delete(identity);
+                        Set<String> candidates = store.clips(java.util.Collections.singleton(identity));
+                        store.delete(identity);
+                        store.removeClips(candidates, retained);
                     }
                 }
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(SavedAudioLibrary::notifyChanged);
             }
         });
     }

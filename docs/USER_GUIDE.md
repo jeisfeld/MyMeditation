@@ -29,7 +29,7 @@ The old coachat.de web relay is no longer used. Cloud text generation needs a ne
 
 The pause slider sets the gap between spoken segments. The current range is 0–30 seconds: half-second choices through 10 seconds, then whole seconds. The voice-speed slider is most precise around normal speed. Tap either displayed value to enter an exact value; decimal commas and decimal points are accepted.
 
-Both settings apply to live playback, including device TTS. Live speed settings are remembered per cloud voice. Recorded sentence audio uses the same player and adjustable pauses. Changing voice settings or speed selects a new recording identity; matching sentence audio is reused.
+Both settings apply to live playback, including device TTS. Live speed settings are remembered per cloud voice. Recorded sentence audio uses the same player and adjustable pauses. Changing effective voice/model settings selects different source audio. Native-provider speed changes are local and keep the same source identity; OpenAI speed changes select speed-specific audio. Matching sentence sources are reused across scripts.
 
 For an activity that needs more time, put a timed pause directly in the meditation text:
 
@@ -83,7 +83,7 @@ Cloud playback automatically retains an MP3 for each spoken sentence/segment. On
 
 There is no separate audio-save button: cloud playback creates and retains audio automatically. Device TTS can still speak pasted or generated text, but cannot create these saved audio recordings.
 
-Entries with audio show Play and Share before Edit and Trash. Play opens Meditation and uses the existing sentence controls, highlighting and scrolling. Pauses can be changed during replay. Loading a saved name restores its text, prompts and recorded voice settings/speed. Exact matches play from local sentence files without provider credentials or a network request. Changing text, voice settings or speed selects new audio; the previous saved recording remains intact. The Meditation text heading displays the saved entry’s name during playback and while paused. It also keeps that name when a saved meditation is loaded but stopped, as long as the displayed text matches that entry. Changing speech or generation settings does not remove the name; editing the text returns to the generic heading. Entries with identical text use the name of the entry you loaded. The heading shows **(offline)** when the complete recording for the current text and voice settings is available locally. Changing pauses does not affect offline availability. Partial recordings may still require an AI connection for missing sentences.
+Entries with audio show Play and Share before Edit and Trash. Play opens Meditation and uses the existing sentence controls, highlighting and scrolling. Pauses can be changed during replay. Loading a saved name restores its text, prompts and recorded voice settings/speed. Exact matches play from local sentence files without provider credentials or a network request. Unchanged sentences are reused across meditations for the same voice/model and effective delivery settings. Changing a sentence only requires new audio for missing segments. ElevenLabs, Gemini and Qwen speed changes happen locally and preserve offline availability; OpenAI speed changes require speed-specific audio. The Meditation text heading displays the saved entry’s name during playback and while paused. It also keeps that name when a saved meditation is loaded but stopped, as long as the displayed text matches that entry. Changing speech or generation settings does not remove the name; editing the text returns to the generic heading. Entries with identical text use the name of the entry you loaded. The heading shows **(offline)** when the complete recording for the current text and voice settings is available locally. Changing pauses does not affect offline availability. Partial recordings may still require an AI connection for missing sentences.
 
 Share asks for the pause between sentences (default **2 seconds**) and assembles a single MP3 locally. This pause is independent of the playback pause preference. Wait for assembly, then use Android's share sheet. Sharing does not synthesize audio again or use provider credit. It can be cancelled through the sharing notification.
 
@@ -105,8 +105,8 @@ These files contain settings only. Saved meditation entries, current meditation 
 
 Open **Configuration → Additional settings / Weitere Einstellungen** and scroll to **Storage / Speicherplatz**. The display divides approximate private app data into:
 
-- **Offline meditations:** recording files and metadata linked to saved meditations. Shared files count once.
-- **Other audio:** provider caches (including persistent ElevenLabs source audio), unfinished/unlinked recordings, legacy audio and temporary MP3s prepared for sharing.
+- **Offline meditations:** shared sentence source files and metadata linked to saved meditations. Each source counts once, even across different meditation texts.
+- **Other audio:** unused sentence sources, provider caches, unfinished/unlinked recordings, retained backups from the one-time migration, legacy audio and temporary MP3s prepared for sharing.
 - **Other app data:** settings, prompt libraries, saved texts, settings-export staging files and other private data/cache files.
 
 The installed APK and copies you shared outside the app are excluded. Use **Refresh storage / Speicheranzeige aktualisieren** to recalculate sizes.
@@ -121,3 +121,10 @@ Manual saves now start with an editable name suggestion. When the current Medita
 For new content, the app asks the selected text-generation model for a title around 20 characters in the topic’s language, focused on its distinctive subject rather than generic meditation themes. It prefetches after 1.5 seconds without content edits and when opening Saved meditations. This additional request uses the configured provider/account and its normal API billing. Suggestions are cached locally for the most recent 16 content/model combinations. The editable system instruction and query template do not affect title requests.
 
 Saving never waits for the network. Until a title is available, or if generation fails, a short suggestion from the content (at most four words/30 characters) is used. A late AI result can update an untouched save-dialog suggestion or an automatically created entry; it never overwrites an edited name. Automatic saves use the same suggestions and numbering when they create a new entry. Attaching audio to an existing entry keeps its name, and repeated completion callbacks reuse the existing recording entry.
+
+
+## Shared sentence audio and upgrade
+
+New recordings keep the original provider audio per sentence, shared globally for matching voice/model/effective delivery settings. Speed is applied during playback and MP3 export for ElevenLabs, Gemini and Qwen. A new meditation whose spoken sentences are all already stored is immediately available offline, even when reordered or separated by different waits. OpenAI's API generates speed-adjusted speech, so changing its speed still requires matching speed-specific audio.
+
+The one-time migration has been removed after completion. Existing migrated recordings are kept. Files copied from an original provider cache are unchanged; older speed-adjusted MP3s that were normalized locally may have additional artifacts. Retained migration backups remain under Other audio until you delete them. See the [historical migration and fresh-audio procedure](GLOBAL_AUDIO_MIGRATION.md) for recovery details and replacing degraded normalized audio while keeping saved texts/settings. New recordings always keep the original provider source.

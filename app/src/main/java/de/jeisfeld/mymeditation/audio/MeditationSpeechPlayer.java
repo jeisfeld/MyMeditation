@@ -285,7 +285,7 @@ public final class MeditationSpeechPlayer {
                 if (valid(token) && media == player) {
                     try {
                         player.start();
-                        if (recordingRequest == null && backend != SpeechBackend.OPENAI) {
+                        if (backend != SpeechBackend.OPENAI) {
                             player.setPlaybackParams(new android.media.PlaybackParams().setSpeed((float) speed).setPitch(1.0f));
                         }
                         listener.onSpeaking(index);
@@ -305,7 +305,7 @@ public final class MeditationSpeechPlayer {
     }
 
     private void invalidate(File file) {
-        if (recordingRequest != null) { SentenceAudio.store(context).open(recordingRequest).invalidate(index); }
+        if (recordingRequest != null) { SentenceAudio.invalidate(context, recordingRequest, index); }
         else { file.delete(); }
     }
 
@@ -377,8 +377,9 @@ public final class MeditationSpeechPlayer {
     /** Native providers use local speed; update the current recording without regeneration. */
     public boolean setPlaybackSpeed(double value) {
         de.jeisfeld.mymeditation.http.SpeechProtocol.validateSpeed(value);
-        if (backend != SpeechBackend.DEVICE && recordingRequest != null || backend == SpeechBackend.OPENAI) { return false; }
+        if (backend == SpeechBackend.OPENAI) { return false; }
         speed = value;
+        if (recordingRequest != null) { recordingRequest = recordingRequest.withSpeed(value); }
         if (backend == SpeechBackend.DEVICE) { if (tts != null) { tts.setSpeechRate((float) value); } return true; }
         try {
             if (media != null && media.isPlaying()) {

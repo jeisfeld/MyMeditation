@@ -105,7 +105,7 @@ public final class MeditationExportService extends Service {
             temporary = File.createTempFile("share-", ".part", directory);
             try (FileOutputStream output = new FileOutputStream(temporary)) {
                 SentenceAudioAssembler.write(book, request.pauseSeconds, output,
-                        (audio, writer, check) -> OfflineAudioRenderer.append(audio, 1, writer, check),
+                        (audio, writer, check) -> OfflineAudioRenderer.append(audio, request.localSpeed() ? request.speed : 1, writer, check),
                         index -> progress(token, getString(R.string.share_audio_progress, index, book.sentences.size())), () -> check(token));
             }
             check(token);

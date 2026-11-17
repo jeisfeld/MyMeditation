@@ -21,7 +21,7 @@ public class SentenceAudioDeviceTest {
         if (children != null) { for (File child : children) { delete(child); } }
         file.delete();
     }
-    @Test public void sentenceMp3sDecodeAndShareAtBakedSpeedWithIndependentPauses() throws Exception {
+    @Test public void originalSentenceSourcesShareAtSelectedSpeedWithIndependentPauses() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         File root = new File(context.getCacheDir(), "sentence-device-test-" + System.nanoTime());
         assertTrue(root.mkdirs());
@@ -38,20 +38,17 @@ public class SentenceAudioDeviceTest {
                     "gemini-3.8-flash-tts", "Kore", 1.5, "", 0);
             SentenceAudioStore.Book book = new SentenceAudioStore(new File(root, "recordings")).open(request);
             for (int i = 0; i < 2; i++) {
-                book.obtain(i, target -> {
-                    try (FileOutputStream output = new FileOutputStream(target); Mp3Writer writer = new Mp3Writer(output)) {
-                        OfflineAudioRenderer.append(wav, request.speed, writer, () -> { });
-                    }
-                }, () -> { });
+                book.obtain(i, target -> java.nio.file.Files.copy(wav.toPath(), target.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING), () -> { });
             }
             book.finish();
-            SentenceAudioAssembler.Decoder decoder = (file, writer, check) -> OfflineAudioRenderer.append(file, 1, writer, check);
+            SentenceAudioAssembler.Decoder decoder = (file, writer, check) -> OfflineAudioRenderer.append(file, request.speed, writer, check);
             long noPause = SentenceAudioAssembler.write(book, 0, new ByteArrayOutputStream(), decoder, index -> { }, () -> { });
             long twoSeconds = SentenceAudioAssembler.write(book, 2, new ByteArrayOutputStream(), decoder, index -> { }, () -> { });
-            // Applying the 1.5 speed again would shorten the output by about 0.44 seconds and fail.
+            // Original sources are adjusted once, during export; no speed-specific stored copies exist.
             assertEquals(2 * Mp3Writer.SAMPLE_RATE / 1.5, noPause, Mp3Writer.SAMPLE_RATE * 0.15);
             assertEquals(noPause + 2L * Mp3Writer.SAMPLE_RATE, twoSeconds);
             assertTrue(book.isComplete());
+            assertTrue(new SentenceAudioStore(new File(root, "recordings")).open(request.withSpeed(0.8)).isComplete());
         } finally { delete(root); }
     }
 }

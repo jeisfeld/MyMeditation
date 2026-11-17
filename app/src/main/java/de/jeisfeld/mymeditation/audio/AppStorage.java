@@ -37,7 +37,7 @@ public final class AppStorage {
     }
     public static void endCleaning() {
         CLEANING.set(false);
-        Runnable notify = () -> CLEANING_STATE.setValue(CLEANING.get());
+        Runnable notify = () -> { CLEANING_STATE.setValue(CLEANING.get()); SavedAudioLibrary.notifyChanged(); };
         if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) { notify.run(); }
         else { new android.os.Handler(android.os.Looper.getMainLooper()).post(notify); }
     }
@@ -50,11 +50,13 @@ public final class AppStorage {
         roots.add(new File(context.getNoBackupFilesDir(), "native-speech").toPath());
         roots.add(new File(context.getFilesDir(), "native-speech").toPath());
         roots.add(new File(context.getFilesDir(), "offline-meditations").toPath());
+        roots.add(new File(context.getFilesDir(), "legacy-sentence-audio").toPath());
         roots.replaceAll(path -> path.toAbsolutePath().normalize());
         return roots;
     }
     public static Usage measure(Context context) throws IOException {
         Set<String> referenced = SavedAudioLibrary.referencedRecordings();
+        Set<String> pinnedClips = SentenceAudio.store(context).clips(referenced);
         Path recordings = sentences(context); List<Path> other = otherAudioRoots(context);
         long[] totals = new long[3];
         Files.walkFileTree(context.getDataDir().toPath(), new SimpleFileVisitor<Path>() {
@@ -67,7 +69,12 @@ public final class AppStorage {
                 Path path = file.toAbsolutePath().normalize(); int bucket = 2;
                 if (path.startsWith(recordings)) {
                     Path relative = recordings.relativize(path);
-                    bucket = relative.getNameCount() > 1 && referenced.contains(relative.getName(0).toString()) ? 0 : 1;
+                    boolean pinned = relative.getNameCount() > 1 && referenced.contains(relative.getName(0).toString());
+                    if (relative.getNameCount() == 2 && "clips".equals(relative.getName(0).toString())) {
+                        String filename = relative.getFileName().toString();
+                        pinned = filename.endsWith(".audio") && pinnedClips.contains(filename.substring(0, filename.length() - 6));
+                    }
+                    bucket = pinned ? 0 : 1;
                 } else {
                     for (Path root : other) { if (path.startsWith(root)) { bucket = 1; break; } }
                 }
@@ -82,12 +89,23 @@ public final class AppStorage {
         boolean failed = false;
         for (Path root : otherAudioRoots(context)) { try { deleteTree(context, root); } catch (IOException e) { failed = true; } }
         Set<String> referenced = SavedAudioLibrary.referencedRecordings();
+        Set<String> pinnedClips = SentenceAudio.store(context).clips(referenced);
         Path recordings = sentences(context);
         if (Files.isSymbolicLink(recordings)) { throw new IOException("Invalid audio directory"); }
         File[] entries = recordings.toFile().listFiles();
         if (entries != null) {
             for (File entry : entries) {
                 if (referenced.contains(entry.getName())) { continue; }
+                if ("clips".equals(entry.getName())) {
+                    if (Files.isSymbolicLink(entry.toPath())) { throw new IOException("Invalid sentence pool"); }
+                    File[] clips = entry.listFiles();
+                    if (clips != null) { for (File clip : clips) {
+                        String filename = clip.getName();
+                        if (filename.endsWith(".audio") && pinnedClips.contains(filename.substring(0, filename.length() - 6))) { continue; }
+                        try { deleteTree(context, clip.toPath()); } catch (IOException e) { failed = true; }
+                    } }
+                    continue;
+                }
                 try { deleteTree(context, entry.toPath()); } catch (IOException e) { failed = true; }
             }
         }

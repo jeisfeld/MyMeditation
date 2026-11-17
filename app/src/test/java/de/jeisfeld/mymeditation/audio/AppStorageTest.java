@@ -56,8 +56,8 @@ public class AppStorageTest extends BaselineTest {
         File notes = file(context().getFilesDir(), "notes.bin", 731);
         File settings = file(context().getCacheDir(), "settings-export-test.json", 17);
         AppStorage.Usage usage = AppStorage.measure(context());
-        assertEquals(bytes(saved.audio(0).getParentFile()), usage.offlineAudio);
-        assertEquals(31 + 41 + 51 + 37 + 61 + bytes(partial.audio(0).getParentFile()), usage.otherAudio);
+        assertEquals(bytes(saved.directory()) + saved.audio(0).length(), usage.offlineAudio);
+        assertEquals(31 + 41 + 51 + 37 + 61 + bytes(partial.directory()) + partial.audio(0).length(), usage.otherAudio);
         assertTrue(usage.otherData >= 731 + 17);
         assertTrue(AppStorage.beginCleaning()); AppStorage.clearOtherAudio(context()); AppStorage.endCleaning();
         assertFalse(filesAudio.exists());
@@ -92,10 +92,29 @@ public class AppStorageTest extends BaselineTest {
     @Test public void brokenRecordingsCanBeDetachedWithoutDeletingText() throws Exception {
         SentenceAudioStore.Book book = recording(request());
         int id = SavedAudioLibrary.keepComplete(context(), request(), SavedAudioLibrary.Snapshot.current(context()));
-        Files.write(new File(book.audio(0).getParentFile(), "manifest.json").toPath(), "bad".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        Files.write(new File(book.directory(), "manifest.json").toPath(), "bad".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         assertFalse(SavedAudioLibrary.hasAudio(context(), id)); assertTrue(SavedAudioLibrary.hasRecording(id));
         assertTrue(SavedAudioLibrary.removeAudio(context(), id)); awaitGone(book.audio(0));
         assertEquals(request().text, PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id));
+    }
+    @Test public void deletingOneMeditationAndClearingOtherAudioKeepSentencesSharedWithAnotherScript() throws Exception {
+        PlaybackRequest first = new PlaybackRequest("Breathe.Relax.", request().backend, request().model, request().voice, 1, "Calm", 0);
+        SentenceAudioStore.Book a = recording(first);
+        a.obtain(1, file -> { try (FileOutputStream out = new FileOutputStream(file); Mp3Writer writer = new Mp3Writer(out)) { writer.silence(0.1, () -> { }); } }, () -> { });
+        int firstId = SavedAudioLibrary.keepComplete(context(), first, SavedAudioLibrary.Snapshot.current(context()));
+        PlaybackRequest second = new PlaybackRequest("Breathe.Notice.", first.backend, first.model, first.voice, 1.8, "Calm", 0);
+        SentenceAudioStore.Book b = recording(second);
+        b.obtain(1, file -> { try (FileOutputStream out = new FileOutputStream(file); Mp3Writer writer = new Mp3Writer(out)) { writer.silence(0.1, () -> { }); } }, () -> { });
+        int secondId = SavedAudioLibrary.keepComplete(context(), second, SavedAudioLibrary.Snapshot.current(context()));
+        assertEquals(a.audio(0), b.audio(0));
+        assertTrue(SavedAudioLibrary.removeAudio(context(), firstId)); awaitGone(a.audio(1));
+        assertTrue(b.isComplete()); assertTrue(b.audio(0).isFile());
+        PlaybackRequest draft = new PlaybackRequest("Breathe.Unsaved.", first.backend, first.model, first.voice, 1, "Calm", 0);
+        SentenceAudioStore.Book partial = SentenceAudio.store(context()).open(draft);
+        partial.obtain(1, file -> { try (FileOutputStream out = new FileOutputStream(file); Mp3Writer writer = new Mp3Writer(out)) { writer.silence(0.1, () -> { }); } }, () -> { });
+        assertTrue(AppStorage.beginCleaning()); AppStorage.clearOtherAudio(context()); AppStorage.endCleaning();
+        assertFalse(partial.audio(1).exists()); assertTrue(b.isComplete());
+        assertTrue(SavedAudioLibrary.hasAudio(context(), secondId)); assertFalse(SavedAudioLibrary.hasAudio(context(), firstId));
     }
     @Test public void cleanupRequiresReservationAndNeverFollowsAudioSymlinks() throws Exception {
         File outside = Files.createTempDirectory("storage-outside-").toFile();

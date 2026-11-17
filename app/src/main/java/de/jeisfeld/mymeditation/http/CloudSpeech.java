@@ -13,6 +13,20 @@ import org.json.JSONObject;
 
 /** Cancellable native speech generation; Qwen audio downloads never receive the provider key. */
 public final class CloudSpeech {
+    /** Offline source lookup across current and previous cache locations. Never generates speech. */
+    public static File cachedAudio(android.content.Context context, SpeechBackend backend, String model, String voice,
+                                   String text, double speed, String style) throws Exception {
+        if (backend == SpeechBackend.OPENAI) {
+            File file = new File(context.getCacheDir(), "openai-speech/" + SpeechProtocol.cacheName(model, voice, text, speed, style));
+            return file.isFile() && file.length() > 0 ? file : null;
+        }
+        String name = NativeSpeechProtocol.cacheName(backend, model, voice, text, style);
+        for (File root : new File[] {context.getNoBackupFilesDir(), context.getFilesDir(), context.getCacheDir()}) {
+            File file = new File(root, "native-speech/" + name);
+            if (file.isFile() && file.length() > 0) { return file; }
+        }
+        return null;
+    }
     private static final java.util.concurrent.Semaphore GEMINI_GATE = new java.util.concurrent.Semaphore(1, true);
     private static final java.util.concurrent.Semaphore ELEVEN_GATE = new java.util.concurrent.Semaphore(1, true);
     private boolean boundedRetries;

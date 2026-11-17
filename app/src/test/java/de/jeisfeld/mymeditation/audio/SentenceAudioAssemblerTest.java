@@ -29,7 +29,7 @@ public class SentenceAudioAssemblerTest {
         long frames = SentenceAudioAssembler.write(book, 2, new ByteArrayOutputStream(), (file, writer, check) -> {
             decoded.add(file.getName()); writer.write(ByteBuffer.allocate(2000));
         }, count -> { }, () -> { });
-        assertEquals(Arrays.asList("1.mp3", "4.mp3", "5.mp3"), decoded);
+        assertEquals(Arrays.asList(book.audio(1).getName(), book.audio(4).getName(), book.audio(5).getName()), decoded);
         assertEquals(3000 + Math.round(3.05 * Mp3Writer.SAMPLE_RATE), frames);
     }
     private SentenceAudioStore.Book book(boolean complete) throws Exception {
@@ -51,7 +51,7 @@ public class SentenceAudioAssemblerTest {
         long frames = SentenceAudioAssembler.write(book, 2, mp3, (file, writer, check) -> {
             order.add(file.getName()); writer.write(ByteBuffer.allocate(2000));
         }, progress::add, () -> { });
-        assertEquals(Arrays.asList("0.mp3", "1.mp3", "2.mp3"), order);
+        assertEquals(Arrays.asList(book.audio(0).getName(), book.audio(1).getName(), book.audio(2).getName()), order);
         assertEquals(Arrays.asList(1, 2, 3), progress);
         assertEquals(3000 + 4L * Mp3Writer.SAMPLE_RATE, frames);
         assertTrue(mp3.size() > 100); assertEquals(255, mp3.toByteArray()[0] & 255);
@@ -76,6 +76,6 @@ public class SentenceAudioAssemblerTest {
         List<String> decoded = new ArrayList<>();
         assertThrows(CancellationException.class, () -> SentenceAudioAssembler.write(book, 2, new ByteArrayOutputStream(),
                 (file, writer, check) -> { decoded.add(file.getName()); throw new CancellationException(); }, count -> { }, () -> { }));
-        assertEquals(Arrays.asList("0.mp3"), decoded); assertTrue(book.isComplete());
+        assertEquals(Arrays.asList(book.audio(0).getName()), decoded); assertTrue(book.isComplete());
     }
 }

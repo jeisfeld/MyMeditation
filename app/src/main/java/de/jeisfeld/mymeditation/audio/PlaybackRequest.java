@@ -19,12 +19,14 @@ public final class PlaybackRequest {
         this.speed = speed; this.style = style; this.pauseSeconds = Math.max(0, Math.min(30, pauseSeconds));
     }
     public PlaybackRequest withPause(double pause) { return new PlaybackRequest(text, backend, model, voice, speed, style, pause); }
+    public boolean localSpeed() { return backend != SpeechBackend.OPENAI; }
+    public PlaybackRequest withSpeed(double value) { return new PlaybackRequest(text, backend, model, voice, value, style, pauseSeconds); }
     /** Compare effective synthesis settings so renames/ignored instructions do not restart audio. */
     public boolean sameSynthesis(PlaybackRequest other) {
         return text.equals(other.text) && backend == other.backend && model.equals(other.model) && voice.equals(other.voice)
                 && java.util.Objects.equals(effectiveStyle(), other.effectiveStyle());
     }
-    private String effectiveStyle() {
+    String effectiveStyle() {
         if (backend == SpeechBackend.DEVICE || backend == SpeechBackend.ELEVENLABS
                 || (backend == SpeechBackend.OPENAI && model.startsWith("tts-1"))
                 || (backend == SpeechBackend.QWEN && !model.contains("instruct"))) { return ""; }

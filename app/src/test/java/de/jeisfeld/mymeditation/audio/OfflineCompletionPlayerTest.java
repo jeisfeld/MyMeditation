@@ -94,7 +94,7 @@ public class OfflineCompletionPlayerTest extends BaselineTest {
         start(request(1)); await(book::isComplete);
         assertTrue(created.containsAll(Arrays.asList(0, 3, 5))); assertEquals(3, created.size());
         assertFalse(book.audio(1).exists());
-        assertFalse(new File(book.audio(0).getParentFile(), "played-0").exists());
+        assertFalse(new File(book.directory(), "played-0").exists());
     }
     @Test public void fourMissingClipsDoNotTriggerBackgroundCompletion() throws Exception {
         SentenceAudioStore.Book book = prepare(request(1), 0, 2, 3, 4);
@@ -120,9 +120,10 @@ public class OfflineCompletionPlayerTest extends BaselineTest {
     @Test public void settingsRestartCancelsOldCompletionAndKeepsIdentitiesSeparate() throws Exception {
         gate = new CountDownLatch(1);
         SentenceAudioStore.Book old = prepare(request(1), 0, 3);
-        SentenceAudioStore.Book replacement = prepare(request(1.25));
+        PlaybackRequest different = new PlaybackRequest(request(1.25).text, request(1.25).backend, request(1.25).model, "voice987654321", 1.25, "Calm", 0);
+        SentenceAudioStore.Book replacement = prepare(different);
         start(request(1)); await(() -> !created.isEmpty());
-        start(request(1.25)); gate.countDown(); await(cancelled::get); await(() -> spoken == 7);
+        start(different); gate.countDown(); await(cancelled::get); await(() -> spoken == 7);
         assertFalse(old.isComplete()); assertTrue(replacement.isComplete()); assertNotEquals(old.identity, replacement.identity);
     }
     @Test public void backgroundFailureDoesNotInterruptPlayableSpeechOrCreateFalseOfflineAvailability() throws Exception {

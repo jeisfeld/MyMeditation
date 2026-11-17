@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import org.json.JSONObject;
 
-/** Durable speech-only MP3s; timed pauses stay in the text/manifest and need no audio file. */
+/** Global source clips plus lightweight script manifests; timed pauses never have an audio file. */
 public final class SentenceAudioStore {
     private static final ConcurrentHashMap<String, Object> LOCKS = new ConcurrentHashMap<>();
     private final File root;
@@ -21,11 +21,9 @@ public final class SentenceAudioStore {
 
     public static String key(PlaybackRequest request) {
         try {
-            // Preserve existing recordings without commands. Older audio that spoke commands
-            // must not collide with the new segment indices or be replayed as timed silence.
-            JSONObject value = new JSONObject().put("version", MeditationPauses.hasCommands(request.text) ? 2 : 1).put("text", request.text)
+            JSONObject value = new JSONObject().put("version", 3).put("text", request.text)
                     .put("backend", request.backend.id).put("model", request.model).put("voice", request.voice)
-                    .put("style", request.style == null ? "" : request.style).put("speed", request.speed);
+                    .put("style", request.effectiveStyle()).put("speed", request.localSpeed() ? 1 : request.speed);
             byte[] hash = MessageDigest.getInstance("SHA-256").digest(value.toString().getBytes(StandardCharsets.UTF_8));
             char[] hex = "0123456789abcdef".toCharArray();
             char[] result = new char[hash.length * 2];
@@ -46,7 +44,7 @@ public final class SentenceAudioStore {
             File metadata = new File(new File(root, identity), "manifest.json");
             if (!metadata.isFile() || metadata.length() > 2 * 1024 * 1024) { return null; }
             JSONObject value = new JSONObject(new String(Files.readAllBytes(metadata.toPath()), StandardCharsets.UTF_8));
-            if (value.getInt("version") != 1) { return null; }
+            if (value.getInt("version") != 2) { return null; }
             Book book = open(PlaybackRequest.parse(value.getString("request")));
             return book.identity.equals(identity) ? book : null;
         } catch (Exception e) { return null; }
@@ -61,17 +59,55 @@ public final class SentenceAudioStore {
         directory.delete();
     }
 
-    private static void publish(File temporary, File target) throws IOException {
+    /** The sentence identity excludes surrounding text, positions, gaps and locally applied speed. */
+    public static String clipKey(PlaybackRequest request, String sentence) {
+        return key(new PlaybackRequest(sentence, request.backend, request.model, request.voice, request.speed, request.style, 0));
+    }
+    java.util.Set<String> clips(java.util.Set<String> identities) {
+        java.util.Set<String> result = new java.util.HashSet<>();
+        for (String identity : identities) {
+            if (!identity.matches("[0-9a-f]{64}")) { continue; }
+            Book book = find(identity);
+            if (book != null) {
+                for (String sentence : book.sentences) {
+                    if (MeditationPauses.seconds(sentence) < 0) { result.add(clipKey(book.request, sentence)); }
+                }
+            } else {
+                File references = new File(new File(root, identity), "clips.json");
+                try {
+                    if (!references.isFile() || references.length() > 2 * 1024 * 1024) { continue; }
+                    org.json.JSONArray values = new org.json.JSONArray(new String(Files.readAllBytes(references.toPath()), StandardCharsets.UTF_8));
+                    for (int i = 0; i < values.length(); i++) {
+                        String value = values.optString(i);
+                        if (value.matches("[0-9a-f]{64}")) { result.add(value); }
+                    }
+                } catch (Exception ignored) { /* Corrupt references never grant access outside the pool. */ }
+            }
+        }
+        return result;
+    }
+    void removeClips(java.util.Set<String> candidates, java.util.Set<String> retained) {
+        for (String key : candidates) {
+            if (key.matches("[0-9a-f]{64}") && !retained.contains(key)) { new File(new File(root, "clips"), key + ".audio").delete(); }
+        }
+    }
+
+    static void publish(File temporary, File target) throws IOException {
         try { Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING); }
         catch (java.nio.file.AtomicMoveNotSupportedException e) {
             Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
-    private static boolean mp3(File file) {
+    static boolean validAudio(File file) {
         if (!file.isFile() || file.length() < 4) { return false; }
         try (FileInputStream input = new FileInputStream(file)) {
             int a = input.read(), b = input.read(), c = input.read();
+            if (a == 'R' && b == 'I' && c == 'F') {
+                byte[] header = new byte[12];
+                try (FileInputStream wave = new FileInputStream(file)) { if (wave.read(header) != header.length) { return false; } }
+                return file.length() > 12 && header[3] == 'F' && header[8] == 'W' && header[9] == 'A' && header[10] == 'V' && header[11] == 'E';
+            }
             return a == 255 && (b & 224) == 224 || a == 'I' && b == 'D' && c == '3';
         } catch (IOException e) { return false; }
     }
@@ -90,22 +126,30 @@ public final class SentenceAudioStore {
         private void index(int index) {
             if (index < 0 || index >= sentences.size()) { throw new IllegalArgumentException("Invalid sentence index"); }
         }
-        public File audio(int index) { index(index); return new File(directory, index + ".mp3"); }
-        public File available(int index) { File file = audio(index); return mp3(file) ? file : null; }
+        File directory() { return directory; }
+        public File audio(int index) {
+            index(index);
+            if (MeditationPauses.seconds(sentences.get(index)) >= 0) { return new File(directory, index + ".pause"); }
+            return new File(new File(root, "clips"), clipKey(request, sentences.get(index)) + ".audio");
+        }
+        public File available(int index) { File file = audio(index); return validAudio(file) ? file : null; }
         private boolean ready(int index) { return MeditationPauses.seconds(sentences.get(index)) >= 0 || available(index) != null; }
 
         /** One producer per sentence, including concurrent playback requests. */
         public File obtain(int index, Producer producer, Runnable check) throws Exception {
             File target = audio(index);
+            if (MeditationPauses.seconds(sentences.get(index)) >= 0) { throw new IllegalArgumentException("Pauses have no audio"); }
+            initialize();
             synchronized (LOCKS.computeIfAbsent(target.getAbsolutePath(), ignored -> new Object())) {
                 check.run();
-                if (mp3(target)) { return target; }
-                initialize();
-                File temporary = File.createTempFile("sentence-" + index + "-", ".part", directory);
+                if (validAudio(target)) { return target; }
+                File clips = target.getParentFile();
+                if (!clips.isDirectory() && !clips.mkdirs()) { throw new IOException("Cannot create sentence pool"); }
+                File temporary = File.createTempFile("sentence-", ".part", clips);
                 try {
                     producer.write(temporary);
                     check.run();
-                    if (!mp3(temporary)) { throw new IOException("Empty or invalid sentence MP3"); }
+                    if (!validAudio(temporary)) { throw new IOException("Empty or invalid sentence MP3"); }
                     publish(temporary, target);
                     return target;
                 } finally { temporary.delete(); }
@@ -118,11 +162,16 @@ public final class SentenceAudioStore {
                 if (!metadata.isFile() || find(identity) == null) {
                     File temporary = File.createTempFile("manifest-", ".part", directory);
                     try {
-                        JSONObject value = new JSONObject().put("version", 1).put("request", request.json());
+                        JSONObject value = new JSONObject().put("version", 2).put("request", request.json());
                         byte[] encoded = value.toString().getBytes(StandardCharsets.UTF_8);
                         if (encoded.length > 2 * 1024 * 1024) { throw new IOException("Recording metadata too large"); }
                         Files.write(temporary.toPath(), encoded);
                         publish(temporary, metadata);
+                        org.json.JSONArray references = new org.json.JSONArray();
+                        for (String sentence : sentences) {
+                            if (MeditationPauses.seconds(sentence) < 0) { references.put(clipKey(request, sentence)); }
+                        }
+                        Files.write(new File(directory, "clips.json").toPath(), references.toString().getBytes(StandardCharsets.UTF_8));
                     } finally { temporary.delete(); }
                 }
             }
@@ -130,11 +179,10 @@ public final class SentenceAudioStore {
         public boolean isPublished() { return new File(directory, "complete").isFile(); }
         /** Completeness is about valid generated clips, independent of listening progress. */
         public boolean isComplete() {
-            if (!new File(directory, "manifest.json").isFile()) { return false; }
             for (int i = 0; i < sentences.size(); i++) {
                 if (!ready(i)) { new File(directory, "complete").delete(); return false; }
             }
-            if (!isPublished()) { try { finish(); } catch (Exception e) { return false; } }
+            if (!new File(directory, "complete").isFile()) { try { finish(); } catch (Exception e) { return false; } }
             return true;
         }
         public List<Integer> missingSpeech() {

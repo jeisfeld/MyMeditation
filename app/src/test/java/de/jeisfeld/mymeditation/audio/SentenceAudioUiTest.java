@@ -192,11 +192,18 @@ public class SentenceAudioUiTest extends BaselineTest {
         awaitLabel(activity.getString(R.string.label_named_meditation_offline, name));
         SavedAudioLibrary.restoreVoice(new PlaybackRequest("Breathe slowly. Relax.", SpeechBackend.GEMINI,
                 "gemini-3.8-flash-tts", "Kore", 1.5, "Calm", 0)); idle();
-        awaitLabel(name);
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline, name));
         SavedAudioLibrary.restore(Application.getAppContext(), id); idle();
         awaitLabel(activity.getString(R.string.label_named_meditation_offline, name));
         ((EditText) activity.findViewById(R.id.editTextMeditationText)).setText("Different meditation."); idle();
         awaitLabel(activity.getString(R.string.label_meditation_text));
+    }
+    @Test public void newScriptBuiltFromStoredSentencesIsImmediatelyShownOfflineBeforePlayback() throws Exception {
+        int id = recorded(); SavedAudioLibrary.restore(Application.getAppContext(), id);
+        controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
+        ((EditText) activity.findViewById(R.id.editTextMeditationText)).setText("Relax.[wait 10s]Breathe slowly.Relax."); idle();
+        awaitLabel(activity.getString(R.string.label_meditation_text_offline));
+        assertFalse(MeditationPlaybackService.state().getValue().active);
     }
 
 }

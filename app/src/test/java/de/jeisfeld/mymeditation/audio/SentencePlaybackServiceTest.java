@@ -88,7 +88,7 @@ public class SentencePlaybackServiceTest extends BaselineTest {
         SentenceAudioStore.Book book = prefetched(1); assertTrue(book.isComplete());
         start(); await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 0);
         await(() -> !PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).isEmpty());
-        assertFalse(new File(book.audio(1).getParentFile(), "played-1").exists());
+        assertFalse(new File(book.directory(), "played-1").exists());
         complete(0);
         await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 1);
         complete(1);
@@ -98,15 +98,16 @@ public class SentencePlaybackServiceTest extends BaselineTest {
         assertTrue(SavedAudioLibrary.hasAudio(Application.getAppContext(), id));
         assertEquals(request(1).text, PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_text, id));
     }
-    @Test public void changingVoiceSpeedKeepsSeparateGeneratedRecordings() throws Exception {
+    @Test public void changingLocalSpeedKeepsOfflineFilesAndCurrentSentence() throws Exception {
         SentenceAudioStore.Book original = prefetched(1), changed = prefetched(1.25);
         start(); await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 0);
         complete(0); await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 1);
         SavedAudioLibrary.restoreVoice(request(1.25));
         service.onStartCommand(new Intent().setAction("meditation.APPLY_SETTINGS"), 0, 2);
-        await(() -> players.size() == 3 && MeditationPlaybackService.state().getValue().spokenPosition == 1);
-        complete(2);
-        await(() -> new File(changed.audio(1).getParentFile(), "played-1").exists());
+        await(() -> players.size() == 2 && MeditationPlaybackService.state().getValue().spokenPosition == 1);
+        assertEquals(1.25, PlaybackRequest.parse(PreferenceUtil.getSharedPreferenceString("playback_session", "")).speed, 0.001);
+        complete(1);
+        await(() -> new File(changed.directory(), "played-1").exists());
         idle();
         assertTrue(original.isComplete()); assertTrue(changed.isComplete());
         await(() -> PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).stream().anyMatch(id -> {

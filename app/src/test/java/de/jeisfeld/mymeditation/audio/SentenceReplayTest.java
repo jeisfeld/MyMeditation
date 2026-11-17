@@ -68,7 +68,7 @@ public class SentenceReplayTest extends BaselineTest {
     @Test public void replayReportsSentenceHighlightsAndUsesTheUpdatedPauseWithoutRegeneration() throws Exception {
         start(0);
         assertEquals(Arrays.asList(0), spoken);
-        assertFalse("A baked sentence must be restarted under a new speed identity", player.setPlaybackSpeed(1.7));
+        assertTrue("Local speed must change without restarting a sentence", player.setPlaybackSpeed(1.7));
         player.setPauseSeconds(0.5);
         completeLast(); await(() -> secondStatuses >= 2);
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(499));

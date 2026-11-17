@@ -101,9 +101,7 @@ public class MeditationFragment extends Fragment {
         }
         android.content.Context context = requireContext().getApplicationContext();
         offlineChecker.execute(() -> {
-            de.jeisfeld.mymeditation.audio.SentenceAudioStore.Book book = de.jeisfeld.mymeditation.audio.SentenceAudio.store(context)
-                    .find(de.jeisfeld.mymeditation.audio.SentenceAudioStore.key(request));
-            boolean offline = book != null && book.isComplete();
+            boolean offline = de.jeisfeld.mymeditation.audio.SentenceAudio.store(context).open(request).isComplete();
             ui.post(() -> {
                 if (binding != null && check == offlineCheck) {
                     binding.labelMeditationText.setText(meditationHeading(offline));
