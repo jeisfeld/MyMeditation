@@ -97,7 +97,8 @@ public final class MeditationSpeechPlayer {
         if (text.isEmpty()) { return; }
         this.recordingRequest = recordingRequest;
         sentences = new ArrayList<>(text);
-        index = Math.max(0, Math.min(position, text.size() - 1));
+        index = SpeechSegments.nextSpeech(sentences, position);
+        if (index == sentences.size()) { listener.onFinished(); return; }
         this.pauseSeconds = Math.max(0, pauseSeconds);
         this.backend = backend;
         this.model = model;

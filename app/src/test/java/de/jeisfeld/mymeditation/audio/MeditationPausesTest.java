@@ -58,4 +58,14 @@ public class MeditationPausesTest {
         }
     }
 
+    @Test public void manualPositionsSkipWaitGroupsAndReturnEndWhenNoSpeechRemains() {
+        List<String> parts = SpeechSegments.split("[wait 1s][wait 2s]One.[wait 3s]Two.[wait 4s]");
+        assertEquals(2, SpeechSegments.nextSpeech(parts, 0));
+        assertEquals(4, SpeechSegments.nextSpeech(parts, 3));
+        assertEquals(parts.size(), SpeechSegments.nextSpeech(parts, 5));
+        assertEquals(2, SpeechSegments.nextSpeech(parts, -1));
+        assertEquals(parts.size(), SpeechSegments.nextSpeech(parts, 100));
+        assertEquals(0, SpeechSegments.nextSpeech(java.util.Collections.emptyList(), 0));
+    }
+
 }

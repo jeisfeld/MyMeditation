@@ -69,7 +69,6 @@ public class SentencePlaybackServiceTest extends BaselineTest {
         PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_text, text);
         start(1);
         assertTrue(book.isComplete());
-        service.onStartCommand(new Intent().setAction("meditation.NEXT"), 0, 2);
         await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 1);
         complete(0);
         await(() -> MeditationPlaybackService.state().getValue().position == 2);
@@ -83,6 +82,27 @@ public class SentencePlaybackServiceTest extends BaselineTest {
         assertTrue(SavedAudioLibrary.hasAudio(Application.getAppContext(), id));
         for (int i : new int[] {0, 2, 4}) { assertFalse(book.audio(i).exists()); }
         service.onStartCommand(new Intent().setAction("meditation.STOP"), 0, 4);
+    }
+
+    @Test public void manualNavigationSkipsWaitsAndStopsWhenNoSpeechRemains() throws Exception {
+        String text = "[wait 300s]Breathe slowly.[wait 300s][wait 2s]Relax.[wait 300s]";
+        prefetched(new PlaybackRequest(text, SpeechBackend.GEMINI, "gemini-3.8-flash-tts", "Kore", 1, "Calm", 1));
+        PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_text, text);
+        start(1); await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 1);
+        service.onStartCommand(new Intent().setAction("meditation.NEXT"), 0, 2);
+        await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 4);
+        service.onStartCommand(new Intent().setAction("meditation.PREVIOUS"), 0, 3);
+        await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 1);
+        complete(players.size() - 1);
+        await(() -> MeditationPlaybackService.state().getValue().position == 2);
+        service.onStartCommand(new Intent().setAction("meditation.PAUSE"), 0, 4);
+        service.onStartCommand(new Intent().setAction("meditation.RESUME"), 0, 5);
+        await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 4);
+        service.onStartCommand(new Intent().setAction("meditation.SEEK").putExtra("position", 2), 0, 6);
+        await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 4);
+        service.onStartCommand(new Intent().setAction("meditation.NEXT"), 0, 7);
+        assertFalse(MeditationPlaybackService.state().getValue().active);
+        assertFalse(MeditationPlaybackService.state().getValue().running);
     }
 
     @Test public void creatingAllSentencesKeepsOfflineAudioBeforeListeningFinishes() throws Exception {

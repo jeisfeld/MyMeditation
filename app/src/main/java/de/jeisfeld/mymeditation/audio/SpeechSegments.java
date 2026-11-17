@@ -30,6 +30,13 @@ public final class SpeechSegments {
         return result;
     }
 
+    /** Manual starts/seeks land on speech; size means there is no speech remaining. */
+    public static int nextSpeech(List<String> segments, int position) {
+        int index = Math.max(0, Math.min(position, segments.size()));
+        while (index < segments.size() && MeditationPauses.seconds(segments.get(index)) >= 0) { index++; }
+        return index;
+    }
+
     private static void splitSpeech(String text, int limit, List<String> result) {
         Matcher matcher = Pattern.compile("[^.!?。！？]+(?:[.!?。！？]+|$)").matcher(text);
         while (matcher.find()) {

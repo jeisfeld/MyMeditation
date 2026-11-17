@@ -61,22 +61,29 @@ public class DeviceTimedPauseTest extends BaselineTest {
         assertTrue(finished);
     }
 
-    @Test public void leadingConsecutiveAndTrailingPausesRunToCompletionWithoutSpeechCommands() {
+    @Test public void manualStartSkipsLeadingWaitsButNaturalTrailingWaitStillRuns() {
         ShadowTextToSpeech tts = start("[wait 1s][wait 2s]Rest.[wait 3s]", 0);
-        advance(32999); assertNull(tts.getLastSpokenText());
+        advance(499); assertNull(tts.getLastSpokenText());
         advance(1); assertEquals(Arrays.asList("Rest."), tts.getSpokenTextList());
         assertFalse(finished);
         advance(32999); assertFalse(finished);
-        advance(1); assertTrue(finished); assertEquals(Arrays.asList(0, 1, 2, 3), completed);
+        advance(1); assertTrue(finished); assertEquals(Arrays.asList(2, 3), completed);
     }
 
-    @Test public void stopCancelsALongPauseAndSeekingSkipsItWithoutStaleCallbacks() {
+    @Test public void selectingAWaitSkipsConsecutiveWaitsAndStartsWithSpeech() {
+        ShadowTextToSpeech tts = start("Breathe.[wait 300s][wait 2s]Rest.", 1);
+        advance(500); assertEquals(Arrays.asList("Rest."), tts.getSpokenTextList());
+        assertTrue(finished); assertEquals(Arrays.asList(3), completed);
+    }
+
+    @Test public void stopCancelsANaturallyReachedPauseWithoutStaleCallbacks() {
         String text = "Breathe.[wait 300s]Rest.";
-        ShadowTextToSpeech old = start(text, 1);
-        advance(1000); player.stop(); advance(300000);
-        assertNull(old.getLastSpokenText()); assertFalse(finished); assertTrue(completed.isEmpty());
+        ShadowTextToSpeech old = start(text, 0);
+        advance(500); advance(1000); player.stop(); advance(330000);
+        assertEquals(Arrays.asList("Breathe."), old.getSpokenTextList()); assertFalse(finished);
+        assertEquals(Arrays.asList(0), completed);
         ShadowTextToSpeech current = start(text, 2);
         advance(500); assertEquals(Arrays.asList("Rest."), current.getSpokenTextList());
-        assertTrue(finished); assertEquals(Arrays.asList(2), completed);
+        assertTrue(finished); assertEquals(Arrays.asList(0, 2), completed);
     }
 }

@@ -340,7 +340,8 @@ public final class MeditationPlaybackService extends Service {
         SavedAudioLibrary.begin(request);
         active = true; spokenPosition = -1;
         sentences = SpeechSegments.split(request.text, request.backend.segmentLimit);
-        position = Math.max(0, Math.min(index, sentences.size() - 1));
+        position = SpeechSegments.nextSpeech(sentences, index);
+        if (position == sentences.size()) { stopPlayback(); return; }
         idleHandler.removeCallbacks(stopIdle);
         error = ""; status = ""; keepNotification = false; stopping = false;
         saveRequest();
@@ -371,7 +372,12 @@ public final class MeditationPlaybackService extends Service {
             PlaybackRequest updated = configuredRequest(request.text, PreferenceUtil.getPauseSeconds());
             position = request.positionFor(updated, position);
             request = updated;
-            startAt(position + direction);
+            int target = position + direction;
+            if (direction < 0) {
+                List<String> updatedSegments = SpeechSegments.split(request.text, request.backend.segmentLimit);
+                while (target >= 0 && MeditationPauses.seconds(updatedSegments.get(target)) >= 0) { target--; }
+            }
+            startAt(target);
         }
         catch (Exception e) { playbackError(e); }
     }

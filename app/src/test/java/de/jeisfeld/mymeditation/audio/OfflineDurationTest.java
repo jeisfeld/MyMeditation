@@ -30,7 +30,7 @@ public class OfflineDurationTest {
         assertEquals(2, reads[0]); // Repeated sentences use the same source metadata.
         assertEquals(Long.valueOf(13000), duration.milliseconds(book(text, SpeechBackend.GEMINI, 1, 1), 1));
         assertEquals(2, reads[0]);
-        assertEquals(Long.valueOf(35000), duration.milliseconds(book("[wait 5s]", SpeechBackend.GEMINI, 4, 30), 30));
+        assertEquals(Long.valueOf(0), duration.milliseconds(book("[wait 5s]", SpeechBackend.GEMINI, 4, 30), 30));
     }
     @Test public void percentageScalesWaitGroupsAndBaseGapButNotSpeechDuration() throws Exception {
         OfflineDuration duration = new OfflineDuration(file -> 1000);
@@ -38,6 +38,11 @@ public class OfflineDurationTest {
         assertEquals(Long.valueOf(8500), duration.milliseconds(book(text, SpeechBackend.GEMINI, 1, 0.5), 0.5));
         assertEquals(Long.valueOf(2000), duration.milliseconds(book(text, SpeechBackend.GEMINI, 1, 0), 0));
         assertEquals(Long.valueOf(15000), duration.milliseconds(book(text, SpeechBackend.GEMINI, 1, 1), 1));
+    }
+    @Test public void leadingWaitGroupsAreExcludedFromPlaybackDuration() throws Exception {
+        OfflineDuration duration = new OfflineDuration(file -> 1000);
+        assertEquals(Long.valueOf(5000), duration.milliseconds(
+                book("[wait 20s][wait 10s]One.[wait 3s]", SpeechBackend.GEMINI, 1, 1), 1));
     }
     @Test public void openAiAudioAlreadyContainsSpeedAndHasNoTrailingGap() throws Exception {
         OfflineDuration duration = new OfflineDuration(file -> 10000);

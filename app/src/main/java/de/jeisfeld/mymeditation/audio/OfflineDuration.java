@@ -18,7 +18,7 @@ public final class OfflineDuration {
     /** Call off the UI thread. Unknown metadata leaves the existing offline label available. */
     public Long milliseconds(SentenceAudioStore.Book book, double pause) {
         double total = 0;
-        for (int i = 0; i < book.sentences.size(); i++) {
+        for (int i = SpeechSegments.nextSpeech(book.sentences, 0); i < book.sentences.size(); i++) {
             if (Thread.currentThread().isInterrupted()) { return null; }
             total += MeditationPauses.gapBefore(book.sentences, i, pause) * 1000;
             double wait = MeditationPauses.seconds(book.sentences.get(i));

@@ -30,7 +30,7 @@ public class SentenceAudioAssemblerTest {
             decoded.add(file.getName()); writer.write(ByteBuffer.allocate(2000));
         }, count -> { }, () -> { });
         assertEquals(Arrays.asList(book.audio(1).getName(), book.audio(4).getName(), book.audio(5).getName()), decoded);
-        assertEquals(3000 + Math.round(9.05 * Mp3Writer.SAMPLE_RATE), frames);
+        assertEquals(3000 + Math.round(6.95 * Mp3Writer.SAMPLE_RATE), frames);
     }
     @Test public void percentageScalesExplicitWaitsAndBaseGapInSharedAudio() throws Exception {
         PlaybackRequest request = new PlaybackRequest("First.[wait 10s][wait 2s]Second.Third.[wait 4s]",

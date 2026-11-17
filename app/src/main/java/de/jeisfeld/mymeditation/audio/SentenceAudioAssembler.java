@@ -13,7 +13,7 @@ public final class SentenceAudioAssembler {
         if (!Double.isFinite(pause) || pause < 0 || pause > 30) { throw new IllegalArgumentException("Invalid share pause"); }
         if (!book.isComplete()) { throw new java.io.IOException("Incomplete sentence recording"); }
         try (Mp3Writer writer = new Mp3Writer(output)) {
-            for (int i = 0; i < book.sentences.size(); i++) {
+            for (int i = SpeechSegments.nextSpeech(book.sentences, 0); i < book.sentences.size(); i++) {
                 check.run(); progress.accept(i + 1);
                 writer.silence(MeditationPauses.gapBefore(book.sentences, i, pause), check);
                 double explicitPause = MeditationPauses.seconds(book.sentences.get(i));

@@ -301,6 +301,7 @@ public class MeditationFragment extends Fragment {
                 if (resumeAfterSeek) { stopAudio(); }
             }
             @Override public void onStopTrackingTouch(SeekBar seekBar) {
+                selectSeekSentence();
                 if (resumeAfterSeek) { MeditationPlaybackService.seek(requireContext(), seekBar.getProgress()); }
             }
         });
@@ -469,6 +470,35 @@ public class MeditationFragment extends Fragment {
                 editor.scrollTo(0, Math.max(0, Math.min(top - height / 4, layout.getHeight() - height)));
             }
         });
+    }
+
+    private void selectSeekSentence() {
+        android.widget.EditText editor = binding.editTextMeditationText;
+        String text = editor.getText().toString();
+        MeditationPlaybackService.State state = MeditationPlaybackService.state().getValue();
+        List<String> segments;
+        try { segments = state.active ? state.sentences : SpeechSegments.split(text, speechBackend().segmentLimit); }
+        catch (IllegalArgumentException e) { editor.setError(e.getMessage()); return; }
+        sentences = segments;
+        int position = SpeechSegments.nextSpeech(segments, binding.seekBarAudio.getProgress());
+        if (position < segments.size()) {
+            binding.seekBarAudio.setProgress(position);
+            meditationViewModel.setSeekBarProgress(position);
+        }
+        int[] range = de.jeisfeld.mymeditation.audio.SpokenTextRanges.range(text, segments, position);
+        int offset = range[0] < 0 ? text.length() : range[0];
+        editor.setSelection(offset);
+        // Selection should be visible without focusing the editor or opening the keyboard.
+        Runnable scroll = () -> {
+            if (binding == null || binding.editTextMeditationText != editor || !editor.getText().toString().equals(text)) { return; }
+            android.text.Layout layout = editor.getLayout();
+            if (layout == null) { return; }
+            int top = layout.getLineTop(layout.getLineForOffset(offset));
+            int height = editor.getHeight() - editor.getCompoundPaddingTop() - editor.getCompoundPaddingBottom();
+            editor.scrollTo(0, Math.max(0, Math.min(top - height / 4, layout.getHeight() - height)));
+        };
+        scroll.run();
+        androidx.core.view.OneShotPreDrawListener.add(editor, scroll);
     }
 
     private void refreshSentencePosition() {
