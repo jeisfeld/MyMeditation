@@ -123,4 +123,12 @@
     <string name="stop_meditation_rewind">Beenden und zum Anfang zurückkehren</string>
     <string name="label_meditation_text_approx_duration">Meditationstext (ca. %1$s)</string>
     <string name="label_named_meditation_approx_duration">%1$s (ca. %2$s)</string>
+    <string name="meditation_duration_title">Dauer der Meditation</string>
+    <string name="meditation_duration_estimated_title">Geschätzte Dauer der Meditation</string>
+    <string name="meditation_duration_edit">Dauer der Meditation ändern</string>
+    <string name="meditation_duration_prompt">Gib Minuten:Sekunden ein (zum Beispiel 20:00). Die Pauseneinstellung wird angepasst. Möglicher Bereich: %1$s–%2$s.</string>
+    <string name="meditation_duration_fixed">Die Dauer bleibt bei %1$s, da diese Meditation keine anpassbaren Pausen hat.</string>
+    <string name="meditation_duration_format">Gib Minuten:Sekunden ein, zum Beispiel 20:00.</string>
+    <string name="meditation_duration_range">Gib eine Dauer zwischen %1$s und %2$s ein.</string>
+    <string name="meditation_duration_changed">Die Meditation oder die Spracheinstellungen wurden geändert. Schließe diesen Dialog und tippe erneut auf die aktualisierte Dauer.</string>
 </resources>

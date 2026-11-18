@@ -34,6 +34,7 @@ public class SentenceAudioUiTest extends BaselineTest {
         SavedAudioLibrary.begin(request);
         SentenceAudioStore.Book book = SentenceAudio.store(Application.getAppContext()).open(request);
         for (int i = 0; i < book.sentences.size(); i++) {
+            if (MeditationPauses.seconds(book.sentences.get(i)) >= 0) { continue; }
             book.obtain(i, file -> {
                 try (FileOutputStream output = new FileOutputStream(file); Mp3Writer writer = new Mp3Writer(output)) { writer.silence(0.1, () -> { }); }
             }, () -> { });
@@ -212,6 +213,69 @@ public class SentenceAudioUiTest extends BaselineTest {
         controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
         awaitLabel("Meditationstext (ca. 0:03)");
         assertEquals(text, ((EditText) activity.findViewById(R.id.editTextMeditationText)).getText().toString());
+    }
+
+    @Test public void tappingOfflineDurationAdjustsPauseAcrossBothRangesAndRejectsImpossibleTargets() throws Exception {
+        PlaybackRequest speech = new PlaybackRequest("Breathe.[wait 10s]Relax.", SpeechBackend.GEMINI,
+                "gemini-3.8-flash-tts", "Kore", 1, "Calm", 2);
+        int id = recorded(speech); SavedAudioLibrary.restore(Application.getAppContext(), id);
+        SentenceAudioStore.Book book = SavedAudioLibrary.book(Application.getAppContext(), id);
+        for (int i : new int[]{0, 2}) { durationClip(book, i, 10000); }
+        PreferenceUtil.setPauseSeconds(2);
+        controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
+        String name = PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, id);
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline_duration, name, "0:32"));
+        assertTrue(activity.findViewById(R.id.labelMeditationText).isClickable());
+        activity.findViewById(R.id.labelMeditationText).performClick(); idle();
+        AlertDialog dialog = (AlertDialog) ShadowDialog.getLatestDialog();
+        EditText input = dialog.findViewById(R.id.editTextDialog);
+        assertEquals("0:32", input.getText().toString());
+        for (String invalid : new String[]{"0:19", "1:01", "1:99"}) {
+            input.setText(invalid); dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); idle();
+            assertTrue(dialog.isShowing()); assertNotNull(input.getError());
+            assertEquals(2, PreferenceUtil.getPauseSeconds(), 0);
+        }
+        input.setText("0:25"); dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); idle();
+        assertEquals(5 / 11.0, PreferenceUtil.getPauseSeconds(), 0.000001);
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline_duration, name, "0:25"));
+        activity.findViewById(R.id.labelMeditationText).performClick(); idle();
+        dialog = (AlertDialog) ShadowDialog.getLatestDialog(); input = dialog.findViewById(R.id.editTextDialog);
+        input.setText("0:40"); dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); idle();
+        assertEquals(10, PreferenceUtil.getPauseSeconds(), 0);
+        assertEquals(1, MeditationPlaybackService.currentSpeed(), 0);
+        assertTrue(book.isComplete());
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline_duration, name, "0:40"));
+    }
+    @Test public void estimatedDurationCanBeEditedAndCancellationDoesNotChangePause() throws Exception {
+        durationSamples(); PreferenceUtil.setPauseSeconds(1);
+        String text = letters("D") + "[wait 10s]" + letters("E");
+        PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_text, text);
+        controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
+        awaitLabel(activity.getString(R.string.label_meditation_text_approx_duration, "0:31"));
+        activity.findViewById(R.id.labelMeditationText).performClick(); idle();
+        AlertDialog dialog = (AlertDialog) ShadowDialog.getLatestDialog();
+        ((EditText) dialog.findViewById(R.id.editTextDialog)).setText("0:40");
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick(); idle();
+        assertEquals(1, PreferenceUtil.getPauseSeconds(), 0);
+        activity.findViewById(R.id.labelMeditationText).performClick(); idle();
+        dialog = (AlertDialog) ShadowDialog.getLatestDialog();
+        ((EditText) dialog.findViewById(R.id.editTextDialog)).setText("0:25");
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); idle();
+        assertEquals(5 / 11.0, PreferenceUtil.getPauseSeconds(), 0.000001);
+        awaitLabel(activity.getString(R.string.label_meditation_text_approx_duration, "0:25"));
+    }
+    @Test public void durationDialogRejectsAChangedSpeechConfiguration() throws Exception {
+        durationSamples(); PreferenceUtil.setPauseSeconds(1);
+        PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_text, letters("D") + "[wait 10s]" + letters("E"));
+        controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
+        awaitLabel(activity.getString(R.string.label_meditation_text_approx_duration, "0:31"));
+        activity.findViewById(R.id.labelMeditationText).performClick(); idle();
+        AlertDialog dialog = (AlertDialog) ShadowDialog.getLatestDialog();
+        EditText input = dialog.findViewById(R.id.editTextDialog); input.setText("0:25");
+        SavedAudioLibrary.restoreVoice(MeditationPlaybackService.currentRequest(letters("D"), 1).withSpeed(2)); idle();
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); idle();
+        assertTrue(dialog.isShowing()); assertNotNull(input.getError());
+        assertEquals(1, PreferenceUtil.getPauseSeconds(), 0);
     }
 
     private void publishPosition(java.util.List<String> segments, int position) {

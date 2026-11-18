@@ -139,4 +139,12 @@
     <string name="stop_meditation_rewind">Stop and return to the beginning</string>
     <string name="label_meditation_text_approx_duration">Meditation text (approx. %1$s)</string>
     <string name="label_named_meditation_approx_duration">%1$s (approx. %2$s)</string>
+    <string name="meditation_duration_title">Meditation duration</string>
+    <string name="meditation_duration_estimated_title">Estimated meditation duration</string>
+    <string name="meditation_duration_edit">Edit meditation duration</string>
+    <string name="meditation_duration_prompt">Enter minutes:seconds (for example, 20:00). The pause setting will be adjusted. Available range: %1$s–%2$s.</string>
+    <string name="meditation_duration_fixed">The duration is fixed at %1$s because this meditation has no adjustable pauses.</string>
+    <string name="meditation_duration_format">Enter minutes:seconds, for example 20:00.</string>
+    <string name="meditation_duration_range">Enter a duration from %1$s to %2$s.</string>
+    <string name="meditation_duration_changed">The meditation or speech settings changed. Close this dialog and tap the updated duration again.</string>
 </resources>

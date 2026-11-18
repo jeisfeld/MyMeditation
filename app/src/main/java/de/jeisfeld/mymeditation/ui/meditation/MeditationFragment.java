@@ -51,6 +51,9 @@ public class MeditationFragment extends Fragment {
     private int offlineCheck;
     private String offlineIdentity = "";
     private boolean rewindAfterStop;
+    private de.jeisfeld.mymeditation.audio.DurationCurve durationCurve;
+    private String durationCurveIdentity = "";
+    private boolean durationEstimated;
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable refreshOfflineLabel = this::checkOfflineLabel;
     private final Runnable prefetchTitle = () -> {
@@ -108,14 +111,15 @@ public class MeditationFragment extends Fragment {
         } catch (IllegalArgumentException e) {
             offlineDuration.diagnostic("outcome=unavailable reason=invalid_request characters=" + binding.editTextMeditationText.length()
                     + " exception=" + e.getClass().getSimpleName());
-            offlineIdentity = ""; binding.labelMeditationText.setText(meditationHeading(false)); return;
+            offlineIdentity = ""; clearDurationEditor(); binding.labelMeditationText.setText(meditationHeading(false)); return;
         }
         if (request.backend == SpeechBackend.DEVICE) {
             offlineDuration.diagnostic("outcome=unavailable reason=device_speech");
-            offlineIdentity = ""; binding.labelMeditationText.setText(meditationHeading(false)); return;
+            offlineIdentity = ""; clearDurationEditor(); binding.labelMeditationText.setText(meditationHeading(false)); return;
         }
         String identity = de.jeisfeld.mymeditation.audio.SentenceAudioStore.key(request) + ":" + request.speed + ":" + request.pauseSeconds;
         if (!identity.equals(offlineIdentity)) {
+            clearDurationEditor();
             binding.labelMeditationText.setText(meditationHeading(false));
             offlineIdentity = identity;
         }
@@ -128,6 +132,14 @@ public class MeditationFragment extends Fragment {
                     : offlineDuration.estimate(store, book, request.pauseSeconds);
             ui.post(() -> {
                 if (binding != null && check == offlineCheck) {
+                    clearDurationEditor();
+                    if (duration != null) {
+                        durationCurve = new de.jeisfeld.mymeditation.audio.DurationCurve(request, duration);
+                        durationCurveIdentity = identity; durationEstimated = !offline;
+                        binding.labelMeditationText.setClickable(true);
+                        binding.labelMeditationText.setFocusable(true);
+                        binding.labelMeditationText.setTooltipText(getString(R.string.meditation_duration_edit));
+                    }
                     binding.labelMeditationText.setText(meditationHeading(offline, duration));
                     offlineDuration.diagnostic(de.jeisfeld.mymeditation.audio.OfflineDuration.diagnosticContext(request, request.pauseSeconds)
                             + " display=" + (duration == null ? offline ? "offline_without_duration" : "no_duration" : offline ? "offline" : "approx"));
@@ -148,6 +160,8 @@ public class MeditationFragment extends Fragment {
 
         binding = FragmentMeditationBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
+        binding.labelMeditationText.setOnClickListener(v -> durationDialog());
+        clearDurationEditor();
         android.widget.ArrayAdapter<CharSequence> pauseChoices = android.widget.ArrayAdapter.createFromResource(
                 requireContext(), R.array.pause_guidance_options, R.layout.spinner_settings_item);
         pauseChoices.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -386,6 +400,59 @@ public class MeditationFragment extends Fragment {
         format.setGroupingUsed(false);
         return format.format(value);
     }
+    private void clearDurationEditor() {
+        durationCurve = null; durationCurveIdentity = "";
+        if (binding != null) {
+            binding.labelMeditationText.setClickable(false);
+            binding.labelMeditationText.setFocusable(false);
+            binding.labelMeditationText.setTooltipText(null);
+        }
+    }
+    private void durationDialog() {
+        if (durationCurve == null) { return; }
+        final String identity = durationCurveIdentity;
+        de.jeisfeld.mymeditation.audio.DurationCurve curve = durationCurve;
+        android.widget.EditText input = new android.widget.EditText(requireContext());
+        input.setId(R.id.editTextDialog);
+        input.setSingleLine(true);
+        input.setKeyListener(android.text.method.DigitsKeyListener.getInstance("0123456789:"));
+        input.setRawInputType(android.text.InputType.TYPE_CLASS_DATETIME | android.text.InputType.TYPE_DATETIME_VARIATION_TIME);
+        input.setContentDescription(getString(R.string.meditation_duration_title));
+        input.setText(de.jeisfeld.mymeditation.audio.OfflineDuration.format(curve.current()));
+        input.selectAll();
+        String minimum = de.jeisfeld.mymeditation.audio.OfflineDuration.format(curve.minimum());
+        String maximum = de.jeisfeld.mymeditation.audio.OfflineDuration.format(curve.maximum());
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setTitle(durationEstimated ? R.string.meditation_duration_estimated_title : R.string.meditation_duration_title)
+                .setMessage(curve.adjustable() ? getString(R.string.meditation_duration_prompt, minimum, maximum)
+                        : getString(R.string.meditation_duration_fixed, minimum))
+                .setView(input).setNegativeButton(R.string.button_cancel, null).setPositiveButton(R.string.button_save, null).create();
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            if (binding == null) { dialog.dismiss(); return; }
+            long target;
+            try { target = de.jeisfeld.mymeditation.audio.DurationCurve.parse(input.getText().toString()); }
+            catch (IllegalArgumentException e) { input.setError(getString(R.string.meditation_duration_format)); return; }
+            try {
+                de.jeisfeld.mymeditation.audio.PlaybackRequest request = MeditationPlaybackService.currentRequest(
+                        binding.editTextMeditationText.getText().toString(), PreferenceUtil.getPauseSeconds());
+                String current = de.jeisfeld.mymeditation.audio.SentenceAudioStore.key(request) + ":" + request.speed + ":" + request.pauseSeconds;
+                if (durationCurve == null || !identity.equals(current) || !identity.equals(durationCurveIdentity)) {
+                    input.setError(getString(R.string.meditation_duration_changed)); return;
+                }
+                double pause;
+                try { pause = durationCurve.pauseFor(target); }
+                catch (IllegalArgumentException e) {
+                    input.setError(getString(R.string.meditation_duration_range,
+                            de.jeisfeld.mymeditation.audio.OfflineDuration.format(durationCurve.minimum()),
+                            de.jeisfeld.mymeditation.audio.OfflineDuration.format(durationCurve.maximum())));
+                    return;
+                }
+                setPause(pause); dialog.dismiss();
+            } catch (IllegalArgumentException e) { input.setError(getString(R.string.meditation_duration_changed)); }
+        }));
+        dialog.show();
+    }
+
     private double voiceSpeed() {
         return MeditationPlaybackService.currentSpeed();
     }
@@ -619,6 +686,7 @@ public class MeditationFragment extends Fragment {
         ui.removeCallbacks(prefetchTitle);
         binding.textSpeechStatus.removeCallbacks(showSpeechStatus);
         binding.editTextMeditationText.setOnCursorChangedListener(null);
+        clearDurationEditor();
         pendingSpeechStatus = "";
         reading = false; highlightedPosition = -2; highlightedText = "";
         binding = null;
