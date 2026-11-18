@@ -80,11 +80,18 @@ public class MeditationFragment extends Fragment {
         if (source > 0 && PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).contains(source)) {
             String name = PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, source);
             if (name != null && !name.trim().isEmpty()) {
-                if (!offline) { return name; }
+                if (!offline) {
+                    return duration == null ? name : getString(R.string.label_named_meditation_approx_duration, name,
+                            de.jeisfeld.mymeditation.audio.OfflineDuration.format(duration));
+                }
                 return duration == null ? getString(R.string.label_named_meditation_offline, name)
                         : getString(R.string.label_named_meditation_offline_duration, name,
                                 de.jeisfeld.mymeditation.audio.OfflineDuration.format(duration));
             }
+        }
+        if (!offline && duration != null) {
+            return getString(R.string.label_meditation_text_approx_duration,
+                    de.jeisfeld.mymeditation.audio.OfflineDuration.format(duration));
         }
         if (offline && duration != null) {
             return getString(R.string.label_meditation_text_offline_duration,
@@ -99,9 +106,12 @@ public class MeditationFragment extends Fragment {
         try {
             request = MeditationPlaybackService.currentRequest(binding.editTextMeditationText.getText().toString(), PreferenceUtil.getPauseSeconds());
         } catch (IllegalArgumentException e) {
+            offlineDuration.diagnostic("outcome=unavailable reason=invalid_request characters=" + binding.editTextMeditationText.length()
+                    + " exception=" + e.getClass().getSimpleName());
             offlineIdentity = ""; binding.labelMeditationText.setText(meditationHeading(false)); return;
         }
         if (request.backend == SpeechBackend.DEVICE) {
+            offlineDuration.diagnostic("outcome=unavailable reason=device_speech");
             offlineIdentity = ""; binding.labelMeditationText.setText(meditationHeading(false)); return;
         }
         String identity = de.jeisfeld.mymeditation.audio.SentenceAudioStore.key(request) + ":" + request.speed + ":" + request.pauseSeconds;
@@ -111,12 +121,19 @@ public class MeditationFragment extends Fragment {
         }
         android.content.Context context = requireContext().getApplicationContext();
         offlineChecker.execute(() -> {
-            de.jeisfeld.mymeditation.audio.SentenceAudioStore.Book book = de.jeisfeld.mymeditation.audio.SentenceAudio.store(context).open(request);
+            de.jeisfeld.mymeditation.audio.SentenceAudioStore store = de.jeisfeld.mymeditation.audio.SentenceAudio.store(context);
+            de.jeisfeld.mymeditation.audio.SentenceAudioStore.Book book = store.open(request);
             boolean offline = book.isComplete();
-            Long duration = offline ? offlineDuration.milliseconds(book, request.pauseSeconds) : null;
+            Long duration = offline ? offlineDuration.milliseconds(book, request.pauseSeconds)
+                    : offlineDuration.estimate(store, book, request.pauseSeconds);
             ui.post(() -> {
                 if (binding != null && check == offlineCheck) {
                     binding.labelMeditationText.setText(meditationHeading(offline, duration));
+                    offlineDuration.diagnostic(de.jeisfeld.mymeditation.audio.OfflineDuration.diagnosticContext(request, request.pauseSeconds)
+                            + " display=" + (duration == null ? offline ? "offline_without_duration" : "no_duration" : offline ? "offline" : "approx"));
+                } else {
+                    offlineDuration.diagnostic(de.jeisfeld.mymeditation.audio.OfflineDuration.diagnosticContext(request, request.pauseSeconds)
+                            + " display=skipped reason=" + (binding == null ? "view_closed" : "stale_request"));
                 }
             });
         });
@@ -351,6 +368,7 @@ public class MeditationFragment extends Fragment {
             @Override public void afterTextChanged(android.text.Editable s) { }
         });
         de.jeisfeld.mymeditation.audio.SavedAudioLibrary.changes().observe(getViewLifecycleOwner(), version -> scheduleOfflineLabel());
+        de.jeisfeld.mymeditation.audio.MeditationOfflineService.state().observe(getViewLifecycleOwner(), state -> scheduleOfflineLabel());
         androidx.preference.PreferenceManager.getDefaultSharedPreferences(requireContext()).registerOnSharedPreferenceChangeListener(offlinePreferences);
         refreshSpeed();
         refreshSentencePosition();

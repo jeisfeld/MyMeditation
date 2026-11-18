@@ -137,4 +137,6 @@
     <string name="pause_setting_help" formatted="false">Below 1 second, pauses are shown as percentages. At 50%, a 10-second wait plus the 1-second base pause takes 5.5 seconds. Enter a percentage or a pause in seconds.</string>
     <string name="stop_meditation_hint">Stop; hold to return to the beginning</string>
     <string name="stop_meditation_rewind">Stop and return to the beginning</string>
+    <string name="label_meditation_text_approx_duration">Meditation text (approx. %1$s)</string>
+    <string name="label_named_meditation_approx_duration">%1$s (approx. %2$s)</string>
 </resources>

@@ -161,6 +161,59 @@ public class SentenceAudioUiTest extends BaselineTest {
         playbackHeading(id, true, true);
         awaitLabel(activity.getString(R.string.label_named_meditation_offline_duration, name, "0:15"));
     }
+    private String letters(String value) { return String.join("", java.util.Collections.nCopies(100, value)) + "."; }
+    private PlaybackRequest durationSamples() throws Exception {
+        PlaybackRequest profile = new PlaybackRequest(letters("A") + letters("B") + letters("C"),
+                SpeechBackend.GEMINI, "gemini-3.8-flash-tts", "Kore", 1, "Calm", 1);
+        SentenceAudioStore.Book samples = SentenceAudio.store(Application.getAppContext()).open(profile);
+        for (int i = 0; i < 3; i++) { durationClip(samples, i, 10000); }
+        SavedAudioLibrary.restoreVoice(profile);
+        return profile;
+    }
+    private void durationClip(SentenceAudioStore.Book book, int index, long milliseconds) throws Exception {
+        java.io.File file = book.obtain(index, path -> java.nio.file.Files.write(path.toPath(), new byte[]{'I', 'D', '3', 0}), () -> { });
+        org.robolectric.shadows.ShadowMediaMetadataRetriever.addMetadata(file.getAbsolutePath(),
+                android.media.MediaMetadataRetriever.METADATA_KEY_DURATION, Long.toString(milliseconds));
+    }
+    @Test public void approximateHeadingUsesCachedVoiceForNewSavedAndPartialTextThenBecomesOffline() throws Exception {
+        PlaybackRequest profile = durationSamples();
+        String text = letters("D") + "[wait 10s]" + letters("E");
+        PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_text, text); PreferenceUtil.setPauseSeconds(1);
+        controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
+        awaitLabel(activity.getString(R.string.label_meditation_text_approx_duration, "0:31"));
+        int id = SavedMeditations.save("New topic", PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt),
+                PreferenceUtil.getSharedPreferenceString(R.string.key_query_template),
+                PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content), text);
+        SavedAudioLibrary.restore(Application.getAppContext(), id); idle();
+        awaitLabel(activity.getString(R.string.label_named_meditation_approx_duration, "New topic", "0:31"));
+        SavedAudioLibrary.restoreVoice(profile.withSpeed(2)); idle();
+        awaitLabel(activity.getString(R.string.label_named_meditation_approx_duration, "New topic", "0:21"));
+        PreferenceUtil.setPauseSeconds(0.5); idle();
+        awaitLabel(activity.getString(R.string.label_named_meditation_approx_duration, "New topic", "0:16"));
+        SentenceAudioStore.Book target = SentenceAudio.store(activity).open(MeditationPlaybackService.currentRequest(text, 0.5));
+        durationClip(target, 0, 8000); SavedAudioLibrary.notifyChanged(); idle();
+        awaitLabel(activity.getString(R.string.label_named_meditation_approx_duration, "New topic", "0:14"));
+        durationClip(target, 2, 10000); SavedAudioLibrary.notifyChanged(); idle();
+        awaitLabel(activity.getString(R.string.label_named_meditation_offline_duration, "New topic", "0:15"));
+    }
+    @Test @org.robolectric.annotation.Config(qualifiers = "de-rDE-w411dp-h891dp")
+    public void estimatedDurationUsesGermanApproximationLabel() throws Exception {
+        durationSamples(); PreferenceUtil.setPauseSeconds(1);
+        PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_text, letters("D"));
+        controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
+        awaitLabel("Meditationstext (ca. 0:10)");
+    }
+
+    @Test @org.robolectric.annotation.Config(qualifiers = "de-rDE-w411dp-h891dp")
+    public void germanClosingQuoteStillDisplaysAnEstimatedDuration() throws Exception {
+        durationSamples(); PreferenceUtil.setPauseSeconds(1);
+        String text = "„Dies ist ein Zitat.“";
+        PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_text, text);
+        controller = Robolectric.buildActivity(MainActivity.class).setup().visible(); activity = controller.get(); idle();
+        awaitLabel("Meditationstext (ca. 0:03)");
+        assertEquals(text, ((EditText) activity.findViewById(R.id.editTextMeditationText)).getText().toString());
+    }
+
     private void publishPosition(java.util.List<String> segments, int position) {
         publishedPlayback = true;
         ((androidx.lifecycle.MutableLiveData<MeditationPlaybackService.State>) MeditationPlaybackService.state()).setValue(

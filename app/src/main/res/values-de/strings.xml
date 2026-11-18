@@ -121,4 +121,6 @@
     <string name="pause_setting_help" formatted="false">Unter 1 Sekunde werden Pausen als Prozentwert angezeigt. Bei 50% dauern 10 Sekunden Wartezeit plus 1 Sekunde Grundpause insgesamt 5,5 Sekunden. Gib einen Prozentwert oder eine Pause in Sekunden ein.</string>
     <string name="stop_meditation_hint">Beenden; gedrückt halten, um zum Anfang zurückzukehren</string>
     <string name="stop_meditation_rewind">Beenden und zum Anfang zurückkehren</string>
+    <string name="label_meditation_text_approx_duration">Meditationstext (ca. %1$s)</string>
+    <string name="label_named_meditation_approx_duration">%1$s (ca. %2$s)</string>
 </resources>

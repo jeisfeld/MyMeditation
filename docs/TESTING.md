@@ -130,3 +130,9 @@ Offline preparation tests cover spoken-word weighting, repeated sentences, waits
 
 
 Storage-association regressions cover partial saved requests without completed links, matching provider-cache copies across all supported locations, current-voice independence, stale-text snapshot rejection, preserving shared sources for a different partial saved script, and Audio only releasing/re-establishing ownership while retaining voice metadata. A UI regression checks that partial audio offers Audio only removal. Other-audio cleanup is verified against the same association rules as byte accounting.
+
+### Diagnose missing meditation durations
+
+In Android Studio Logcat, select the app process and filter with `tag:MeditationDuration`. Open the affected meditation and collect the resulting lines. With adb, use `adb logcat -s MeditationDuration:I '*:S'`. Logs are available in installed builds at INFO level; identical messages are limited to once per 30 seconds.
+
+Each calculation identifies the script by a short hash and records the speech provider/model, a voice-ID hash, speed and pause setting. Estimate summaries include scanned/matching manifests, model/voice mismatch counts, distinct sample passages, letters, original-speed speech milliseconds, missing/unreadable clips, and one-based segment numbers when a fragment prevents calculation. `reason=insufficient_samples`, `reason=segment_without_letters` and `reason=duration_metadata` explain missing results. `display=skipped reason=stale_request` means a newer UI refresh superseded the result; `display=approx` or `display=offline` confirms it reached the heading. Punctuation-only fragments such as a closing German quote are counted as `ignoredPunctuation` when their speech duration cannot be measured. No meditation text, voice names/IDs, exception messages, file paths or API keys are logged.

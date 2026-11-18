@@ -37,6 +37,14 @@ public final class SentenceAudioStore {
         return new Book(request.withPause(0));
     }
 
+    /** Existing manifests provide the text and voice metadata for cached speech samples. */
+    List<String> identities() {
+        String[] entries = root.list((directory, name) -> name.matches("[0-9a-f]{64}") && new File(directory, name).isDirectory());
+        if (entries == null) { return java.util.Collections.emptyList(); }
+        java.util.Arrays.sort(entries);
+        return java.util.Arrays.asList(entries);
+    }
+
     /** Untrusted/corrupt metadata is unavailable, never a reason to follow an arbitrary path. */
     public Book find(String identity) {
         if (identity == null || !identity.matches("[0-9a-f]{64}")) { return null; }
