@@ -22,8 +22,7 @@ public final class ModelCatalog {
     public static List<String> speechModels(SpeechBackend backend) {
         switch (backend) {
             case OPENAI: return Arrays.asList("gpt-4o-mini-tts", "gpt-4o-mini-tts-2025-12-15", "tts-1", "tts-1-hd");
-            case GEMINI: return Arrays.asList("gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts",
-                    "gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts");
+            case GEMINI: return Arrays.asList("gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts");
             case QWEN: return Arrays.asList("qwen3-tts-flash", "qwen3-tts-instruct-flash", "qwen-tts-latest");
             case ELEVENLABS: return Arrays.asList("eleven_v4", "eleven_v4_turbo", "eleven_v3", "eleven_multilingual_v2",
                     "eleven_flash_v2_5", "eleven_turbo_v2_5", "eleven_flash_v2", "eleven_turbo_v2");
@@ -31,10 +30,21 @@ public final class ModelCatalog {
         }
     }
 
+    /** Google lists these previews for shutdown on December 18, 2026. Keep old audio identities intact. */
+    public static boolean deprecatedSpeechModel(SpeechBackend backend, String model) {
+        return backend == SpeechBackend.GEMINI && Arrays.asList("gemini-3.1-flash-tts-preview",
+                "gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts").contains(model);
+    }
+
+    /** Resolve a dropdown selection without rewriting saved meditation requests or cache keys. */
+    public static String selectableSpeechModel(SpeechBackend backend, String model) {
+        return model == null || model.isEmpty() || deprecatedSpeechModel(backend, model) ? backend.defaultModel : model;
+    }
+
     /** Keep saved dated/custom speech model IDs selectable when replacing the former text field. */
     public static List<String> speechModels(SpeechBackend backend, String savedModel) {
         List<String> result = new ArrayList<>(speechModels(backend));
-        if (savedModel != null && !savedModel.isEmpty() && !result.contains(savedModel)) { result.add(savedModel); }
+        if (savedModel != null && !savedModel.isEmpty() && !deprecatedSpeechModel(backend, savedModel) && !result.contains(savedModel)) { result.add(savedModel); }
         return result;
     }
 }

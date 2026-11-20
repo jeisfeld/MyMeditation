@@ -2,6 +2,7 @@ package de.jeisfeld.mymeditation.ui.configuration;
 
 import android.os.Bundle;
 import de.jeisfeld.mymeditation.http.VoiceProfiles;
+import de.jeisfeld.mymeditation.http.ModelCatalog;
 import de.jeisfeld.mymeditation.http.SpeechBackend;
 import de.jeisfeld.mymeditation.databinding.DialogAiSettingsBinding;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
@@ -168,7 +169,7 @@ public class ConfigurationFragment extends Fragment {
             loading[0] = true;
             String model = models.containsKey(backend) ? models.get(backend)
                     : PreferenceUtil.getSharedPreferenceString(backend.modelKey(), backend.defaultModel);
-            if (model == null || model.isEmpty()) { model = backend.defaultModel; }
+            model = ModelCatalog.selectableSpeechModel(backend, model);
             models.put(backend, model);
             java.util.List<String> choices = SettingsCollections.speechModels(backend, model);
             settings.spinnerSpeechModel.setAdapter(modelAdapter(choices));

@@ -9,6 +9,7 @@ import android.widget.Toast;
 import de.jeisfeld.mymeditation.R;
 import de.jeisfeld.mymeditation.audio.MeditationPlaybackService;
 import de.jeisfeld.mymeditation.databinding.FragmentConfigurationBinding;
+import de.jeisfeld.mymeditation.http.ModelCatalog;
 import de.jeisfeld.mymeditation.http.SpeechBackend;
 import de.jeisfeld.mymeditation.http.VoiceProfiles;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
@@ -75,7 +76,9 @@ final class InlineAiSettings {
 
     private String savedModel(SpeechBackend backend) {
         String model = PreferenceUtil.getSharedPreferenceString(backend.modelKey(), backend.defaultModel);
-        return model.isEmpty() ? backend.defaultModel : model;
+        String selected = ModelCatalog.selectableSpeechModel(backend, model);
+        if (!selected.equals(model)) { PreferenceUtil.setSharedPreferenceString(backend.modelKey(), selected); }
+        return selected;
     }
 
     private VoiceProfiles profiles() {

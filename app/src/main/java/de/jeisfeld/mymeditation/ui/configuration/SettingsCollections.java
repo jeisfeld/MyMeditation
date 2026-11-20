@@ -109,6 +109,8 @@ final class SettingsCollections {
     }
     static List<String> speechModels(SpeechBackend backend, String active) {
         LinkedHashSet<String> choices = new LinkedHashSet<>(ModelCatalog.speechModels(backend, active));
-        choices.addAll(readModels(speechModelsKey(backend))); return new ArrayList<>(choices);
+        choices.addAll(readModels(speechModelsKey(backend)));
+        choices.removeIf(model -> ModelCatalog.deprecatedSpeechModel(backend, model));
+        return new ArrayList<>(choices);
     }
 }

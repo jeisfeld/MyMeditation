@@ -68,6 +68,19 @@ public class SettingsMergeTest extends BaselineTest {
         Map<String, String> once = SettingsBackup.decode(SettingsBackup.encode(capture()));
         SettingsBackup.restore(Application.getAppContext(), imported); assertEquals(once, capture());
     }
+    @Test public void restoringOldModelCollectionsDoesNotReintroduceDeprecatedDropdownChoices() throws Exception {
+        Map<String, String> imported = capture();
+        imported.put("gemini_speech_model", "gemini-2.5-flash-preview-tts");
+        imported.put(SettingsCollections.speechModelsKey(SpeechBackend.GEMINI),
+                "[\"gemini-3.1-flash-tts-preview\",\"gemini-2.5-pro-preview-tts\",\"gemini-custom-tts\"]");
+        SettingsBackup.restore(Application.getAppContext(), imported);
+        java.util.List<String> choices = SettingsCollections.speechModels(SpeechBackend.GEMINI,
+                capture().get("gemini_speech_model"));
+        assertFalse(choices.contains("gemini-2.5-flash-preview-tts"));
+        assertFalse(choices.contains("gemini-2.5-pro-preview-tts"));
+        assertFalse(choices.contains("gemini-3.1-flash-tts-preview"));
+        assertTrue(choices.contains("gemini-custom-tts"));
+    }
     @Test public void versionOneFilesStillMergeAndBadNewModelListsLeaveCollectionsUntouched() throws Exception {
         Map<String, String> incoming = capture();
         JSONObject oldFile = new JSONObject(SettingsBackup.encode(incoming)); oldFile.put("version", 1);

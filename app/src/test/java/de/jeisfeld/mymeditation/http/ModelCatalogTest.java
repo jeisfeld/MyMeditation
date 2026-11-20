@@ -28,6 +28,19 @@ public class ModelCatalogTest {
         assertFalse(SpeechBackend.OPENAI.voices("tts-1").contains("coral"));
         assertTrue(SpeechBackend.OPENAI.voices("gpt-4o-mini-tts").contains("coral"));
     }
+    @Test public void deprecatedGoogleSelectionsFallBackWithoutInvalidatingOldAudioRequests() {
+        for (String old : java.util.Arrays.asList("gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts",
+                "gemini-3.1-flash-tts-preview")) {
+            assertFalse(ModelCatalog.speechModels(SpeechBackend.GEMINI, old).contains(old));
+            assertEquals(SpeechBackend.GEMINI.defaultModel, ModelCatalog.selectableSpeechModel(SpeechBackend.GEMINI, old));
+            // Validation of a saved speech snapshot must still work for cached/offline playback.
+            SpeechBackend.GEMINI.validate(old, "Kore");
+        }
+        String custom = "gemini-3.8-flash-tts-custom-date";
+        assertEquals(custom, ModelCatalog.selectableSpeechModel(SpeechBackend.GEMINI, custom));
+        assertTrue(ModelCatalog.speechModels(SpeechBackend.GEMINI, custom).contains(custom));
+        assertThrows(IllegalArgumentException.class, () -> SpeechBackend.GEMINI.validate("gemini-3.8-live", "Kore"));
+    }
     @Test public void migrationKeepsSavedSpeechIdsWithoutDuplicatesOrChangingPresets() {
         String saved = "gemini-2.5-flash-preview-tts-custom-date";
         List<String> choices = ModelCatalog.speechModels(SpeechBackend.GEMINI, saved);

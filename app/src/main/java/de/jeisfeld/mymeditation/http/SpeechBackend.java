@@ -8,7 +8,7 @@ import java.util.List;
 public enum SpeechBackend {
     DEVICE("device", "", "", "", 3500),
     OPENAI("openai", "OPENAI_API_KEY", "gpt-4o-mini-tts", "coral", 3500),
-    GEMINI("gemini", "GEMINI_API_KEY", "gemini-2.5-flash-preview-tts", "Kore", 1500),
+    GEMINI("gemini", "GEMINI_API_KEY", "gemini-3.8-flash-tts", "Kore", 1500),
     QWEN("qwen", "QWEN_API_KEY", "qwen3-tts-flash", "Cherry", 500),
     ELEVENLABS("elevenlabs", "ELEVENLABS_API_KEY", "eleven_v4", "", 3500);
 
