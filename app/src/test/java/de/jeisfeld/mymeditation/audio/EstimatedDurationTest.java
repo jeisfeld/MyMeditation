@@ -54,7 +54,7 @@ public class EstimatedDurationTest {
         assertNull(duration.estimate(store(), store().open(new PlaybackRequest(request.text, request.backend,
                 request.model, "Puck", 1, "", 0)), 1));
         assertNull(duration.estimate(store(), store().open(new PlaybackRequest(request.text, request.backend,
-                "gemini-3.8-flash-tts", request.voice, 1, "", 0)), 1));
+                "gemini-3.8-flash-lite-tts", request.voice, 1, "", 0)), 1));
         assertNull(duration.estimate(store(), store().open(request(request.text, SpeechBackend.OPENAI, 1)), 1));
     }
     @Test public void repeatedSentencesAcrossPartialManifestsCountOnlyOnce() throws Exception {

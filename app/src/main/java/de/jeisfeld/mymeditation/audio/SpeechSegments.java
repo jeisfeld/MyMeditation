@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 
 /** Sentence controls also retain trailing text and bound individual API requests. */
 public final class SpeechSegments {
+    private static final Pattern CONTENT = Pattern.compile("[^\\s.!?。！？]");
     private SpeechSegments() { }
 
     public static List<String> split(String text) {
@@ -37,6 +38,11 @@ public final class SpeechSegments {
         return index;
     }
 
+    /** Standalone sentence delimiters have no audio and cannot form a clip request by themselves. */
+    private static void addSpeech(String sentence, List<String> result) {
+        if (CONTENT.matcher(sentence).find()) { result.add(sentence); }
+    }
+
     private static void splitSpeech(String text, int limit, List<String> result) {
         Matcher matcher = Pattern.compile("[^.!?。！？]+(?:[.!?。！？]+|$)").matcher(text);
         while (matcher.find()) {
@@ -45,10 +51,10 @@ public final class SpeechSegments {
                 int cut = sentence.lastIndexOf(' ', limit);
                 if (cut <= 0) { cut = limit; }
                 if (Character.isHighSurrogate(sentence.charAt(cut - 1))) { cut--; }
-                result.add(sentence.substring(0, cut).trim());
+                addSpeech(sentence.substring(0, cut).trim(), result);
                 sentence = sentence.substring(cut).trim();
             }
-            if (!sentence.isEmpty()) { result.add(sentence); }
+            addSpeech(sentence, result);
         }
     }
 }

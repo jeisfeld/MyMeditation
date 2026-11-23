@@ -21,6 +21,22 @@ public class SentenceAudioStoreTest {
             writer.silence(0.1, () -> { });
         }
     }
+    @Test public void leadingFullStopsDoNotCrashOfflineChecksOrRequirePunctuationAudio() throws Exception {
+        SentenceAudioStore store = new SentenceAudioStore(temporary.getRoot());
+        SentenceAudioStore.Book book = store.open(request("\n. Breathe.\n. [wait 5s]\n. Relax.", 1, "Kore", "Calm", 2));
+        assertEquals(java.util.Arrays.asList("Breathe.", "[wait 5s]", "Relax."), book.sentences);
+        assertFalse(book.isComplete());
+        assertEquals(java.util.Arrays.asList(0, 2), book.missingSpeech());
+        // Sources from a clean meditation must remain reusable without new generation.
+        SentenceAudioStore.Book clean = store.open(request());
+        clean.obtain(0, this::mp3, () -> { }); clean.obtain(1, this::mp3, () -> { });
+        assertTrue(book.isComplete());
+        assertTrue(book.missingSpeech().isEmpty());
+        assertTrue(store.find(book.identity).isComplete());
+        assertEquals(Long.valueOf(9000), new OfflineDuration(file -> 1000).milliseconds(book, 2));
+        assertEquals(2, new File(temporary.getRoot(), "clips").listFiles().length);
+    }
+
     @Test public void skippedTimedPausesNeedNoAudioAndDoNotPreventAutomaticRetention() throws Exception {
         SentenceAudioStore store = new SentenceAudioStore(temporary.getRoot());
         SentenceAudioStore.Book book = store.open(request("[wait 1s]Breathe.[wait 18s]Rest.[wait 2s]", 1, "Kore", "", 2));

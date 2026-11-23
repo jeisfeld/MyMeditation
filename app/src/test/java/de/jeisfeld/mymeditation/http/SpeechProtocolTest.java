@@ -47,6 +47,19 @@ public class SpeechProtocolTest {
         assertTrue(SpeechSegments.split(null).isEmpty());
     }
 
+    @Test public void leadingAndStandaloneTerminatorsDoNotCreateUnplayableSentences() {
+        assertEquals(Arrays.asList("Breathe.", "Rest!", "[wait 5s]", "Relax?"),
+                SpeechSegments.split("\n. Breathe.\n...\n！ Rest!\n? [wait 5s]\n。 Relax?"));
+        assertTrue(SpeechSegments.split("\n. \n... ! ? 。 ！ ？").isEmpty());
+        // Splitting a long sentence can also leave only its final punctuation behind.
+        assertEquals(Arrays.asList("abcde"), SpeechSegments.split("abcde.", 5));
+        for (int limit : new int[] {2, 5, 500, 3500}) {
+            for (String segment : SpeechSegments.split("\n. abcde.\n? Breathe slowly! [wait 5s] 。 Rest?", limit)) {
+                assertFalse(segment, SpeechSegments.split(segment, limit).isEmpty());
+            }
+        }
+    }
+
     @Test public void longSegmentsStayWithinApiLimitWithoutLosingText() throws Exception {
         String text = String.join("", java.util.Collections.nCopies(8000, "a"));
         List<String> segments = SpeechSegments.split(text);
