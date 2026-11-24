@@ -58,6 +58,13 @@ public final class OfflineDuration {
         return Math.round(total);
     }
 
+    /** Source metadata normalized to the request's audible speed; used by the system media timeline. */
+    Long speechMilliseconds(SentenceAudioStore.Book book, int index) {
+        File file = book.available(index);
+        Long measured = file == null ? null : duration(file);
+        return measured == null ? null : Math.round(measured / (book.request.localSpeed() ? book.request.speed : 1));
+    }
+
     private Long duration(File file) {
         metadataFailure = "";
         String key = file.getAbsolutePath() + ":" + file.length() + ":" + file.lastModified();

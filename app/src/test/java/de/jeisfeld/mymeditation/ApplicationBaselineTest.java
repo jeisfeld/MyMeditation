@@ -19,7 +19,7 @@ public class ApplicationBaselineTest {
         assertFalse(PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt).isEmpty());
         assertTrue(PreferenceUtil.getSharedPreferenceString(R.string.key_query_template).contains("@TEXT@"));
         assertFalse(PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content).isEmpty());
-        assertEquals(15, PreferenceUtil.getSharedPreferenceInt(R.string.key_pause_duration, -1));
+        assertEquals(1, PreferenceUtil.getSharedPreferenceInt(R.string.key_pause_duration, -1));
         assertTrue(PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).isEmpty());
     }
 

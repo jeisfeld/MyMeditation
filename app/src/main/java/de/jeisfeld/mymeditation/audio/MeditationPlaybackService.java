@@ -118,6 +118,21 @@ public final class MeditationPlaybackService extends Service {
     };
     private MeditationSpeechPlayer player;
     private MediaSession session;
+    private android.graphics.Bitmap mediaArtwork;
+    private int mediaColor;
+    private MediaTimeline mediaTimeline;
+    private final OfflineDuration mediaDurations = new OfflineDuration();
+    private int timelineGeneration;
+    private String timelineKey = "", metadataTitle = "";
+    private long metadataDuration = -1;
+    private final Runnable mediaTick = () -> { if (!destroying) { updateSession(); } };
+    private final android.content.SharedPreferences.OnSharedPreferenceChangeListener mediaNames = (preferences, key) -> {
+        if (!destroying && key != null && (key.startsWith(getString(R.string.key_saved_meditation_name) + "[")
+                || key.equals(getString(R.string.key_saved_meditation_ids)))) {
+            updateSession();
+            if (active) { updateNotification(); }
+        }
+    };
     private PowerManager.WakeLock wakeLock;
     private PlaybackRequest request;
     private List<String> sentences = Collections.emptyList();
@@ -138,14 +153,25 @@ public final class MeditationPlaybackService extends Service {
         wakeLock = ((PowerManager) getSystemService(POWER_SERVICE)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, getPackageName() + ":meditation");
         wakeLock.setReferenceCounted(false);
         session = new MediaSession(this, "Meditation");
-        session.setMetadata(new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE, getString(R.string.app_name))
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, getString(R.string.notification_guided_meditation)).build());
+        mediaArtwork = android.graphics.Bitmap.createBitmap(256, 256, android.graphics.Bitmap.Config.ARGB_8888);
+        android.content.res.TypedArray colors = new android.view.ContextThemeWrapper(this, R.style.Theme_MyMeditation)
+                .obtainStyledAttributes(new int[]{androidx.appcompat.R.attr.colorPrimary});
+        mediaColor = colors.getColor(0, getColor(R.color.purple_500));
+        colors.recycle();
+        mediaArtwork.eraseColor(mediaColor);
+        updateMetadata();
         session.setCallback(new MediaSession.Callback() {
             @Override public void onPlay() { resumePlayback(); }
             @Override public void onPause() { pausePlayback(); }
             @Override public void onStop() { stopPlayback(); }
             @Override public void onCustomAction(String action, android.os.Bundle extras) {
                 if (STOP.equals(action)) { stopPlayback(); }
+            }
+            @Override public void onSeekTo(long milliseconds) {
+                if (mediaTimeline != null && request != null) {
+                    try { startAt(mediaTimeline.sentenceAt(milliseconds)); }
+                    catch (Exception error) { playbackError(error); }
+                }
             }
             @Override public void onSkipToNext() { skip(1); }
             @Override public void onSkipToPrevious() { skip(-1); }
@@ -163,9 +189,9 @@ public final class MeditationPlaybackService extends Service {
                 // Reload saved voice/speed/pause settings and replay from the segment start.
                 resumePlayback();
             }
-            @Override public void onSpeaking(int index) { spokenPosition = index; publish(); }
+            @Override public void onSpeaking(int index) { spokenPosition = index; publish(); updateSession(); }
             @Override public void onSentence(int index) {
-                position = index; PreferenceUtil.setSharedPreferenceString(POSITION, Integer.toString(index)); publish(); updateNotification();
+                position = index; PreferenceUtil.setSharedPreferenceString(POSITION, Integer.toString(index)); publish(); updateSession(); updateNotification();
             }
             @Override public void onRunning(boolean active) {
                 if (destroying || (transition && !active)) { return; }
@@ -191,7 +217,7 @@ public final class MeditationPlaybackService extends Service {
                 recordingWriter.execute(() -> {
                     if (SentenceAudio.store(context).open(recording).isComplete()) {
                         new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
-                                SavedAudioLibrary.keepComplete(context, recording, captured));
+                                retainRecording(context, recording, captured));
                     }
                 });
             }
@@ -205,7 +231,7 @@ public final class MeditationPlaybackService extends Service {
                     try {
                         if (SentenceAudio.store(context).open(recording).played(index)) {
                             new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
-                                    SavedAudioLibrary.keepComplete(context, recording, captured));
+                                    retainRecording(context, recording, captured));
                         }
                     } catch (Exception ignored) {
                         // Audio remains cached; a later playback/save can complete the library recording.
@@ -227,6 +253,7 @@ public final class MeditationPlaybackService extends Service {
         });
         if (Build.VERSION.SDK_INT >= 33) { registerReceiver(noisy, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY), RECEIVER_NOT_EXPORTED); }
         else { registerReceiver(noisy, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)); }
+        androidx.preference.PreferenceManager.getDefaultSharedPreferences(this).registerOnSharedPreferenceChangeListener(mediaNames);
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
@@ -254,7 +281,7 @@ public final class MeditationPlaybackService extends Service {
             } else { if (request == null) { stopSelf(); } }
         }
         else if (SET_PAUSE.equals(action)) {
-            if (request != null) { request = request.withPause(intent.getDoubleExtra("seconds", request.pauseSeconds)); saveRequest(); player.setPauseSeconds(request.pauseSeconds); }
+            if (request != null) { request = request.withPause(intent.getDoubleExtra("seconds", request.pauseSeconds)); saveRequest(); player.setPauseSeconds(request.pauseSeconds); refreshMediaTimeline(false); updateSession(); }
         } else {
             // Foreground registration above also precedes audio focus and synthesis (Android 15+).
             try {
@@ -324,6 +351,7 @@ public final class MeditationPlaybackService extends Service {
             if (Double.compare(previous.speed, updated.speed) == 0 || player.setPlaybackSpeed(updated.speed)) {
                 request = updated;
                 saveRequest();
+                refreshMediaTimeline(false); updateSession();
                 return;
             }
         }
@@ -354,6 +382,7 @@ public final class MeditationPlaybackService extends Service {
         idleHandler.removeCallbacks(stopIdle);
         error = ""; status = ""; keepNotification = false; stopping = false;
         saveRequest();
+        refreshMediaTimeline(false);
         startForeground(NOTIFICATION, notification(true));
         // A renewable CPU-only lease spans speech, pauses and synthesis/retry work.
         wakeLock.acquire(10 * 60 * 1000L);
@@ -429,12 +458,67 @@ public final class MeditationPlaybackService extends Service {
         if (wakeLock != null && wakeLock.isHeld()) { wakeLock.release(); }
     }
     private void publish() { STATE.setValue(new State(running, position, sentences, status, error, errorId, active, request == null ? "" : request.text, spokenPosition, waitingForAudioFocus, savedId, completed)); }
+    private void retainRecording(Context context, PlaybackRequest recording, SavedAudioLibrary.Snapshot captured) {
+        int id = SavedAudioLibrary.keepComplete(context, recording, captured);
+        if (!destroying && active && request == recording) {
+            if (savedId == 0 && id > 0) { savedId = id; saveRequest(); publish(); updateSession(); updateNotification(); }
+            if (mediaTimeline != null && mediaTimeline.estimated) { refreshMediaTimeline(true); }
+        }
+    }
+    private void refreshMediaTimeline(boolean force) {
+        if (request == null || destroying) { return; }
+        String key = SentenceAudioStore.key(request) + ":" + request.speed + ":" + request.pauseSeconds;
+        if (!force && key.equals(timelineKey)) { return; }
+        timelineKey = key;
+        if (!force) { mediaTimeline = null; }
+        int generation = ++timelineGeneration;
+        PlaybackRequest captured = request;
+        recordingWriter.execute(() -> {
+            final MediaTimeline measured;
+            try { measured = MediaTimeline.create(captured, SentenceAudio.store(getApplicationContext()), mediaDurations); }
+            catch (RuntimeException error) {
+                android.util.Log.w("MeditationDuration", "media timeline unavailable exception=" + error.getClass().getSimpleName());
+                return;
+            }
+            idleHandler.post(() -> {
+                if (!destroying && generation == timelineGeneration) { mediaTimeline = measured; updateSession(); }
+            });
+        });
+    }
+    private String mediaTitle() {
+        if (savedId > 0 && PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids).contains(savedId)) {
+            String name = PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, savedId);
+            if (name != null && !name.trim().isEmpty()) { return name.trim(); }
+        }
+        return getString(R.string.notification_guided_meditation);
+    }
+    private void updateMetadata() {
+        String title = mediaTitle();
+        long duration = mediaTimeline == null ? 0 : mediaTimeline.duration;
+        if (title.equals(metadataTitle) && duration == metadataDuration) { return; }
+        metadataTitle = title; metadataDuration = duration;
+        session.setMetadata(new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE, title)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, getString(R.string.app_name))
+                .putLong(MediaMetadata.METADATA_KEY_DURATION, duration)
+                .putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, mediaArtwork)
+                .putBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON, mediaArtwork).build());
+    }
     private void updateSession() {
+        if (session == null || destroying) { return; }
+        updateMetadata();
+        MediaTimeline.Sample sample = player == null ? new MediaTimeline.Sample(position, MediaTimeline.Part.BUFFERING, 0, false) : player.mediaProgress();
+        long elapsed = mediaTimeline == null ? 0 : mediaTimeline.position(sample);
+        boolean advancing = running && sample.advancing;
+        // BUFFERING replaces Android's pause control with a spinner. Keep Pause available
+        // throughout an active run; speed zero freezes progress while the next clip prepares.
+        int state = !active ? PlaybackState.STATE_STOPPED : !running ? PlaybackState.STATE_PAUSED : PlaybackState.STATE_PLAYING;
         session.setPlaybackState(new PlaybackState.Builder().setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE
-                | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_STOP | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS)
-                // Android 13+ derives notification buttons from the session, not Notification actions.
+                | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_STOP | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS
+                | (mediaTimeline != null && mediaTimeline.duration > 0 ? PlaybackState.ACTION_SEEK_TO : 0))
                 .addCustomAction(STOP, getString(R.string.notification_stop), R.drawable.ic_playback_stop)
-                .setState(running ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED, PlaybackState.PLAYBACK_POSITION_UNKNOWN, running ? 1f : 0f).build());
+                .setState(state, elapsed, advancing ? 1f : 0f, android.os.SystemClock.elapsedRealtime()).build());
+        idleHandler.removeCallbacks(mediaTick);
+        if (running) { idleHandler.postDelayed(mediaTick, 1000); }
     }
     private PendingIntent command(String action, int code, boolean foreground) {
         Intent intent = new Intent(this, MeditationPlaybackService.class).setAction(action);
@@ -445,7 +529,8 @@ public final class MeditationPlaybackService extends Service {
         PendingIntent open = PendingIntent.getActivity(this, 0, MainActivity.notificationIntent(this, savedId > 0 ? R.id.navigation_saved_meditations : R.id.navigation_meditation), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         session.setSessionActivity(open);
         String description = status.isEmpty() ? getString(R.string.notification_sentence, getString(active ? R.string.notification_playing : R.string.notification_paused), position + 1, sentences.size()) : status;
-        return new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_launcher_meditation).setContentTitle(getString(R.string.app_name))
+        return new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_launcher_meditation).setContentTitle(mediaTitle()).setLargeIcon(mediaArtwork)
+                .setColor(mediaColor).setColorized(true)
                 .setContentText(description).setContentIntent(open).setDeleteIntent(command(STOP, 5, false))
                 .setOnlyAlertOnce(true).setOngoing(active || waitingForAudioFocus)
                 .setVisibility(Notification.VISIBILITY_PUBLIC).setCategory(Notification.CATEGORY_TRANSPORT)
@@ -460,6 +545,7 @@ public final class MeditationPlaybackService extends Service {
     @Override public IBinder onBind(Intent intent) { return null; }
     @Override public void onDestroy() {
         destroying = true;
+        androidx.preference.PreferenceManager.getDefaultSharedPreferences(this).unregisterOnSharedPreferenceChangeListener(mediaNames);
         idleHandler.removeCallbacksAndMessages(null);
         if (player != null) { player.close(); }
         recordingWriter.shutdown();

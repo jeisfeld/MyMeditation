@@ -23,7 +23,18 @@ import org.robolectric.shadows.util.DataSource;
 import static org.junit.Assert.*;
 import static org.robolectric.Shadows.shadowOf;
 
+@org.robolectric.annotation.Config(shadows = SentencePlaybackServiceTest.CapturedMediaSession.class)
+@org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
 public class SentencePlaybackServiceTest extends BaselineTest {
+    @org.robolectric.annotation.Implements(android.media.session.MediaSession.class)
+    public static class CapturedMediaSession extends org.robolectric.shadows.ShadowMediaSession {
+        android.media.MediaMetadata metadata;
+        android.media.session.PlaybackState playback;
+        android.media.session.MediaSession.Callback callback;
+        @org.robolectric.annotation.Implementation public void setMetadata(android.media.MediaMetadata value) { metadata = value; }
+        @org.robolectric.annotation.Implementation public void setPlaybackState(android.media.session.PlaybackState value) { playback = value; }
+        @org.robolectric.annotation.Implementation public void setCallback(android.media.session.MediaSession.Callback value) { callback = value; }
+    }
     private ServiceController<MeditationPlaybackService> controller;
     private MeditationPlaybackService service;
     private final List<MediaPlayer> players = new ArrayList<>();
@@ -61,6 +72,60 @@ public class SentencePlaybackServiceTest extends BaselineTest {
     }
     private void complete(int index) { shadowOf(players.get(index)).getOnCompletionListener().onCompletion(players.get(index)); idle(); }
     @After public void close() { if (controller != null) { controller.destroy(); idle(); } }
+
+    @Test public void mediaPanelShowsSavedNameVioletArtworkAndProgressThatCanSeek() throws Exception {
+        SentenceAudioStore.Book book = prefetched(1);
+        for (int i = 0; i < book.sentences.size(); i++) {
+            org.robolectric.shadows.ShadowMediaMetadataRetriever.addMetadata(book.audio(i).getAbsolutePath(),
+                    android.media.MediaMetadataRetriever.METADATA_KEY_DURATION, "60000");
+        }
+        int saved = SavedMeditations.save("Abendruhe", "s", "@TEXT@", "c", request(1).text);
+        SavedAudioLibrary.restore(Application.getAppContext(), saved);
+        start(); await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 0);
+        android.media.session.MediaSession session = org.robolectric.util.ReflectionHelpers.getField(service, "session");
+        CapturedMediaSession controls = org.robolectric.shadow.api.Shadow.extract(session);
+        await(() -> controls.metadata.getLong(android.media.MediaMetadata.METADATA_KEY_DURATION) == 120000);
+        assertEquals("Abendruhe", controls.metadata.getString(android.media.MediaMetadata.METADATA_KEY_TITLE));
+        android.graphics.Bitmap artwork = controls.metadata.getBitmap(android.media.MediaMetadata.METADATA_KEY_ALBUM_ART);
+        assertNotNull(artwork);
+        assertEquals(service.getColor(R.color.purple_500), artwork.getPixel(0, 0));
+        assertEquals(artwork.getPixel(0, 0), artwork.getPixel(128, 128));
+        assertEquals(artwork.getPixel(0, 0), artwork.getPixel(128, 40));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
+        assertTrue(controls.playback.getPosition() >= 1000);
+        assertEquals(1f, controls.playback.getPlaybackSpeed(), 0.001);
+        SavedMeditations.rename(saved, "Neue Abendruhe"); idle();
+        assertEquals("Neue Abendruhe", controls.metadata.getString(android.media.MediaMetadata.METADATA_KEY_TITLE));
+        controls.callback.onSeekTo(65000); idle();
+        await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 1);
+        assertTrue(controls.playback.getPosition() >= 60000);
+        service.onStartCommand(new Intent().setAction("meditation.PAUSE"), 0, 2);
+        long paused = controls.playback.getPosition();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
+        assertEquals(paused, controls.playback.getPosition());
+        assertEquals(0f, controls.playback.getPlaybackSpeed(), 0.001);
+    }
+
+    @Test public void mediaPauseRemainsAvailableWhileTheNextSentenceIsPreparing() throws Exception {
+        SentenceAudioStore.Book book = prefetched(1);
+        ShadowMediaPlayer.addMediaInfo(DataSource.toDataSource(book.audio(1).getAbsolutePath()), new ShadowMediaPlayer.MediaInfo(60000, 5000));
+        start();
+        android.media.session.MediaSession session = org.robolectric.util.ReflectionHelpers.getField(service, "session");
+        CapturedMediaSession controls = org.robolectric.shadow.api.Shadow.extract(session);
+        assertEquals(android.media.session.PlaybackState.STATE_PLAYING, controls.playback.getState());
+        assertEquals(0f, controls.playback.getPlaybackSpeed(), 0.001);
+        await(() -> MeditationPlaybackService.state().getValue().spokenPosition == 0);
+        complete(0);
+        await(() -> players.size() == 2);
+        assertEquals(android.media.session.PlaybackState.STATE_PLAYING, controls.playback.getState());
+        assertEquals(0f, controls.playback.getPlaybackSpeed(), 0.001);
+        assertTrue((controls.playback.getActions() & android.media.session.PlaybackState.ACTION_PAUSE) != 0);
+        controls.callback.onPause(); idle();
+        assertEquals(android.media.session.PlaybackState.STATE_PAUSED, controls.playback.getState());
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6));
+        assertFalse(MeditationPlaybackService.state().getValue().running);
+        assertEquals(android.media.session.PlaybackState.STATE_PAUSED, controls.playback.getState());
+    }
 
     @Test public void skippingWaitsStillKeepsOfflineAudioOnceEverySpokenSentenceFinishes() throws Exception {
         String text = "[wait 300s]Breathe slowly.[wait 300s]Relax.[wait 300s]";

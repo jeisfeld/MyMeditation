@@ -64,6 +64,28 @@ public final class MeditationSpeechPlayer {
     private double speed;
     private String style;
     private List<String> sentences;
+    private MediaTimeline.Part progressPart = MediaTimeline.Part.BUFFERING;
+    private long phaseStarted;
+    private int silenceMilliseconds;
+    MediaTimeline.Sample mediaProgress() {
+        long elapsed = Math.max(0, android.os.SystemClock.elapsedRealtime() - phaseStarted);
+        boolean advancing = running && (progressPart == MediaTimeline.Part.SPEECH || progressPart == MediaTimeline.Part.SILENCE);
+        if (progressPart == MediaTimeline.Part.SPEECH && media != null) {
+            try {
+                elapsed = Math.round(media.getCurrentPosition() / (backend == SpeechBackend.OPENAI ? 1.0 : speed));
+                advancing &= media.isPlaying();
+            } catch (IllegalStateException ignored) { advancing = false; }
+        } else if (progressPart == MediaTimeline.Part.SILENCE) {
+            advancing &= elapsed < silenceMilliseconds;
+            elapsed = Math.min(elapsed, silenceMilliseconds);
+        }
+        return new MediaTimeline.Sample(index, progressPart, elapsed, advancing);
+    }
+    private void speaking() {
+        progressPart = MediaTimeline.Part.SPEECH;
+        phaseStarted = android.os.SystemClock.elapsedRealtime();
+        listener.onSpeaking(index);
+    }
     private PlaybackRequest recordingRequest;
 
     private static final class Download {
@@ -134,7 +156,7 @@ public final class MeditationSpeechPlayer {
                 tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                     @Override public void onStart(String id) {
                         int spoken = Integer.parseInt(id.substring(id.lastIndexOf('-') + 1));
-                        handler.post(() -> { if (valid(token) && index == spoken) { listener.onSpeaking(spoken); } });
+                        handler.post(() -> { if (valid(token) && index == spoken) { speaking(); } });
                     }
                     @Override public void onDone(String id) {
                         handler.post(() -> {
@@ -222,6 +244,7 @@ public final class MeditationSpeechPlayer {
 
     private void next(int token, boolean first) {
         if (!valid(token)) { return; }
+        progressPart = MediaTimeline.Part.BUFFERING;
         listener.onSentence(index);
         double pause = MeditationPauses.seconds(sentences.get(index));
         if (pause >= 0) {
@@ -290,7 +313,7 @@ public final class MeditationSpeechPlayer {
                         if (backend != SpeechBackend.OPENAI) {
                             player.setPlaybackParams(new android.media.PlaybackParams().setSpeed((float) speed).setPitch(1.0f));
                         }
-                        listener.onSpeaking(index);
+                        speaking();
                     } catch (RuntimeException e) { fail(UiText.PLAYBACK_SPEED_FAILED.text()); }
                 }
             });
@@ -351,6 +374,8 @@ public final class MeditationSpeechPlayer {
     }
 
     private void waitSilently(int duration, int token, Runnable action) {
+        progressPart = MediaTimeline.Part.SILENCE;
+        phaseStarted = android.os.SystemClock.elapsedRealtime(); silenceMilliseconds = duration;
         // Keep Bluetooth output awake across meditation pauses.
         if (duration > 0) {
             try {
@@ -368,6 +393,7 @@ public final class MeditationSpeechPlayer {
         handler.postDelayed(() -> {
             if (!valid(token)) { return; }
             releaseSilence();
+            progressPart = MediaTimeline.Part.READY;
             action.run();
         }, duration);
     }
@@ -396,6 +422,7 @@ public final class MeditationSpeechPlayer {
     private void stopPlaybackResources() {
         session++;
         running = false;
+        progressPart = MediaTimeline.Part.BUFFERING;
         planning = false; finishing = false; awaitingCompletion = false;
         // Do not remove handler messages here: a focus GAIN may already be queued.
         for (Download job : downloads.values()) { job.cancelled = true; job.request.cancel(); job.result.cancel(true); }
