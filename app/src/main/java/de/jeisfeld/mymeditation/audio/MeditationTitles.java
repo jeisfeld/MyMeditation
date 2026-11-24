@@ -42,16 +42,38 @@ public final class MeditationTitles {
     public static String nextNumber(String name) {
         String base = name == null ? "" : name.trim();
         if (base.isEmpty()) { base = de.jeisfeld.mymeditation.Application.getAppContext().getString(R.string.default_offline_name); }
+        int postfixStart = postfixStart(base);
+        String postfix = base.substring(postfixStart);
+        base = base.substring(0, postfixStart).trim();
         Matcher original = NUMBER.matcher(base);
         BigInteger maximum = BigInteger.ONE;
         if (original.matches()) { base = original.group(1); maximum = maximum.max(new BigInteger(original.group(2))); }
         for (int id : PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids)) {
             String saved = PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, id);
-            Matcher match = NUMBER.matcher(saved == null ? "" : saved);
+            String title = saved == null ? "" : saved.trim();
+            Matcher match = NUMBER.matcher(title.substring(0, postfixStart(title)).trim());
             if (match.matches() && base.equals(match.group(1))) { maximum = maximum.max(new BigInteger(match.group(2))); }
         }
-        return base + " " + maximum.add(BigInteger.ONE);
+        return base + " " + maximum.add(BigInteger.ONE) + (postfix.isEmpty() ? "" : " " + postfix);
     }
+    /** Strip only balanced trailing parenthetical groups; parentheses inside the topic remain part of its series. */
+    private static int postfixStart(String title) {
+        int end = title.length(), start = end;
+        while (end > 0 && title.charAt(end - 1) == ')') {
+            int depth = 0, opening = -1;
+            for (int i = end - 1; i >= 0; i--) {
+                char value = title.charAt(i);
+                if (value == ')') { depth++; }
+                else if (value == '(' && --depth == 0) { opening = i; break; }
+            }
+            if (opening < 0) { break; }
+            start = opening; end = opening;
+            while (end > 0 && Character.isWhitespace(title.charAt(end - 1))) { end--; }
+        }
+        // A title made entirely of parentheses has no separate topic to number.
+        return end == 0 ? title.length() : start;
+    }
+
     static String unique(String name, int excludingId) {
         for (int id : PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids)) {
             if (id != excludingId && name.equals(PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, id))) {

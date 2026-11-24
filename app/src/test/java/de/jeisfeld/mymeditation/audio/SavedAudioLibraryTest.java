@@ -165,6 +165,21 @@ public class SavedAudioLibraryTest extends BaselineTest {
         assertEquals(SentenceAudioStore.key(request()), SavedAudioLibrary.book(Application.getAppContext(), source).identity);
         assertEquals(variant.identity, SavedAudioLibrary.book(Application.getAppContext(), saved).identity);
     }
+    @Test public void automaticSavePreservesPostfixAndContinuesTheWholeSeriesAfterGeneration() throws Exception {
+        audio(true);
+        SavedMeditations.save("Medi 1", "s", "q", "c", "Other.");
+        SavedMeditations.save("Medi 2 (extended)", "s", "q", "c", "Other.");
+        SavedMeditations.save("Medi 3", "s", "q", "c", "Other.");
+        int source = SavedMeditations.save("Medi 4 (Short)", "s", "q", "c", "Original text.");
+        SavedAudioLibrary.restore(Application.getAppContext(), source);
+        SavedAudioLibrary.clearSource();
+        PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_text, request().text);
+        int saved = SavedAudioLibrary.keepComplete(Application.getAppContext(), request(), SavedAudioLibrary.Snapshot.current(Application.getAppContext()));
+        assertNotEquals(source, saved);
+        assertEquals("Medi 5 (Short)", PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, saved));
+        assertEquals("Medi 4 (Short)", PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, source));
+    }
+
     @Test public void editingRestoredTextDetachesItsSourceAndDoesNotOverwriteTheSavedEntry() {
         int source = SavedMeditations.save("Original", "s", "q", "c", request().text);
         SavedAudioLibrary.restore(Application.getAppContext(), source);

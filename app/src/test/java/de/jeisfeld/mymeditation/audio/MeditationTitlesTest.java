@@ -55,6 +55,32 @@ public class MeditationTitlesTest extends BaselineTest {
         assertEquals("Wald 1000000000000000000000", MeditationTitles.nextNumber("Wald 999999999999999999999"));
         assertTrue(ShadowTitleAi.contents.isEmpty());
     }
+    @Test public void parentheticalPostfixesShareNumberingAndTheSelectedPostfixIsPreservedInManualSuggestions() {
+        save("Medi 1", "First topic"); save("Medi 2 (extended)", "Extended topic"); save("Medi 3", "Third topic");
+        int shortVersion = save("Medi 4 (Short)", "Short topic");
+        assertEquals("Medi 5", MeditationTitles.nextNumber("Medi 1"));
+        assertEquals("Medi 5 (Short)", MeditationTitles.nextNumber("Medi 4 (Short)"));
+        assertEquals("Medi 5 (extended)", MeditationTitles.nextNumber("Medi 2 (extended)"));
+        assertEquals("Medi 5 (New variant)", MeditationTitles.nextNumber("Medi (New variant)"));
+        SavedAudioLibrary.restore(Application.getAppContext(), shortVersion);
+        assertEquals("Medi 5 (Short)", suggestion("Short topic"));
+        assertEquals("Medi 5 (Short)", manual().getText().toString());
+        assertTrue(ShadowTitleAi.contents.isEmpty());
+        assertEquals("Medi 4 (Short)", PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, shortVersion));
+    }
+    @Test public void onlyTrailingPostfixesAreIgnoredIncludingNestedAndRepeatedGroups() {
+        save("Focus (Work) 7 (Extended)", "Topic");
+        save("Focus 99 (Other)", "Unrelated series");
+        save("Focus (Work) 3 (10 minutes)", "Topic");
+        assertEquals("Focus (Work) 8 (Short (5 min)) (DE)",
+                MeditationTitles.nextNumber("  Focus (Work) 2 (Short (5 min)) (DE)  "));
+        assertEquals("Focus (Work) 8 (Short)", MeditationTitles.nextNumber("Focus (Work) 2(Short)"));
+        assertEquals("(Title) 2", MeditationTitles.nextNumber("(Title)"));
+        assertEquals("Focus 2 (unfinished 2", MeditationTitles.nextNumber("Focus 2 (unfinished"));
+        assertEquals("Medi 1000000000000000000000 (Short)",
+                MeditationTitles.nextNumber("Medi 999999999999999999999 (Short)"));
+    }
+
     @Test public void titleRequestsCoalesceCacheAndDoNotConfuseDifferentContentOrModels() {
         ShadowTitleAi.deferred = true;
         List<String> first = new ArrayList<>(), second = new ArrayList<>();

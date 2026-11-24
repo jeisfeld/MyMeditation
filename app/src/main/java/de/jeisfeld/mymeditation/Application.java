@@ -48,7 +48,7 @@ public class Application extends android.app.Application {
 			PreferenceUtil.setSharedPreferenceString(R.string.key_meditation_content, "Ich versetze mich in eine Zukunft hinein, in der ich anderen Menschen diene und finde darin meine Erfüllung.");
 		}
 		if (PreferenceUtil.getSharedPreferenceInt(R.string.key_pause_duration, -1) == -1) {
-			PreferenceUtil.setSharedPreferenceInt(R.string.key_pause_duration, 15);
+			PreferenceUtil.setSharedPreferenceInt(R.string.key_pause_duration, 1);
 		}
 	}
 }
