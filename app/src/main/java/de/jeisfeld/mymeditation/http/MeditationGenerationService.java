@@ -110,7 +110,7 @@ public final class MeditationGenerationService extends Service {
     private Notification notification(boolean active, String message) {
         PendingIntent open = PendingIntent.getActivity(this, NOTIFICATION, MainActivity.notificationIntent(this, R.id.navigation_meditation),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        Notification.Builder builder = new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_saved_meditations)
+        Notification.Builder builder = new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_launcher_meditation)
                 .setContentTitle(getString(R.string.button_create_meditation)).setContentText(message)
                 .setStyle(new Notification.BigTextStyle().bigText(message)).setContentIntent(open)
                 .setOngoing(active).setOnlyAlertOnce(true).setAutoCancel(!active);

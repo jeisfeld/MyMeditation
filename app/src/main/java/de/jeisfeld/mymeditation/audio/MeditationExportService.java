@@ -150,7 +150,7 @@ public final class MeditationExportService extends Service {
         PendingIntent open = PendingIntent.getActivity(this, 0, MainActivity.notificationIntent(this,
                 R.id.navigation_saved_meditations), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         PendingIntent cancel = PendingIntent.getService(this, 43, new Intent(this, MeditationExportService.class).setAction(CANCEL), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        return new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_saved_meditations)
+        return new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_launcher_meditation)
                 .setContentTitle(getString(R.string.button_share_offline)).setContentText(status).setContentIntent(open)
                 .setOngoing(true).setOnlyAlertOnce(true).setProgress(0, 0, true)
                 .addAction(new Notification.Action.Builder(R.drawable.ic_playback_stop, getString(R.string.button_cancel), cancel).build()).build();

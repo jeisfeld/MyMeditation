@@ -119,7 +119,7 @@ public final class MeditationOfflineService extends Service {
     private Notification notification(boolean active, String status) {
         PendingIntent open = PendingIntent.getActivity(this, 44, MainActivity.notificationIntent(this, R.id.navigation_saved_meditations), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         PendingIntent cancel = PendingIntent.getService(this, 44, new Intent(this, MeditationOfflineService.class).setAction(CANCEL), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        return new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_saved_meditations).setContentTitle(name)
+        return new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_launcher_meditation).setContentTitle(name)
                 .setContentText(status).setContentIntent(open).setOngoing(active).setOnlyAlertOnce(true)
                 .setProgress(100, coverage == null ? 0 : coverage.perMille / 10, coverage == null)
                 .addAction(new Notification.Action.Builder(R.drawable.ic_playback_stop, getString(R.string.button_cancel), cancel).build()).build();

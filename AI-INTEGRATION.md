@@ -2,6 +2,8 @@
 
 Create Meditation calls the selected provider directly over HTTPS. Configure its native model ID in **Configuration → AI settings**. Existing prompts, the `@TEXT@` query template, and saved model selection are retained. Speak Meditation supports device TTS or OpenAI speech.
 
+Foreground service notifications for text generation, offline preparation, MP3 export and playback use the standalone monochrome meditation symbol from the app icon. Playback retains Android MediaStyle controls; Android and channel settings determine status-bar visibility.
+
 ## Long-running text generation
 
 Meditation generation uses a foreground `dataSync` service with an ongoing notification and Cancel action. A bounded partial wake lock keeps it running while switching apps or turning the screen off. The original draft remains visible and can still be played, but its text is read-only while generation is active. Editing returns when both generation and playback are inactive. The draft is preserved on failure or cancellation. Completed text is stored before notifying the UI; pending results/errors survive activity recreation and are delivered on return. Android process termination or force-stop interrupts the request; a persisted pending marker reports the interruption on reopening rather than silently resubmitting a potentially billed request. Duplicate starts do not send another request.
