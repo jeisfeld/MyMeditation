@@ -28,7 +28,7 @@ import static org.junit.Assert.*;
 public class MeditationGenerationServiceTest extends BaselineTest {
     @Implements(value = AiClient.class, isInAndroidSdk = false)
     public static class ShadowGenerationAi extends ShadowTitleAi {
-        static final List<AiClient.Callback> generations = new ArrayList<>();
+        public static final List<AiClient.Callback> generations = new ArrayList<>();
         static int cancellations;
         @Implementation public static AiClient.Call create(String model, String system, String prompt, AiClient.Callback callback) {
             generations.add(callback); return () -> cancellations++;
@@ -51,8 +51,10 @@ public class MeditationGenerationServiceTest extends BaselineTest {
     @Test public void generationSurvivesActivityRecreationAndCompletionWhileBackgrounded() {
         start(); open();
         assertTrue(state().active); assertTrue(lock().isHeld());
+        assertNull(((EditText) activity.get().findViewById(R.id.editTextMeditationText)).getKeyListener());
         assertFalse(((Button) activity.get().findViewById(R.id.buttonCreateMeditation)).isEnabled());
         activity.recreate(); idle();
+        assertNull(((EditText) activity.get().findViewById(R.id.editTextMeditationText)).getKeyListener());
         assertFalse(((Button) activity.get().findViewById(R.id.buttonCreateMeditation)).isEnabled());
         activity.pause().stop();
         ShadowGenerationAi.generations.get(0).complete("Long generated meditation.", null); idle();
@@ -61,6 +63,7 @@ public class MeditationGenerationServiceTest extends BaselineTest {
         activity.restart().start().resume().visible(); idle();
         assertEquals("Long generated meditation.", ((EditText) activity.get().findViewById(R.id.editTextMeditationText)).getText().toString());
         assertTrue(((Button) activity.get().findViewById(R.id.buttonCreateMeditation)).isEnabled());
+        assertNotNull(((EditText) activity.get().findViewById(R.id.editTextMeditationText)).getKeyListener());
         assertEquals(1, ShadowGenerationAi.generations.size());
         assertTrue(state().resultId.isEmpty());
     }
@@ -73,6 +76,7 @@ public class MeditationGenerationServiceTest extends BaselineTest {
         assertTrue(dialog.isShowing());
         assertEquals("Timed out while waiting", ((android.widget.TextView) dialog.findViewById(android.R.id.message)).getText().toString());
         assertFalse(lock().isHeld()); assertTrue(state().resultId.isEmpty());
+        assertNotNull(((EditText) activity.get().findViewById(R.id.editTextMeditationText)).getKeyListener());
     }
     @Test public void duplicateStartsDoNotSubmitAnotherBilledRequestAndCancellationIgnoresLateResult() {
         start(); service.get().onStartCommand(command(), 0, 2);

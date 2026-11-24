@@ -30,6 +30,7 @@ public class MeditationFragment extends Fragment {
     private FragmentMeditationBinding binding;
     private List<String> sentences;
     private boolean reading;
+    private boolean generating;
     private android.text.method.KeyListener editorKeyListener;
     private int editorInputType;
     private int highlightedPosition = -2;
@@ -244,6 +245,8 @@ public class MeditationFragment extends Fragment {
         });
 
         MeditationGenerationService.state().observe(getViewLifecycleOwner(), state -> {
+            generating = state.active;
+            updateEditorEditability();
             binding.buttonCreateMeditation.setEnabled(!state.active);
             binding.buttonCreateMeditation.setText(state.active ? R.string.text_creating_meditation : R.string.button_create_meditation);
             if (!state.active && !state.resultId.isEmpty()) {
@@ -535,21 +538,30 @@ public class MeditationFragment extends Fragment {
         binding.meditationPlaybackSection.setVisibility(editing ? View.GONE : View.VISIBLE);
     }
 
+    private void updateEditorEditability() {
+        android.widget.EditText editor = binding.editTextMeditationText;
+        boolean editable = !reading && !generating;
+        if ((editor.getKeyListener() != null) == editable) { return; }
+        editor.setKeyListener(editable ? editorKeyListener : null);
+        editor.setRawInputType(editable ? editorInputType : android.text.InputType.TYPE_NULL);
+        editor.setCursorVisible(editable);
+        editor.setShowSoftInputOnFocus(editable);
+        if (!editable) {
+            editor.clearFocus();
+            ((android.view.inputmethod.InputMethodManager) requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE))
+                    .hideSoftInputFromWindow(editor.getWindowToken(), 0);
+        }
+        if (pageInsets != null) { pageInsets.refresh(); }
+    }
+
     private void renderReadingMode(MeditationPlaybackService.State state) {
         android.widget.EditText editor = binding.editTextMeditationText;
         if (reading != state.active) {
             int scrollX = editor.getScrollX(), scrollY = editor.getScrollY();
             reading = state.active;
 
-            editor.setKeyListener(reading ? null : editorKeyListener);
-            editor.setRawInputType(reading ? android.text.InputType.TYPE_NULL : editorInputType);
-            editor.setCursorVisible(!reading);
-            editor.setShowSoftInputOnFocus(!reading);
-            if (reading) {
-                editor.clearFocus();
-                ((android.view.inputmethod.InputMethodManager) requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE))
-                        .hideSoftInputFromWindow(editor.getWindowToken(), 0);
-            } else {
+            updateEditorEditability();
+            if (!reading) {
                 String draft = meditationViewModel.getMeditationText().getValue();
                 if (!editor.getText().toString().equals(draft)) { editor.setText(draft); }
                 int[] current = de.jeisfeld.mymeditation.audio.SpokenTextRanges.range(editor.getText().toString(), state.sentences, state.position);
@@ -595,7 +607,7 @@ public class MeditationFragment extends Fragment {
     }
 
     private void selectCursorSentence(int offset) {
-        if (binding == null || reading || !binding.editTextMeditationText.hasFocus()) { return; }
+        if (binding == null || reading || generating || !binding.editTextMeditationText.hasFocus()) { return; }
         String text = binding.editTextMeditationText.getText().toString();
         List<String> segments;
         try { segments = SpeechSegments.split(text, speechBackend().segmentLimit); }
