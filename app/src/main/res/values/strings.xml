@@ -147,4 +147,5 @@
     <string name="meditation_duration_format">Enter minutes:seconds, for example 20:00.</string>
     <string name="meditation_duration_range">Enter a duration from %1$s to %2$s.</string>
     <string name="meditation_duration_changed">The meditation or speech settings changed. Close this dialog and tap the updated duration again.</string>
+    <string name="generation_ready">Meditation created. Tap to open.</string>
 </resources>

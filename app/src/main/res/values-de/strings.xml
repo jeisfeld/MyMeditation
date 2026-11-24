@@ -131,4 +131,5 @@
     <string name="meditation_duration_format">Gib Minuten:Sekunden ein, zum Beispiel 20:00.</string>
     <string name="meditation_duration_range">Gib eine Dauer zwischen %1$s und %2$s ein.</string>
     <string name="meditation_duration_changed">Die Meditation oder die Spracheinstellungen wurden geändert. Schließe diesen Dialog und tippe erneut auf die aktualisierte Dauer.</string>
+    <string name="generation_ready">Meditation erstellt. Zum Öffnen tippen.</string>
 </resources>

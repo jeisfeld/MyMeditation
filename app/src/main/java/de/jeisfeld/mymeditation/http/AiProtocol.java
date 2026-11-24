@@ -76,7 +76,7 @@ final class AiProtocol {
         StringBuilder text = new StringBuilder();
         switch (provider) {
             case CLAUDE:
-                requireComplete(provider, "end_turn".equals(response.optString("stop_reason")));
+                requireComplete(provider, "end_turn".equals(response.optString("stop_reason")), "max_tokens".equals(response.optString("stop_reason")));
                 JSONArray blocks = response.getJSONArray("content");
                 for (int i = 0; i < blocks.length(); i++) {
                     JSONObject block = blocks.getJSONObject(i);
@@ -84,7 +84,9 @@ final class AiProtocol {
                 }
                 break;
             case OPENAI:
-                requireComplete(provider, "completed".equals(response.optString("status")));
+                requireComplete(provider, "completed".equals(response.optString("status")),
+                        response.optJSONObject("incomplete_details") != null && "max_output_tokens".equals(
+                                response.getJSONObject("incomplete_details").optString("reason")));
                 JSONArray output = response.getJSONArray("output");
                 for (int i = 0; i < output.length(); i++) {
                     JSONObject item = output.getJSONObject(i);
@@ -100,7 +102,7 @@ final class AiProtocol {
                 JSONArray candidates = response.optJSONArray("candidates");
                 requireComplete(provider, candidates != null && candidates.length() > 0);
                 JSONObject candidate = candidates.getJSONObject(0);
-                requireComplete(provider, "STOP".equals(candidate.optString("finishReason")));
+                requireComplete(provider, "STOP".equals(candidate.optString("finishReason")), "MAX_TOKENS".equals(candidate.optString("finishReason")));
                 JSONArray parts = candidate.getJSONObject("content").getJSONArray("parts");
                 for (int i = 0; i < parts.length(); i++) {
                     JSONObject part = parts.getJSONObject(i);
@@ -112,7 +114,7 @@ final class AiProtocol {
             case KIMI:
             case QWEN:
                 JSONObject choice = response.getJSONArray("choices").getJSONObject(0);
-                requireComplete(provider, "stop".equals(choice.optString("finish_reason")));
+                requireComplete(provider, "stop".equals(choice.optString("finish_reason")), "length".equals(choice.optString("finish_reason")));
                 text.append(choice.getJSONObject("message").optString("content", ""));
                 break;
             default:
@@ -127,7 +129,12 @@ final class AiProtocol {
     }
 
     private static void requireComplete(AiProvider provider, boolean complete) {
+        requireComplete(provider, complete, false);
+    }
+
+    private static void requireComplete(AiProvider provider, boolean complete, boolean outputLimit) {
         if (!complete) {
+            if (outputLimit) { throw new IllegalStateException(UiText.AI_OUTPUT_LIMIT.text(provider.displayName)); }
             throw new IllegalStateException(UiText.INCOMPLETE_MEDITATION.text(provider.displayName));
         }
     }

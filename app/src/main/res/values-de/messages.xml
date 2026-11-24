@@ -12,7 +12,7 @@
     <string name="message_service_start_failed">Die Meditation konnte nicht gestartet werden. Öffne die App und versuche es erneut.</string>
     <string name="message_visible_service_failed">Der Wiedergabedienst konnte nicht gestartet werden. Versuche es erneut, während die App sichtbar ist.</string>
     <string name="message_connection_again">Prüfe die Verbindung und versuche es erneut.</string>
-    <string name="message_create_failed">Die Meditation konnte nicht erstellt werden. Prüfe die Verbindung und deinen lokalen API-Schlüssel und versuche es erneut.</string>
+    <string name="message_create_failed">Die Meditation konnte wegen eines unerwarteten Fehlers nicht erstellt werden. Details findest du in Logcat (MeditationGeneration).</string>
     <string name="message_unsupported_model">Nicht unterstützte Modell-ID. Verwende claude-, gpt-, chatgpt-, ein OpenAI-Modell der o-Serie, gemini-, grok-, deepseek-, kimi-/moonshot- oder qwen-/qwen3-.</string>
     <string name="message_invalid_gemini_model">Ungültige Gemini-Modell-ID.</string>
     <string name="message_unsupported_provider">Nicht unterstützter Anbieter.</string>
@@ -69,4 +69,12 @@
     <string name="message_eleven_retry">ElevenLabs ist vorübergehend nicht verfügbar. Neuer Versuch in %1$d s (Wiederholung %2$d). Zum Anhalten pausieren.</string>
     <string name="message_gemini_incomplete_reason">Gemini hat eine unvollständige Sprachausgabe zurückgegeben (Abschlussgrund: %1$s).</string>
     <string name="message_waiting_for_audio_focus">Für eine andere Audioausgabe pausiert. Danach wird dieser Abschnitt wiederholt.</string>
+    <string name="message_ai_timeout">Zeitüberschreitung beim Verbinden oder Warten auf die KI-Antwort. Versuche es erneut oder fordere eine kürzere Meditation an.</string>
+    <string name="message_ai_tls_failed">Die sichere Verbindung zum KI-Anbieter konnte nicht hergestellt werden oder wurde unterbrochen. Prüfe deine Verbindung und das Gerätedatum.</string>
+    <string name="message_ai_network_failed">Die Verbindung zum KI-Anbieter ist fehlgeschlagen oder wurde während der Erstellung unterbrochen. Prüfe deine Verbindung und versuche es erneut.</string>
+    <string name="message_ai_invalid_response">Der KI-Anbieter hat ein ungültiges oder unvollständiges Antwortformat geliefert. Versuche es erneut.</string>
+    <string name="message_ai_output_limit">%1$s hat die Erstellung wegen des Ausgabelimits beendet. Fordere eine kürzere Meditation an oder wähle ein anderes Modell. Längeres Warten vervollständigt diese Antwort nicht.</string>
+    <string name="message_generation_interrupted">Die Meditationserstellung wurde durch Android oder das Beenden der App unterbrochen. Dein bisheriger Text wurde behalten. Bitte starte die Erstellung erneut.</string>
+    <string name="message_generation_cancelled">Die Meditationserstellung wurde abgebrochen. Dein bisheriger Text wurde behalten.</string>
+    <string name="message_generation_start_failed">Die Meditationserstellung konnte nicht gestartet werden. Lasse die App im Vordergrund und versuche es erneut.</string>
 </resources>

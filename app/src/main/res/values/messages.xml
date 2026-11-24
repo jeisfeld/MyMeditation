@@ -12,7 +12,7 @@
     <string name="message_service_start_failed">Could not start meditation playback. Please open the app and try again.</string>
     <string name="message_visible_service_failed">Could not start the playback service. Please try again while the app is visible.</string>
     <string name="message_connection_again">Check your connection and try again.</string>
-    <string name="message_create_failed">Could not create meditation. Check your connection and local API key, then try again.</string>
+    <string name="message_create_failed">Could not create meditation because of an unexpected error. Details are available in Logcat (MeditationGeneration).</string>
     <string name="message_unsupported_model">Unsupported model ID. Use claude-, gpt-, chatgpt-, an OpenAI o-series model, gemini-, grok-, deepseek-, kimi-/moonshot-, or qwen-/qwen3-.</string>
     <string name="message_invalid_gemini_model">Invalid Gemini model ID.</string>
     <string name="message_unsupported_provider">Unsupported provider.</string>
@@ -69,4 +69,12 @@
     <string name="message_eleven_retry">ElevenLabs temporarily unavailable. Retrying in %1$d s (retry %2$d). Pause to stop.</string>
     <string name="message_gemini_incomplete_reason">Gemini returned incomplete speech (finish reason: %1$s).</string>
     <string name="message_waiting_for_audio_focus">Paused for other audio. This passage will repeat when it ends.</string>
+    <string name="message_ai_timeout">The AI request timed out while connecting or waiting for a response. Try again or request a shorter meditation.</string>
+    <string name="message_ai_tls_failed">A secure connection to the AI provider could not be established or was interrupted. Check your connection and device date.</string>
+    <string name="message_ai_network_failed">The connection to the AI provider failed or was interrupted during generation. Check your connection and try again.</string>
+    <string name="message_ai_invalid_response">The AI provider returned an invalid or incomplete response format. Please try again.</string>
+    <string name="message_ai_output_limit">%1$s stopped because the response reached its output token limit. Request a shorter meditation or choose another model. Waiting longer will not complete this response.</string>
+    <string name="message_generation_interrupted">Meditation generation was interrupted by Android or by stopping the app. Your previous text was kept. Please start generation again.</string>
+    <string name="message_generation_cancelled">Meditation generation was cancelled. Your previous text was kept.</string>
+    <string name="message_generation_start_failed">Could not start meditation generation. Keep the app visible and try again.</string>
 </resources>

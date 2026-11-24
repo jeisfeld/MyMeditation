@@ -2,6 +2,14 @@
 
 Create Meditation calls the selected provider directly over HTTPS. Configure its native model ID in **Configuration → AI settings**. Existing prompts, the `@TEXT@` query template, and saved model selection are retained. Speak Meditation supports device TTS or OpenAI speech.
 
+## Long-running text generation
+
+Meditation generation uses a foreground `dataSync` service with an ongoing notification and Cancel action. A bounded partial wake lock keeps it running while switching apps or turning the screen off. The original draft remains visible and is preserved on failure or cancellation. Completed text is stored before notifying the UI; pending results/errors survive activity recreation and are delivered on return. Android process termination or force-stop interrupts the request; a persisted pending marker reports the interruption on reopening rather than silently resubmitting a potentially billed request. Duplicate starts do not send another request.
+
+Text-generation connections have a 15-second connection timeout and a 10-minute read timeout (previously 3 minutes). Title prefetch retains its 30-second read timeout. The foreground operation has a 12-minute overall deadline, and cancellation/timeout disconnects the request and ignores late callbacks. There are no automatic text-generation retries.
+
+Errors distinguish a request timeout, TLS failure, other connection failures, malformed response data and provider output-token limits. Output limits still reject truncated meditations; waiting longer cannot complete a response the provider has already terminated. Request token budgets remain provider-specific. Unexpected errors report a Logcat reference instead of blaming API keys. The `MeditationGeneration` tag records request kind, provider, stage, exception class and elapsed seconds; it never logs keys, prompts, response content, remote error text or URLs. A longer client timeout cannot prevent a provider or intermediary from terminating a request earlier.
+
 ## Configuration page
 
 System instruction and Query template are the first two sections. The AI settings section below them provides four directly accessible dropdowns: AI model presets, Speech output, Speech model and Voice. Each selection saves immediately; speech changes also apply to a running meditation. The lists retain the current custom model ID, remember provider-specific model/voice selections, and use the existing model-specific voice catalogs and named ElevenLabs voices. Device TTS shows disabled model/voice controls with “Device default”. To use ElevenLabs, first add a voice in the full dialog if none is saved.

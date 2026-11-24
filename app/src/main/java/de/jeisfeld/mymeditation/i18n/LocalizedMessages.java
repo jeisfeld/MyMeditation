@@ -25,6 +25,14 @@ public final class LocalizedMessages {
             case SERVICE_START_FAILED: return R.string.message_service_start_failed;
             case VISIBLE_SERVICE_FAILED: return R.string.message_visible_service_failed;
             case CONNECTION_AGAIN: return R.string.message_connection_again;
+            case AI_TIMEOUT: return R.string.message_ai_timeout;
+            case AI_TLS_FAILED: return R.string.message_ai_tls_failed;
+            case AI_NETWORK_FAILED: return R.string.message_ai_network_failed;
+            case AI_INVALID_RESPONSE: return R.string.message_ai_invalid_response;
+            case AI_OUTPUT_LIMIT: return R.string.message_ai_output_limit;
+            case GENERATION_INTERRUPTED: return R.string.message_generation_interrupted;
+            case GENERATION_CANCELLED: return R.string.message_generation_cancelled;
+            case GENERATION_START_FAILED: return R.string.message_generation_start_failed;
             case CREATE_FAILED: return R.string.message_create_failed;
             case UNSUPPORTED_MODEL: return R.string.message_unsupported_model;
             case INVALID_GEMINI_MODEL: return R.string.message_invalid_gemini_model;

@@ -57,6 +57,7 @@ public class LocalizationTest {
     @Test public void runtimeMessagesUseTheSameEnglishFallbackAsAndroidResources() throws Exception {
         Map<String, Element> english = entries("values");
         for (UiText message : UiText.values()) {
+            assertNotEquals(message.name(), 0, LocalizedMessages.resource(message));
             Element value = english.get("message_" + message.name().toLowerCase(Locale.ROOT));
             assertNotNull(message.name(), value);
             assertEquals(message.name(), message.english, value.getTextContent());

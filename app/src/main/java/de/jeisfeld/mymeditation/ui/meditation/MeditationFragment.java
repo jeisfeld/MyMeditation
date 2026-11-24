@@ -21,7 +21,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import de.jeisfeld.mymeditation.R;
 import de.jeisfeld.mymeditation.databinding.FragmentMeditationBinding;
-import de.jeisfeld.mymeditation.http.AiClient;
+import de.jeisfeld.mymeditation.http.MeditationGenerationService;
 import de.jeisfeld.mymeditation.util.PreferenceUtil;
 
 public class MeditationFragment extends Fragment {
@@ -243,6 +243,23 @@ public class MeditationFragment extends Fragment {
             }
         });
 
+        MeditationGenerationService.state().observe(getViewLifecycleOwner(), state -> {
+            binding.buttonCreateMeditation.setEnabled(!state.active);
+            binding.buttonCreateMeditation.setText(state.active ? R.string.text_creating_meditation : R.string.button_create_meditation);
+            if (!state.active && !state.resultId.isEmpty()) {
+                if (state.error == null && state.text != null) {
+                    meditationViewModel.setMeditationText(state.text);
+                    sentences = splitIntoIndividualSentences(state.text);
+                    meditationViewModel.setSeekBarMax(Math.max(0, sentences.size() - 1));
+                    meditationViewModel.setSeekBarProgress(0);
+                } else if (state.error != null) {
+                    new AlertDialog.Builder(requireContext()).setTitle(R.string.button_create_meditation)
+                            .setMessage(state.error).setPositiveButton(R.string.button_ok, null).show();
+                }
+                MeditationGenerationService.acknowledge(state.resultId);
+            }
+        });
+
         binding.buttonCreateMeditation.setOnClickListener(v -> {
             de.jeisfeld.mymeditation.audio.SavedAudioLibrary.clearSource();
             // postValue updates the ViewModel asynchronously; build this request from the visible text.
@@ -253,24 +270,14 @@ public class MeditationFragment extends Fragment {
             String systemMessage = PreferenceUtil.getSharedPreferenceString(R.string.key_system_prompt);
             String queryTemplate = PreferenceUtil.getSharedPreferenceString(R.string.key_query_template);
             String userMessage = MeditationPrompt.render(queryTemplate, meditationContent);
-            String oldMeditation = meditationViewModel.getMeditationText().getValue();
-            meditationViewModel.setMeditationText(getString(R.string.text_creating_meditation));
-            binding.buttonCreateMeditation.setEnabled(false);
+            meditationViewModel.setMeditationText(binding.editTextMeditationText.getText().toString());
             String model = PreferenceUtil.getSharedPreferenceString(R.string.key_ai_model, R.string.default_ai_model);
-            AiClient.create(model, systemMessage, userMessage, (text, error) -> {
-                meditationViewModel.setMeditationText(error == null ? text : oldMeditation);
-                if (binding == null) { return; }
-                binding.buttonCreateMeditation.setEnabled(true);
-                if (error == null) {
-                    sentences = splitIntoIndividualSentences(text);
-                    meditationViewModel.setSeekBarMax(Math.max(0, sentences.size() - 1));
-                    meditationViewModel.setSeekBarProgress(0);
-                } else {
-                    new AlertDialog.Builder(requireContext())
-                            .setTitle(R.string.button_create_meditation).setMessage(error)
-                            .setPositiveButton(R.string.button_ok, null).show();
-                }
-            });
+            try { MeditationGenerationService.create(requireContext(), model, systemMessage, userMessage); }
+            catch (RuntimeException error) {
+                new AlertDialog.Builder(requireContext()).setTitle(R.string.button_create_meditation)
+                        .setMessage(de.jeisfeld.mymeditation.i18n.UiText.GENERATION_START_FAILED.text())
+                        .setPositiveButton(R.string.button_ok, null).show();
+            }
         });
 
         binding.buttonSpeakMeditation.setOnClickListener(v -> {

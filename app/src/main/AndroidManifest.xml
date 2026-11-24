@@ -28,6 +28,8 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/offline_file_paths" />
         </provider>
+        <service android:name=".http.MeditationGenerationService" android:exported="false"
+            android:foregroundServiceType="dataSync" android:stopWithTask="false" />
         <service android:name=".audio.MeditationExportService" android:exported="false"
             android:foregroundServiceType="dataSync" android:stopWithTask="false" />
         <service android:name=".audio.MeditationOfflineService" android:exported="false"

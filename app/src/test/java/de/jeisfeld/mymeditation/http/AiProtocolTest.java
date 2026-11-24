@@ -139,6 +139,25 @@ public class AiProtocolTest {
                 "{\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"content\":\"Breathe.\",\"reasoning_content\":\"private\"}}]}")));
     }
 
+    @Test public void outputLimitsAreReportedSeparatelyFromOtherIncompleteResponses() throws Exception {
+        AiProvider[] providers = {AiProvider.CLAUDE, AiProvider.OPENAI, AiProvider.GEMINI, AiProvider.GROK,
+                AiProvider.DEEPSEEK, AiProvider.KIMI, AiProvider.QWEN};
+        String[] responses = {
+                "{\"stop_reason\":\"max_tokens\"}",
+                "{\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"max_output_tokens\"}}",
+                "{\"candidates\":[{\"finishReason\":\"MAX_TOKENS\"}]}",
+                "{\"choices\":[{\"finish_reason\":\"length\"}]}"};
+        for (int i = 0; i < providers.length; i++) {
+            AiProvider provider = providers[i];
+            JSONObject response = new JSONObject(responses[Math.min(i, 3)]);
+            IllegalStateException failure = assertThrows(IllegalStateException.class, () -> AiProtocol.response(provider, response));
+            assertEquals(de.jeisfeld.mymeditation.i18n.UiText.AI_OUTPUT_LIMIT.text(provider.displayName), failure.getMessage());
+        }
+        assertEquals(de.jeisfeld.mymeditation.i18n.UiText.INCOMPLETE_MEDITATION.text(AiProvider.OPENAI.displayName),
+                assertThrows(IllegalStateException.class, () -> AiProtocol.response(AiProvider.OPENAI,
+                        new JSONObject("{\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"content_filter\"}}"))).getMessage());
+    }
+
     @Test public void rejectsTruncatedOrBlockedResponses() throws Exception {
         assertThrows(IllegalStateException.class, () -> AiProtocol.response(AiProvider.CLAUDE,
                 new JSONObject("{\"stop_reason\":\"max_tokens\"}")));
