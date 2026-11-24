@@ -1,5 +1,6 @@
 package de.jeisfeld.mymeditation.ui.savedmeditations;
 
+import de.jeisfeld.mymeditation.audio.SavedMeditationFilter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -16,6 +17,14 @@ public class SavedMeditationFilterTest {
         names.put(3, "Evening Calm");
         names.put(12, "Stärke und Ruhe");
         names.put(5, "Calm focus");
+    }
+
+    @Test public void selectedNamesUseOnlyTheTrimmedPrefixBeforeNumbersOrParentheses() {
+        for (String name : Arrays.asList("  Abendruhe 12 (lang) ", "Abendruhe(lang)", "Abendruhe) extra", "Abendruhe ٣", "Abendruhe")) {
+            assertEquals("Abendruhe", SavedMeditationFilter.namePrefix(name));
+        }
+        assertEquals("", SavedMeditationFilter.namePrefix("123 Thema"));
+        assertEquals("", SavedMeditationFilter.namePrefix(null));
     }
 
     @Test public void nameAndAudioFiltersCombineWithoutChangingStoredIdsOrOrder() {

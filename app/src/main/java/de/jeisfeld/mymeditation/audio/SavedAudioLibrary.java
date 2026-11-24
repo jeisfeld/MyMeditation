@@ -225,10 +225,6 @@ public final class SavedAudioLibrary {
                     : MeditationTitles.unique(snapshot.name, 0);
             target = SavedMeditations.save(name, snapshot.system, snapshot.query, snapshot.content, request.text, snapshot.guidance);
             if (source > 0) {
-                java.util.ArrayList<Integer> order = PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids);
-                order.remove(Integer.valueOf(target));
-                order.add(order.indexOf(source) + 1, target);
-                PreferenceUtil.setSharedPreferenceIntList(R.string.key_saved_meditation_ids, order);
                 PreferenceUtil.setSharedPreferenceString("audio_variant_source_" + target, Integer.toString(source));
             }
             if (titleSource == 0) { MeditationTitles.improveAutomaticName(target, snapshot.content, snapshot.titleModel, name); }
@@ -266,6 +262,7 @@ public final class SavedAudioLibrary {
         PreferenceUtil.setSharedPreferenceString(R.string.key_speech_style, request.style);
     }
     public static void restore(Context context, int id) {
+        SavedMeditations.select(id);
         PreferenceUtil.setSharedPreferenceString(RESTORED_SOURCE, Integer.toString(id));
         PreferenceUtil.setSharedPreferenceString(CONTENT_SOURCE, Integer.toString(id));
         int[][] fields = {{R.string.key_system_prompt, R.string.key_saved_system_prompt},

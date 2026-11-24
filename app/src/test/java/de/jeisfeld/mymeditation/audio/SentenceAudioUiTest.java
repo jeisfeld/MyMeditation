@@ -400,6 +400,7 @@ public class SentenceAudioUiTest extends BaselineTest {
         awaitLabel(activity.getString(R.string.label_meditation_text));
         editor.setText("Breathe slowly. Relax."); idle(); awaitLabel("Second name");
         ((BottomNavigationView) activity.findViewById(R.id.nav_view)).setSelectedItemId(R.id.navigation_saved_meditations); idle();
+        activity.findViewById(R.id.buttonClearMeditationFilter).performClick(); idle();
         row(0).findViewById(R.id.textViewMeditationName).performClick(); idle();
         ((BottomNavigationView) activity.findViewById(R.id.nav_view)).setSelectedItemId(R.id.navigation_meditation); idle();
         awaitLabel("First name");

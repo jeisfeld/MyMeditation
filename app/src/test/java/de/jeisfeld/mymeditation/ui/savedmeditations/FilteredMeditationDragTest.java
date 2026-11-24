@@ -104,6 +104,6 @@ public class FilteredMeditationDragTest extends BaselineTest {
         filter("match", false);
         adapter().onRowMoved(-1, 0); adapter().onRowMoved(0, 3); order(0, 1, 2, 3, 4, 5, 6);
         ids.add(SavedMeditations.save("New hidden", "s", "@TEXT@", "c", "Breathe."));
-        adapter().onRowMoved(0, 1); idle(); order(0, 2, 3, 1, 4, 5, 6, 7);
+        adapter().onRowMoved(0, 1); idle(); order(0, 2, 3, 1, 4, 5, 7, 6);
     }
 }

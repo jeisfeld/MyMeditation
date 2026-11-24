@@ -12,6 +12,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 import de.jeisfeld.mymeditation.R;
+import de.jeisfeld.mymeditation.audio.SavedMeditations;
 import de.jeisfeld.mymeditation.ui.meditation.MeditationViewModel;
 import de.jeisfeld.mymeditation.databinding.FragmentSavedMeditationsBinding;
 import de.jeisfeld.mymeditation.util.DialogUtil;
@@ -34,10 +35,8 @@ public class SavedMeditationsFragment extends Fragment {
 
         pageInsets = new de.jeisfeld.mymeditation.ui.PageInsets(root, keyboard -> { });
 
-        if (savedInstanceState != null) {
-            nameFilter = savedInstanceState.getString("savedNameFilter", "");
-            audioOnly = savedInstanceState.getBoolean("savedAudioOnly", false);
-        }
+        nameFilter = SavedMeditations.nameFilter();
+        audioOnly = SavedMeditations.audioOnly();
         binding.editTextMeditationFilter.setText(nameFilter);
         binding.buttonClearMeditationFilter.setVisibility(nameFilter.isEmpty() ? View.GONE : View.VISIBLE);
         binding.buttonClearMeditationFilter.setOnClickListener(v -> binding.editTextMeditationFilter.getText().clear());
@@ -46,6 +45,7 @@ public class SavedMeditationsFragment extends Fragment {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 nameFilter = s.toString();
+                SavedMeditations.setNameFilter(nameFilter);
                 binding.buttonClearMeditationFilter.setVisibility(nameFilter.isEmpty() ? View.GONE : View.VISIBLE);
                 applyFilters();
             }
@@ -53,11 +53,15 @@ public class SavedMeditationsFragment extends Fragment {
         });
         binding.checkBoxAudioOnly.setOnCheckedChangeListener((button, checked) -> {
             audioOnly = checked;
+            SavedMeditations.setAudioOnly(checked);
             applyFilters();
         });
 
 		final RecyclerView recyclerView = binding.recyclerViewSavedMeditations;
 		populateRecyclerView(recyclerView);
+
+        androidx.preference.PreferenceManager.getDefaultSharedPreferences(requireContext())
+                .registerOnSharedPreferenceChangeListener(selectionListener);
 
         String initialContent = PreferenceUtil.getSharedPreferenceString(R.string.key_meditation_content);
         de.jeisfeld.mymeditation.audio.MeditationTitles.prefetch(requireContext(), initialContent);
@@ -122,14 +126,23 @@ public class SavedMeditationsFragment extends Fragment {
         }
     }
 
-    @Override public void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putString("savedNameFilter", nameFilter);
-        outState.putBoolean("savedAudioOnly", audioOnly);
-    }
+    private final android.content.SharedPreferences.OnSharedPreferenceChangeListener selectionListener = (preferences, key) -> {
+        if (binding == null || !(SavedMeditations.NAME_FILTER.equals(key) || SavedMeditations.AUDIO_ONLY.equals(key))) { return; }
+        String query = SavedMeditations.nameFilter();
+        boolean onlyAudio = SavedMeditations.audioOnly();
+        if (nameFilter.equals(query) && audioOnly == onlyAudio) { return; }
+        nameFilter = query; audioOnly = onlyAudio;
+        if (!binding.editTextMeditationFilter.getText().toString().equals(nameFilter)) {
+            binding.editTextMeditationFilter.setText(nameFilter);
+        }
+        binding.checkBoxAudioOnly.setChecked(audioOnly);
+        applyFilters();
+    };
 
 	@Override
 	public void onDestroyView() {
+        androidx.preference.PreferenceManager.getDefaultSharedPreferences(requireContext())
+                .unregisterOnSharedPreferenceChangeListener(selectionListener);
         if (pageInsets != null) { pageInsets.close(); pageInsets = null; }
 		if (touchHelper != null) { touchHelper.attachToRecyclerView(null); touchHelper = null; }
 		super.onDestroyView();

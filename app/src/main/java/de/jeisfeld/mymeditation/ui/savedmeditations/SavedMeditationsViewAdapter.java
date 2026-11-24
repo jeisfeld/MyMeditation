@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 import de.jeisfeld.mymeditation.R;
+import de.jeisfeld.mymeditation.audio.SavedMeditationFilter;
 import de.jeisfeld.mymeditation.ui.configuration.ConfigurationViewModel;
 import de.jeisfeld.mymeditation.ui.meditation.MeditationViewModel;
 import de.jeisfeld.mymeditation.util.DialogUtil;

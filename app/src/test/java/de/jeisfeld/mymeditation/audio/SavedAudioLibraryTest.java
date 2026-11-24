@@ -138,10 +138,11 @@ public class SavedAudioLibraryTest extends BaselineTest {
         assertFalse(SavedAudioLibrary.hasAudio(Application.getAppContext(), other));
         assertEquals(java.util.Arrays.asList(other, source), PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids));
     }
-    @Test public void changedVoiceCreatesSameNamedVariantDirectlyBelowRestoredSourceAndOnlyOnce() throws Exception {
+    @Test public void changedVoiceCreatesVariantBelowTheLastSelectedEntryAndOnlyOnce() throws Exception {
         audio(true);
         int before = SavedMeditations.save("Before", "s", "q", "c", "Other.");
         int source = SavedMeditations.save("Chosen name", "s", "q", "c", request().text);
+        int matching = SavedMeditations.save("Chosen name 2", "s", "q", "c", "Another text.");
         int after = SavedMeditations.save("After", "s", "q", "c", "Other.");
         SavedAudioLibrary.restoreVoice(request()); SavedAudioLibrary.attachAvailable(Application.getAppContext(), source);
         SavedAudioLibrary.restore(Application.getAppContext(), source);
@@ -159,7 +160,7 @@ public class SavedAudioLibraryTest extends BaselineTest {
         int saved = SavedAudioLibrary.keepComplete(Application.getAppContext(), changed, snapshot);
         assertNotEquals(source, saved);
         assertEquals("Renamed while playing 2", PreferenceUtil.getIndexedSharedPreferenceString(R.string.key_saved_meditation_name, saved));
-        assertEquals(java.util.Arrays.asList(before, source, saved, after), PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids));
+        assertEquals(java.util.Arrays.asList(before, source, matching, saved, after), PreferenceUtil.getSharedPreferenceIntList(R.string.key_saved_meditation_ids));
         assertEquals(saved, SavedAudioLibrary.keepComplete(Application.getAppContext(), changed, snapshot));
         assertEquals(SentenceAudioStore.key(request()), SavedAudioLibrary.book(Application.getAppContext(), source).identity);
         assertEquals(variant.identity, SavedAudioLibrary.book(Application.getAppContext(), saved).identity);

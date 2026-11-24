@@ -1,4 +1,4 @@
-package de.jeisfeld.mymeditation.ui.savedmeditations;
+package de.jeisfeld.mymeditation.audio;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,10 +7,17 @@ import java.util.function.IntFunction;
 import java.util.function.IntPredicate;
 
 /** Select visible IDs without changing the stored order or dropping hidden entries. */
-final class SavedMeditationFilter {
+public final class SavedMeditationFilter {
     private SavedMeditationFilter() { }
 
-    static List<Integer> select(List<Integer> ids, String query, boolean audioOnly,
+    /** Keep the topic before the first number or round parenthesis, including non-ASCII numbers. */
+    public static String namePrefix(String name) {
+        if (name == null) { return ""; }
+        java.util.regex.Matcher suffix = java.util.regex.Pattern.compile("[\\p{N}()]").matcher(name);
+        return (suffix.find() ? name.substring(0, suffix.start()) : name).trim();
+    }
+
+    public static List<Integer> select(List<Integer> ids, String query, boolean audioOnly,
                                 IntFunction<String> name, IntPredicate hasAudio) {
         String search = query.trim().toLowerCase(Locale.ROOT);
         List<Integer> visible = new ArrayList<>();
